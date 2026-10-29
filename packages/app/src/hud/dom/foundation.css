@@ -5654,6 +5654,11 @@ body.on-drag-scroll.on-drag-scroll-free * {
 .on-hud .on-book__flow > .on-book__space--wide {
   margin-top: 1.4em;
 }
+/* A heading after such a gap opens a section of its own, ruled off from the text above. */
+.on-hud .on-book__flow > .on-book__sub.on-book__space--wide {
+  padding-top: 0.9em;
+  border-top: 1px solid #8d754980;
+}
 /* Keep the padded initial within two 21px prose lines so the third regains the full width. At this
    line height a capital rises about 2px above its content box, so the top padding clears it. */
 .on-hud .on-book__p--first::first-letter {
@@ -9035,35 +9040,35 @@ body.on-drag-scroll.on-drag-scroll-free * {
 /* ---------- centre notice (centre-notice.ts) ---------- */
 .on-hud .on-centre-notice {
   position: absolute;
-  top: 24%;
+  top: 15%;
   left: 50%;
-  width: min(760px, 90%);
+  width: min(560px, 84%);
   transform: translateX(-50%);
-  padding: 14px 32px 16px;
+  padding: 8px 28px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
   text-align: center;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, #182521cc 0%, #18252199 45%, #18252100 72%);
+  background: radial-gradient(ellipse at center, #18252199 0%, #18252166 45%, #18252100 72%);
   opacity: 0;
   animation: on-centre-notice-life var(--notice-ms, 5000ms) ease-in-out forwards;
 }
 .on-hud .on-centre-notice__title {
   margin: 0;
   color: var(--bronze-hi);
-  font: 600 34px / 1.25 var(--font-title);
+  font: 500 24px / 1.25 var(--font-title);
   text-shadow:
-    0 2px 3px #000000cc,
-    0 0 18px #000000aa;
+    0 1px 2px #000000bb,
+    0 0 10px #00000077;
 }
 .on-hud .on-centre-notice__detail {
   margin: 0;
   color: var(--text-hi);
-  font-size: 22px;
+  font-size: 16px;
   line-height: 1.4;
-  text-shadow: 0 1px 3px #000000dd;
+  text-shadow: 0 1px 2px #000000cc;
 }
 @keyframes on-centre-notice-life {
   0% {

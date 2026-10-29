@@ -12,7 +12,7 @@ export const chsGame = {
       nextAttack: '下次进攻：{time} 后',
       attackRunning: '进攻进行中',
       notices: {
-        attack: { title: '要塞发起了进攻！' },
+        attack: { title: '要塞的爪牙发起了进攻！' },
         landing: { title: '暗地人的战船正在靠岸！' },
         lightArmor: { title: '要塞的战士变得更强了。', detail: '他们获得了轻甲。' },
         heavyArmor: { title: '要塞的战士变得更强了。', detail: '他们获得了重甲。' },

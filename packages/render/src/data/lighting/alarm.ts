@@ -8,7 +8,7 @@ import type { LightGrade } from './types.js';
  */
 
 /** The multiply a full alarm adds: red kept, green and blue lowered. */
-export const ALARM_GRADE: LightGrade = [1, 0.8, 0.76];
+export const ALARM_GRADE: LightGrade = [1, 0.72, 0.66];
 /** Game seconds the alarm takes to come up or die away. */
 export const ALARM_FADE_SECONDS = 2;
 

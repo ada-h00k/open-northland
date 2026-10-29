@@ -12,7 +12,7 @@ export const chtGame = {
       nextAttack: '下次進攻：{time} 後',
       attackRunning: '進攻進行中',
       notices: {
-        attack: { title: '要塞發起了進攻！' },
+        attack: { title: '要塞的爪牙發起了進攻！' },
         landing: { title: '暗地人的戰船正在靠岸！' },
         lightArmor: { title: '要塞的戰士變得更強了。', detail: '他們獲得了輕甲。' },
         heavyArmor: { title: '要塞的戰士變得更強了。', detail: '他們獲得了重甲。' },

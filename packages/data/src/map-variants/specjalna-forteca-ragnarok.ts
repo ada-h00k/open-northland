@@ -220,7 +220,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
     iron: RAGNAROK_DEPOSIT_YIELD,
     mushroom: RAGNAROK_DEPOSIT_YIELD,
   },
-  briefingAppend: SPECJALNA_FORTECA_RAGNAROK_BRIEFING,
+  briefingPages: SPECJALNA_FORTECA_RAGNAROK_BRIEFING,
   // Starter numbers proposed for the owner.
   escalation: {
     keep: { seat: FORTRESS_SEAT, ...KEEP },

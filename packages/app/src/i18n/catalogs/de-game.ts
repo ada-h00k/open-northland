@@ -13,7 +13,7 @@ export const deGame = {
       nextAttack: 'Nächster Angriff in {time}',
       attackRunning: 'Angriff läuft',
       notices: {
-        attack: { title: 'Die Festung zieht in den Angriff!' },
+        attack: { title: 'Die Schlächter der Festung ziehen zum Angriff!' },
         landing: { title: 'Schiffe der Dunkelländer legen am Ufer an!' },
         lightArmor: {
           title: 'Die Krieger der Festung werden stärker.',

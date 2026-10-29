@@ -57,22 +57,21 @@ export function applyMapVariantEntities(entities: TerrainEntities, variant: MapV
   return { ...entities, humans: [...entities.humans, ...variant.startHumans] };
 }
 
-/** The map's briefing as the variant tells it: its section after the named pages in every language the
- *  briefing carries. A map without a briefing stays without one. */
+/** The map's briefing as the variant tells it: each page the variant writes replaces that page in every
+ *  language the briefing carries it in. A map without a briefing stays without one. */
 export function applyMapVariantBriefing(briefing: MapBriefing, variant: MapVariant): MapBriefing {
-  const append = variant.briefingAppend;
-  if (append === undefined) return briefing;
+  const written = variant.briefingPages;
+  if (written === undefined) return briefing;
   const texts: MapBriefing['texts'] = {};
   for (const [lang, pages] of Object.entries(briefing.texts)) {
-    const section = isLanguage(lang)
-      ? textReadingOrder(lang)
-          .map((candidate) => append.texts[candidate])
-          .find((blocks) => blocks !== undefined)
-      : undefined;
     const patched = { ...pages };
-    for (const id of append.pages) {
-      const page = pages[String(id)];
-      if (page !== undefined && section !== undefined) patched[String(id)] = [...page, ...section];
+    for (const [id, byLanguage] of Object.entries(written)) {
+      const page = isLanguage(lang)
+        ? textReadingOrder(lang)
+            .map((candidate) => byLanguage[candidate])
+            .find((blocks) => blocks !== undefined)
+        : undefined;
+      if (pages[id] !== undefined && page !== undefined) patched[id] = page;
     }
     texts[lang] = patched;
   }

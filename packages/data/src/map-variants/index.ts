@@ -14,7 +14,7 @@ export { findMapVariant, MAP_VARIANTS, mapVariantsOf } from './registry.js';
 export {
   MapVariant,
   MapVariantAiTasks,
-  MapVariantBriefingAppend,
+  MapVariantBriefingPages,
   type MapVariantInput,
   MapVariantKind,
   MapVariantMissionResults,

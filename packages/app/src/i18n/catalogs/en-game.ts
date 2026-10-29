@@ -13,7 +13,7 @@ export const enGame = {
       nextAttack: 'Next attack in {time}',
       attackRunning: 'Attack under way',
       notices: {
-        attack: { title: 'The fortress marches to war!' },
+        attack: { title: 'The Fortress enforcers march to attack!' },
         landing: { title: 'Darkland ships are landing on the shore!' },
         lightArmor: { title: 'The fortress warriors grow stronger.', detail: 'They received light armour.' },
         heavyArmor: { title: 'The fortress warriors grow stronger.', detail: 'They received heavy armour.' },

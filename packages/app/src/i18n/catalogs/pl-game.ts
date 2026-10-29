@@ -13,7 +13,7 @@ export const plGame = {
       nextAttack: 'Następny atak za {time}',
       attackRunning: 'Atak trwa',
       notices: {
-        attack: { title: 'Twierdza rusza do ataku!' },
+        attack: { title: 'Siepacze Twierdzy ruszają do ataku!' },
         landing: { title: 'Okręty Krainy Ciemności przybijają do brzegu!' },
         lightArmor: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali lekkie zbroje.' },
         heavyArmor: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali ciężkie zbroje.' },

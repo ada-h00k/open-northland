@@ -41,13 +41,13 @@ export const MapVariantScriptPatch = z.strictObject({
 });
 export type MapVariantScriptPatch = z.infer<typeof MapVariantScriptPatch>;
 
-/** A section added at the end of the named briefing pages (`PlayCutscene` ids), per map text language;
- *  a page in a language the section lacks takes the language a reader of it falls back to. */
-export const MapVariantBriefingAppend = z.strictObject({
-  pages: z.array(z.number().int().nonnegative()).min(1),
-  texts: z.partialRecord(z.enum(LANGUAGES), z.array(HypertextBlock).min(1)),
-});
-export type MapVariantBriefingAppend = z.infer<typeof MapVariantBriefingAppend>;
+/** Briefing pages the variant tells in its own words, by `PlayCutscene` id, each per map text language;
+ *  a page in a language the variant lacks takes the language a reader of it falls back to. */
+export const MapVariantBriefingPages = z.record(
+  z.string().regex(/^\d+$/),
+  z.partialRecord(z.enum(LANGUAGES), z.array(HypertextBlock).min(1)),
+);
+export type MapVariantBriefingPages = z.infer<typeof MapVariantBriefingPages>;
 
 /**
  * One committed variant of one map: our own authored rules over the map's decoded data, never a copy
@@ -62,8 +62,8 @@ export const MapVariant = z.strictObject({
   /** Each spawned deposit node of the named good (a content good id) starts with its authored amount
    *  times this factor. */
   depositYield: z.record(z.string().min(1), z.number().int().min(1)).default({}),
-  /** What the variant changes, told at the end of the map's briefing. */
-  briefingAppend: MapVariantBriefingAppend.optional(),
+  /** The briefing pages the variant replaces, to tell what it changes. */
+  briefingPages: MapVariantBriefingPages.optional(),
   /** The siege the simulation runs over the map; absent for a variant that only patches the map. */
   escalation: MapEscalation.optional(),
 });

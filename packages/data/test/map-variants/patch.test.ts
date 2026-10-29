@@ -156,16 +156,20 @@ describe('applyMapVariantBriefing', () => {
   });
   const told = MapVariant.parse({
     ...VARIANT,
-    briefingAppend: { pages: [OPENING], texts: { pol: [text('tryb')], eng: [text('mode')] } },
+    briefingPages: {
+      [OPENING]: { pol: [text('tryb')], eng: [text('mode')] },
+      [WON]: { eng: [text('victory')] },
+    },
   });
 
-  it('appends the section to the named pages in each language, a missing one read in its fallback', () => {
+  it('replaces the written pages in each language, a missing one read in its fallback', () => {
     const patched = applyMapVariantBriefing(BRIEFING, told);
 
-    expect(patched.texts.pol?.[OPENING]).toEqual([text('start'), text('tryb')]);
-    expect(patched.texts.pol?.[WON]).toEqual([text('won')]);
-    expect(patched.texts.eng?.[OPENING]).toEqual([text('start'), text('mode')]);
-    expect(patched.texts.chs?.[OPENING]).toEqual([text('start'), text('mode')]);
+    expect(patched.texts.pol?.[OPENING]).toEqual([text('tryb')]);
+    expect(patched.texts.pol?.[WON]).toEqual([text('victory')]);
+    expect(patched.texts.eng?.[OPENING]).toEqual([text('mode')]);
+    expect(patched.texts.eng?.[WON]).toBeUndefined();
+    expect(patched.texts.chs?.[OPENING]).toEqual([text('mode')]);
     expect(applyMapVariantBriefing(BRIEFING, VARIANT)).toBe(BRIEFING);
   });
 });
