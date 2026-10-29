@@ -27,7 +27,8 @@ const END_CHECK_TICKS = TICKS_PER_SECOND;
  * band at its keep for every occupied target seat, owned by the raider seat that targets it, and the
  * raider's own `[AIData]` Attack task marches it; the garrison is never drawn in. On each refill beat
  * it tops its own soldiers up toward a cap that grows with game time and the occupied seats, and raises
- * one lost catapult whose wait ran out. Nothing spawns while no finished keep stands. The fortress side's
+ * one lost catapult whose wait ran out. Nothing spawns while no finished keep stands, and the guard and
+ * catapults stop for good once the match counts the fortress seat out. The fortress side's
  * soldiers get the gear steps as they fall due. A wave with sea men also sends one ship per seat
  * (`landings.ts`), and a seat whose headquarters fell is attacked where its aim moved (`focus.ts`).
  */
@@ -47,7 +48,7 @@ export const mapEscalationSystem: System = (world, ctx) => {
   if (ctx.tick >= launchTick(config, progress.launches)) launch(world, ctx, config, progress.launches);
   const refill = refillMen(config, ctx.tick);
   if (refill > 0) refillGuard(world, ctx, config, refill);
-  if (refill > 0 && catapults !== undefined && keepStands(world, config))
+  if (refill > 0 && catapults !== undefined && fortressHolds(world, config))
     respawnCatapult(world, ctx, config, catapults.respawnSeconds);
   if (config.gear !== undefined) gearTurn(world, ctx, config.gear);
 };
@@ -125,7 +126,7 @@ function endAttack(world: World, ctx: SystemContext, cause: 'defeated' | 'expire
 }
 
 function refillGuard(world: World, ctx: SystemContext, config: MapEscalation, men: number): void {
-  if (!keepStands(world, config)) return;
+  if (!fortressHolds(world, config)) return;
   const seat = config.keep.seat;
   const cap = guardCap(config, ctx.tick, occupiedTargets(world, config).length);
   const room = cap - soldierCount(world, ctx.content, seat);
@@ -153,6 +154,12 @@ function spawnAtKeep(
     if (e !== null) spawned.push(e);
   }
   return spawned;
+}
+
+/** The fortress seat is still in the match and its keep stands. The raider seats launch on regardless:
+ *  they never die, so a fallen fortress seat with its keep standing still sends its scheduled attacks. */
+function fortressHolds(world: World, config: MapEscalation): boolean {
+  return !isPlayerDead(world, config.keep.seat) && keepStands(world, config);
 }
 
 /** A finished keep of the fortress seat stands within its range of the keep point. */
