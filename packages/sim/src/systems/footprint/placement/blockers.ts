@@ -5,6 +5,7 @@ import {
   DeliveryFlag,
   Palisade,
   Position,
+  peaceHoldsUntilTick,
   ResourceFootprint,
   Signpost,
   Vehicle,
@@ -255,7 +256,8 @@ export function eachBlockerCell(
  * on every facing, task or seat write. The tier swap moves the UPGRADE_RESERVE cells, which follow each
  * level's own `blocked`, and a map-placed house record whose next tier has no such record moves its
  * OBSTACLE and BUILDING_ZONE cells too. A wall's placement body changes only by a re-add, so its in-place claim
- * and build writes stay out. The `BioGroundRules` waiver changes which ground a well or hive accepts.
+ * and build writes stay out. The `BioGroundRules` waiver changes which ground a well or hive accepts, and
+ * a lobby peace's start and end which ground a member seat may build on.
  *
  * Exactness rests on buildings and footprinted objects never MOVING once placed, so a stored entity's
  * cells are fixed, and on a vehicle moving only through a `World.mut(e, Vehicle)` write. Completeness
@@ -264,5 +266,5 @@ export function eachBlockerCell(
  * sim decision.
  */
 export function placementBlockerVersion(world: World): string {
-  return `${world.componentGeneration(Building)}.${world.componentValueGeneration(Building)}.${world.componentGeneration(Palisade)}.${world.componentGeneration(ResourceFootprint)}.${world.componentGeneration(Signpost)}.${world.componentGeneration(Vehicle)}.${vehicleAnchorRevision(world)}.${landscapePlacementRevision(world)}.${bioGroundWaived(world) ? 1 : 0}`;
+  return `${world.componentGeneration(Building)}.${world.componentValueGeneration(Building)}.${world.componentGeneration(Palisade)}.${world.componentGeneration(ResourceFootprint)}.${world.componentGeneration(Signpost)}.${world.componentGeneration(Vehicle)}.${vehicleAnchorRevision(world)}.${landscapePlacementRevision(world)}.${bioGroundWaived(world) ? 1 : 0}.${peaceHoldsUntilTick(world) ?? ''}`;
 }

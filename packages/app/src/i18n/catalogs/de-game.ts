@@ -1909,7 +1909,8 @@ export const deGame = {
       settingsNeedRestart: 'Neustart nötig',
       peaceEnding: 'Frieden: {count} Min.',
       peaceEnded: 'Frieden vorbei',
-      peaceRefused: 'Friedenssperre',
+      peaceRefused: 'Zutritt gesperrt',
+      peaceRefusedBuild: 'Bauen gesperrt',
       houseUpgraded: 'Ausgebaut',
       vehicleNoPath: 'Kein Weg',
       vehicleNoCommander: 'Kein Kommandant',
@@ -2003,7 +2004,9 @@ export const deGame = {
       peaceEnding: 'Der Frieden endet in {minutes}. Bis dahin können sich die Spieler nicht angreifen.',
       peaceEnded: 'Der Frieden ist vorbei. Die Spieler können sich wieder angreifen.',
       peaceRefused:
-        'Solange der Frieden gilt, kannst du weder Leute in die Nähe der Siedlung eines Spielers schicken, mit dem du Frieden hast, noch dort bauen.',
+        'Solange der Frieden gilt, kannst du keine Leute in die Nähe der Siedlung eines Spielers schicken, mit dem du Frieden hast.',
+      peaceRefusedBuild:
+        'Solange der Frieden gilt, kannst du nicht in der Nähe der Siedlung eines Spielers bauen, mit dem du Frieden hast.',
       houseUpgraded: 'Ausbau abgeschlossen: {building}.',
       vehicleNoPath: '{vehicle}: Kein Weg zum Ziel gefunden. Wähle ein anderes Ziel.',
       vehicleNoCommander: '{vehicle}: Niemand übernimmt das Kommando. Schicke einen Siedler an Bord.',

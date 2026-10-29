@@ -4,7 +4,7 @@
  * live probe the command gates on, so the two cannot disagree.
  */
 import type { ContentSet } from '@open-northland/data';
-import { bioGroundWaived, peaceHoldsUntilTick } from '../components/rules.js';
+import { bioGroundWaived } from '../components/rules.js';
 import type { Entity, World } from '../ecs/world.js';
 import type { HalfCellNode, NodeArea } from '../nav/halfcell.js';
 import type { NodeId, TerrainGraph } from '../nav/terrain/index.js';
@@ -249,11 +249,10 @@ export function placementAnswerFor(
   return { area, accepted, key: `${version}:${enabled}:${contestedKey}:${peaceKey}` };
 }
 
-/** What the signpost overlay's answer reads: the work-flag blockers, the player's posts, the posts its
- *  scouts plan and whether a lobby peace still holds, whose ground a building's placement moves with the
- *  work-flag blockers. */
+/** What the signpost overlay's answer reads: the work-flag blockers, a lobby peace's hold among them, the
+ *  player's posts and the posts its scouts plan. */
 export function signpostBlockerVersionOf(world: World): string {
-  return `${workFlagBlockerVersion(world)}.${signpostNetworkRevision(world)}.${plannedSignpostsVersion(world)}.${peaceHoldsUntilTick(world) ?? ''}`;
+  return `${workFlagBlockerVersion(world)}.${signpostNetworkRevision(world)}.${plannedSignpostsVersion(world)}`;
 }
 
 /** The signpost probe's answer over `area`, the planned posts' spacing included; null for a mapless sim. */
@@ -273,24 +272,37 @@ export function signpostAnswerFor(
   };
 }
 
-/** The palisade collision probe's answer over `area`; null for an unknown row or a mapless sim. */
+/** The palisade collision probe's answer over `area` and, with a `player`, without the ground a peace
+ *  keeps the seat off; null for an unknown row or a mapless sim. */
 export function palisadeAnswerFor(
   world: World,
   content: ContentSet,
   terrain: TerrainGraph | undefined,
   gfxIndex: number,
   area: NodeArea,
+  player?: number,
 ): NodeGridAnswer | null {
   if (terrain === undefined) return null;
   const probe = palisadePlacementProbe(world, content, terrain, gfxIndex);
   const over = palisadePlacementProbe(world, content, terrain, gfxIndex, true);
   if (probe === null || over === null) return null;
-  const accepted = gridOver(area, (hx, hy) => probe.canPlace(hx, hy));
-  return {
+  const accepted = markUpgradeGround(
+    gridOver(area, (hx, hy) => probe.canPlace(hx, hy)),
     area,
-    accepted: markUpgradeGround(accepted, area, placementBlockerGrid(world, content, terrain), over),
-    key: placementBlockerVersion(world),
-  };
+    placementBlockerGrid(world, content, terrain),
+    over,
+  );
+  const peace = peaceGroundWithin(world, player, area);
+  if (peace !== null) {
+    const width = nodeAreaWidth(area);
+    for (let i = 0; i < accepted.length; i++) {
+      if (accepted[i] !== 0 && peace.bars(area.minHx + (i % width), area.minHy + Math.floor(i / width))) {
+        accepted[i] = 0;
+      }
+    }
+  }
+  const peaceKey = peace === null ? '-' : peace.key;
+  return { area, accepted, key: `${placementBlockerVersion(world)}:${peaceKey}` };
 }
 
 /** Road site grids by area, each valid while the blockers, the road sites and the roads on its nodes

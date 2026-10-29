@@ -1,6 +1,6 @@
 import { type HalfCellNode, TICKS_PER_MINUTE } from '@open-northland/sim';
 import type { MessageNaming, RaisedMessage } from './raise.js';
-import { USER_MESSAGE_TYPE } from './types.js';
+import { type PeaceRefusedOrder, USER_MESSAGE_TYPE } from './types.js';
 
 /** The lobby peace's note: it holds `minutesLeft` more minutes, or, with null, it has ended. About the
  *  minutes, so the start note and each warning stand as their own cards. */
@@ -28,15 +28,24 @@ export function peaceNote(minutesLeft: number | null, naming: Pick<MessageNaming
 }
 
 /** The note that the peace held back the player's order to send someone to `at`, or to build there, by a
- *  peace partner's settlement. One card stands for every refusal while it shows, wherever the order went. */
+ *  peace partner's settlement. One card per kind of order stands for every such refusal while it shows,
+ *  wherever the order went. */
 export function peaceRefusalNote(
   at: HalfCellNode | null,
+  what: PeaceRefusedOrder,
   naming: Pick<MessageNaming, 'text'>,
 ): RaisedMessage {
   const type = USER_MESSAGE_TYPE.peaceRefused;
   return {
     pending: { type, subject: null, at, about: null, goodType: null, technologies: null, jobType: null },
-    compose: () => naming.text(type, { subjectName: null, jobLabel: null, goodName: null, stanceName: null }),
+    compose: () =>
+      naming.text(type, {
+        subjectName: null,
+        jobLabel: null,
+        goodName: null,
+        stanceName: null,
+        peaceOrder: what,
+      }),
   };
 }
 

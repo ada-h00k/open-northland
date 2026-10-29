@@ -259,6 +259,17 @@ describe('notice text', () => {
     );
   });
 
+  it('words a peace refusal of a walk and of a build apart', () => {
+    const refusal = (peaceOrder: 'walk' | 'build') =>
+      compose(pl.userMessages, 'peaceRefused', { ...BARE, subjectName: null, peaceOrder }).full;
+    expect(refusal('walk')).toBe(
+      'Dopóki trwa pokój, nie możesz wysyłać ludzi pod osadę gracza, z którym łączy cię pokój.',
+    );
+    expect(refusal('build')).toBe(
+      'Dopóki trwa pokój, nie możesz budować pod osadą gracza, z którym łączy cię pokój.',
+    );
+  });
+
   it('names the husband where the reason is his, and reads cleanly when he cannot be named', () => {
     const family = (partner: { name: string; jobLabel: string | null; female: boolean } | null) =>
       compose(pl.userMessages, 'familyBlocked', {

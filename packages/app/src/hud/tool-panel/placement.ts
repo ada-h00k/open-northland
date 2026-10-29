@@ -155,6 +155,7 @@ export interface PlacementDeps {
    *  upgrade too. */
   readonly canPlacePalisadeAt?: (
     gfxIndex: number,
+    owner: number,
     col: number,
     row: number,
     overUpgradeGround?: boolean,
@@ -207,6 +208,7 @@ export interface PlacementController {
   activeBuilding(): BuildingPick | null;
   activePalisade(): number | null;
   activePalisadeMode(): PalisadePlacementMode | null;
+  activePalisadeOwner(): number | null;
   /** The road tool is held. */
   activeRoad(): boolean;
   /** The held placement is the admin tool's: a finished building, road or wall line. */
@@ -332,7 +334,8 @@ export function createPlacementController(deps: PlacementDeps): PlacementControl
     createLineTool({
       tool: `palisade:${gfxIndex}`,
       maxEdges: PALISADE_LINE_MAX_EDGES,
-      canPlace: (node) => deps.canPlacePalisadeAt?.(gfxIndex, node.col, node.row, overUpgradeGround) === true,
+      canPlace: (node) =>
+        deps.canPlacePalisadeAt?.(gfxIndex, side.owner, node.col, node.row, overUpgradeGround) === true,
       built: (node) => deps.palisadeBuiltAt?.(side.owner, node.col, node.row) === true,
       answersKey: () => `${deps.palisadeAnswersKey?.() ?? ''}:${overUpgradeGround}`,
       commit: (nodes) => {
@@ -548,6 +551,7 @@ export function createPlacementController(deps: PlacementDeps): PlacementControl
     activeBuilding: () => building,
     activePalisade: () => palisade?.gfxIndex ?? null,
     activePalisadeMode: () => palisade?.mode ?? null,
+    activePalisadeOwner: () => palisade?.side.owner ?? null,
     activeRoad: () => road !== null,
     activeStanding: () =>
       building?.standing !== undefined || road?.standing === true || palisade?.mode === 'standingWall',

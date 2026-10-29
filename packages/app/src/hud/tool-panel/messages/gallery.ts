@@ -187,7 +187,7 @@ export function galleryMessages(
       continue;
     }
     if (name === 'peaceRefused') {
-      const note = peaceRefusalNote(null, naming);
+      const note = peaceRefusalNote(null, 'walk', naming);
       raiser.raise(`${type}|peace`, note.pending, note.compose);
       continue;
     }

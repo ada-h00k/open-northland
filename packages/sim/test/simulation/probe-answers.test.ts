@@ -134,6 +134,107 @@ describe('probe answers', () => {
   });
 });
 
+/** The squares a peace case asks its answers over, smaller than the keep-out radius so a partner's
+ *  building outside a square still bars nodes inside it. */
+const PEACE_AREA_NODES = 8;
+/** How many ticks the test peace holds. */
+const PEACE_TICKS = 4;
+/** A second partner building, beside the area a peace key is asked over. */
+const PARTNER_HUT_AT = { x: 22, y: 22 };
+
+function peaceTiles(sim: Simulation): NodeArea[] {
+  const map = wholeMap(sim);
+  const areas: NodeArea[] = [];
+  for (let minHy = map.minHy; minHy <= map.maxHy; minHy += PEACE_AREA_NODES) {
+    for (let minHx = map.minHx; minHx <= map.maxHx; minHx += PEACE_AREA_NODES) {
+      areas.push({
+        minHx,
+        minHy,
+        maxHx: Math.min(minHx + PEACE_AREA_NODES - 1, map.maxHx),
+        maxHy: Math.min(minHy + PEACE_AREA_NODES - 1, map.maxHy),
+      });
+    }
+  }
+  return areas;
+}
+
+/** The area answers of the building, signpost and wall rules for `player` that part from the live
+ *  probes, square by square. */
+function peaceDisagreements(sim: Simulation, player: number): string[] {
+  const building = sim.placementProbe(HUT, player);
+  const signpost = sim.signpostProbe(player);
+  const wall = sim.palisadeProbe(WALL.typeId, player);
+  if (building === null || signpost === null || wall === null) throw new Error('no probe');
+  const parted: string[] = [];
+  for (const area of peaceTiles(sim)) {
+    parted.push(
+      ...disagreements(sim.placementAnswer(HUT, area, player), (hx, hy) => building.canPlace(hx, hy)),
+      ...disagreements(sim.signpostAnswer(player, area), (hx, hy) => signpost.canPlace(hx, hy)),
+      ...disagreements(sim.palisadeAnswer(WALL.typeId, area, player), (hx, hy) => wall.canPlace(hx, hy)),
+    );
+  }
+  return parted;
+}
+
+/** The nodes a wall may take with no seat named but not for `player`: the ground a peace keeps it off. */
+function peaceBarredWallNodes(sim: Simulation, player: number): number {
+  const open = sim.palisadeProbe(WALL.typeId);
+  const seat = sim.palisadeProbe(WALL.typeId, player);
+  if (open === null || seat === null) throw new Error('no probe');
+  const { minHx, minHy, maxHx, maxHy } = wholeMap(sim);
+  let barred = 0;
+  for (let hy = minHy; hy <= maxHy; hy++) {
+    for (let hx = minHx; hx <= maxHx; hx++) {
+      if (open.canPlace(hx, hy) && !seat.canPlace(hx, hy)) barred++;
+    }
+  }
+  return barred;
+}
+
+describe('probe answers during a lobby peace', () => {
+  it("agree with the live probes on a partner's ground and drop it when the peace ends", () => {
+    const sim = settledWorld();
+    const until = sim.tick + PEACE_TICKS;
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: until, players: [P0, P1] });
+    sim.step();
+    expect(peaceBarredWallNodes(sim, P0)).toBeGreaterThan(0);
+    expect(peaceDisagreements(sim, P0)).toEqual([]);
+    while (sim.tick <= until) sim.step();
+    expect(peaceBarredWallNodes(sim, P0)).toBe(0);
+    expect(peaceDisagreements(sim, P0)).toEqual([]);
+  });
+
+  it("move every answer key when a partner's building lands nearby and when the peace ends", () => {
+    const sim = settledWorld();
+    const until = sim.tick + PEACE_TICKS;
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: until, players: [P0, P1] });
+    sim.step();
+    const area: NodeArea = { minHx: 24, minHy: 24, maxHx: 31, maxHy: 31 };
+    /** The building, signpost and wall answer keys over `area`. */
+    const keys = (): (string | undefined)[] => [
+      sim.placementAnswer(HUT, area, P0)?.key,
+      sim.signpostAnswer(P0, area)?.key,
+      sim.palisadeAnswer(WALL.typeId, area, P0)?.key,
+    ];
+    const before = keys();
+    sim.enqueueSetup({
+      kind: 'placeBuilding',
+      buildingType: HUT,
+      x: PARTNER_HUT_AT.x,
+      y: PARTNER_HUT_AT.y,
+      tribe: VIKING,
+      owner: P1,
+    });
+    sim.step();
+    const landed = keys();
+    const held = (from: (string | undefined)[], to: (string | undefined)[]): number[] =>
+      to.flatMap((key, i) => (key === undefined || key === from[i] ? [i] : []));
+    expect(held(before, landed)).toEqual([]);
+    while (sim.tick <= until) sim.step();
+    expect(held(landed, keys())).toEqual([]);
+  });
+});
+
 /** Answers asked the way the app asks them: 32-node squares tiling the map, each against the live
  *  probes, with a hostile fighter and signposts beside the squares' edges. */
 const AREA_NODES = 32;

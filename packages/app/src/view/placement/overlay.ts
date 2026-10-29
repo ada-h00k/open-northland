@@ -62,7 +62,9 @@ export function makeSignpostOverlaySource(
 }
 
 /** The line tool whose placement answers a lit set reads: the road tool's, or a wall graphics row's. */
-export type LitAnswers = { readonly tool: 'road' } | { readonly tool: 'palisade'; readonly gfxIndex: number };
+export type LitAnswers =
+  | { readonly tool: 'road' }
+  | { readonly tool: 'palisade'; readonly gfxIndex: number; readonly owner: number };
 
 /**
  * The wash of a tool that lights a node set of its own: everything dims but `lit`, and ground a standing
@@ -87,7 +89,11 @@ export function makeLitOverlaySource(
   const band = makeBandProber(host, mapSize, player);
   return (lit, answers, camera, screenW, screenH) => {
     const probe =
-      answers === null ? null : answers.tool === 'road' ? probes.road() : probes.palisade(answers.gfxIndex);
+      answers === null
+        ? null
+        : answers.tool === 'road'
+          ? probes.road()
+          : probes.palisade(answers.gfxIndex, answers.owner);
     const keyWithin = (range: NodeBand): string | null =>
       probe === null || probe.keyWithin(range.minCol, range.maxCol, range.minRow, range.maxRow) !== null
         ? lit.key

@@ -171,7 +171,7 @@ describe('placement controller', () => {
       techWaived?: boolean,
       owner?: number,
     ) => boolean = () => true,
-    canPlacePalisadeAt: (gfxIndex: number, col: number, row: number) => boolean = () => true,
+    canPlacePalisadeAt: (gfxIndex: number, owner: number, col: number, row: number) => boolean = () => true,
     palisadeGateProbe?: Parameters<typeof createPlacementController>[0]['palisadeGateProbe'],
     extra: Partial<Parameters<typeof createPlacementController>[0]> = {},
   ) {
@@ -502,7 +502,7 @@ describe('placement controller', () => {
     const { placement, commands } = mount(
       () => tile,
       () => true,
-      (_gfxIndex, col) => col < 7,
+      (_gfxIndex, _owner, col) => col < 7,
     );
     placement.enterPalisade(691, 'wall');
     placement.handleClick(0, 0);
@@ -517,7 +517,7 @@ describe('placement controller', () => {
       () => tile,
       () => true,
       // The standing wall's own node refuses a new segment, so only the built test lets the line start.
-      (_gfxIndex, col) => col > 4,
+      (_gfxIndex, _owner, col) => col > 4,
       undefined,
       { palisadeBuiltAt: (_owner, col, row) => col === 4 && row === 2 },
     );
@@ -640,7 +640,7 @@ describe('placement controller', () => {
     let tile = { col: 4, row: 2 };
     const growth = (col: number, row: number): boolean => col === 6 && row === 2;
     const { placement, commands } = mount(() => tile, undefined, undefined, undefined, {
-      canPlacePalisadeAt: (_gfx, col, row, overUpgradeGround) =>
+      canPlacePalisadeAt: (_gfx, _owner, col, row, overUpgradeGround) =>
         overUpgradeGround === true || !growth(col, row),
     });
     placement.enterPalisade(691, 'gate');

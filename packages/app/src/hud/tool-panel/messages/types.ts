@@ -1,4 +1,4 @@
-import type { DiplomacyState, HalfCellNode, WorkerRefusalReason } from '@open-northland/sim';
+import type { DiplomacyState, HalfCellNode, SimEvent, WorkerRefusalReason } from '@open-northland/sim';
 import type { ChildOrderWait } from '../../../game/snapshot/index.js';
 import type { MessageText } from './text.js';
 
@@ -69,6 +69,9 @@ export const USER_MESSAGE_TYPE = {
 } as const;
 
 export type UserMessageTypeName = keyof typeof USER_MESSAGE_TYPE;
+
+/** What an order the peace refused would have done: send someone there, or build there. */
+export type PeaceRefusedOrder = Extract<SimEvent, { kind: 'peaceRefused' }>['what'];
 export type UserMessageType = (typeof USER_MESSAGE_TYPE)[UserMessageTypeName];
 
 /** The original's message priority levels: 0 routine, 1 notable, 2 important. */

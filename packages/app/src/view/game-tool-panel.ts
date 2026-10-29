@@ -75,6 +75,7 @@ export interface GameToolPanelDeps {
   ) => boolean;
   readonly canPlacePalisadeAt: (
     gfxIndex: number,
+    owner: number,
     col: number,
     row: number,
     overUpgradeGround?: boolean,

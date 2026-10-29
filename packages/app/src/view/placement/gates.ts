@@ -30,8 +30,9 @@ export interface PlacementProbeViews {
    *  that seat's ground rule instead. */
   readonly building: (typeId: number, tribe: number, techWaived?: boolean, owner?: number) => NodeGridProbe;
   readonly signpost: () => NodeGridProbe;
-  /** The wall and road line tools' rules, which their lit washes wait on. */
-  readonly palisade: (gfxIndex: number) => NodeGridProbe;
+  /** The wall and road line tools' rules, which their lit washes wait on; a wall's for the seat it
+   *  is laid for, whose peace ground it refuses. */
+  readonly palisade: (gfxIndex: number, owner: number) => NodeGridProbe;
   readonly road: () => NodeGridProbe;
   /** The ship's mooring spots; undefined while they are being answered. */
   readonly mooring: (vehicle: number) => MooringProbe | null | undefined;
@@ -81,9 +82,11 @@ export interface PlacementGates extends PlacementClickGates {
   readonly canPlaceSignpostAt: (col: number, row: number) => boolean;
   /** `canPlaceSignpostAt`, undefined while the node's answer is on its way rather than refused. */
   readonly signpostAnswerAt: (col: number, row: number) => boolean | undefined;
-  /** With `overUpgradeGround`, ground a building keeps for its upgrade takes a wall too. */
+  /** Where `owner`'s wall may stand; with `overUpgradeGround`, on ground a building keeps for its
+   *  upgrade too. */
   readonly canPlacePalisadeAt: (
     gfxIndex: number,
+    owner: number,
     col: number,
     row: number,
     overUpgradeGround?: boolean,
@@ -175,10 +178,12 @@ export function createPlacementGates(
         () => host.signpostBlockerVersion(),
       ),
     );
-  const palisade = (gfxIndex: number): NodeGridProbe =>
-    gridProbe(`p${gfxIndex}`, () =>
-      nodeGridProbe(grids, `p${gfxIndex}`, (area) => host.palisadeProbe(gfxIndex, area), blockerVersion),
+  const palisade = (gfxIndex: number, owner: number): NodeGridProbe => {
+    const family = `p${gfxIndex}:${owner}`;
+    return gridProbe(family, () =>
+      nodeGridProbe(grids, family, (area) => host.palisadeProbe(gfxIndex, area, owner), blockerVersion),
     );
+  };
   const road = (): NodeGridProbe =>
     gridProbe('r', () =>
       nodeGridProbe(
@@ -265,8 +270,8 @@ export function createPlacementGates(
       const verdict = signpost().at(col, row);
       return verdict === undefined ? undefined : verdict === true;
     },
-    canPlacePalisadeAt: (gfxIndex, col, row, overUpgradeGround) =>
-      fogGates.seesNode(col, row) && palisade(gfxIndex).at(col, row, overUpgradeGround) === true,
+    canPlacePalisadeAt: (gfxIndex, owner, col, row, overUpgradeGround) =>
+      fogGates.seesNode(col, row) && palisade(gfxIndex, owner).at(col, row, overUpgradeGround) === true,
     palisadeBuiltAt: (owner, col, row) => {
       const built = ownNodes.read(`${owner}`, askOwnNodes(owner), blockerVersion());
       return built !== undefined && nodeSetHas(built, col, row);
@@ -299,7 +304,7 @@ export function createPlacementGates(
     palisadeLineReady: async (gfxIndex, owner, anchor, reach) => {
       await Promise.all([
         ownNodes.fresh(`${owner}`, askOwnNodes(owner), blockerVersion()),
-        ...areasReady(palisade(gfxIndex), anchor, reach),
+        ...areasReady(palisade(gfxIndex, owner), anchor, reach),
       ]);
     },
     roadLineReady: async (anchor, reach) => {

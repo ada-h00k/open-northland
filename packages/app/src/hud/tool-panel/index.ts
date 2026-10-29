@@ -184,6 +184,7 @@ export interface ToolPanelOptions {
   ) => boolean;
   readonly canPlacePalisadeAt?: (
     gfxIndex: number,
+    owner: number,
     col: number,
     row: number,
     overUpgradeGround?: boolean,
@@ -297,6 +298,8 @@ export interface ToolPanelController {
   /** The source wall/gate graphics row currently held for placement. */
   palisadeGfxIndex(): number | null;
   palisadeMode(): PalisadePlacementMode | null;
+  /** The seat the held wall or gate is laid for. */
+  palisadeOwner(): number | null;
   /** The road tool is held. */
   roadActive(): boolean;
   /** The wall brush's doomed mark on the wall under `pointer`; null while the brush is not held. */
@@ -907,6 +910,7 @@ export async function mountToolPanel(opts: ToolPanelOptions): Promise<ToolPanelC
       placementBuilding: () => placement.activeBuilding(),
       palisadeGfxIndex: () => placement.activePalisade(),
       palisadeMode: () => placement.activePalisadeMode(),
+      palisadeOwner: () => placement.activePalisadeOwner(),
       roadActive: () => placement.activeRoad(),
       wallDemolishHighlight: (pointer) => wallBrush.highlight(pointer),
       roadPreview: (tile) => placement.roadPreview(tile),

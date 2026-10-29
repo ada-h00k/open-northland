@@ -182,7 +182,8 @@ export interface SessionHost {
     rowSpacing?: 1 | 2,
   ): Promise<readonly FormationSlotGroup[] | null>;
   signpostProbe(player: number, area: NodeArea): Promise<NodeGridAnswer | null>;
-  palisadeProbe(gfxIndex: number, area: NodeArea): Promise<NodeGridAnswer | null>;
+  /** The wall rule over `area` and, for `player`, the ground a lobby peace keeps the seat off. */
+  palisadeProbe(gfxIndex: number, area: NodeArea, player: number): Promise<NodeGridAnswer | null>;
   /** Where a road may be ordered over `area`; null for a mapless world. */
   roadSiteProbe(area: NodeArea): Promise<NodeGridAnswer | null>;
   palisadeGateProbe(

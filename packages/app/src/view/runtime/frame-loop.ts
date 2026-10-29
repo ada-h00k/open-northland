@@ -286,10 +286,11 @@ export function startFrameLoop(loop: FrameLoopDeps): RafLoop {
     const lit = line !== null ? line.reach() : (controller.lineStarts() ?? controller.gateSites());
     if (lit === null) return null;
     const gfxIndex = controller.palisadeGfxIndex();
+    const owner = controller.palisadeOwner();
     const answers: LitAnswers | null = controller.roadActive()
       ? { tool: 'road' }
-      : gfxIndex !== null && controller.palisadeMode() !== 'gate'
-        ? { tool: 'palisade', gfxIndex }
+      : gfxIndex !== null && owner !== null && controller.palisadeMode() !== 'gate'
+        ? { tool: 'palisade', gfxIndex, owner }
         : null;
     return litOverlayFrame(lit, answers, cameraCtl.camera(), app.screen.width, app.screen.height);
   };

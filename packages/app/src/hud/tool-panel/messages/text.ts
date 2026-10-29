@@ -4,6 +4,7 @@ import { bcp47Tag, formatMessage, type Messages, pluralForm } from '../../../i18
 import { shortageTradeOf } from './idle-reasons.js';
 import {
   type IdleReason,
+  type PeaceRefusedOrder,
   type ProductionStallReason,
   USER_MESSAGE_TYPE,
   type UserMessageType,
@@ -58,6 +59,8 @@ export interface MessageTextParts {
   readonly settings?: readonly string[];
   /** The whole match minutes a `peaceEnding` note says the peace still holds for. */
   readonly minutesLeft?: number;
+  /** What the order a `peaceRefused` note reports would have done; a walk without one. */
+  readonly peaceOrder?: PeaceRefusedOrder;
   /** The course a `canDoNewJob` note reports, and the trade it taught. */
   readonly training?: { readonly course: 'barracks' | 'school'; readonly profession: string };
   /** Why a `productionStalled` note's workshop stands still; `goodName` names the good it is about. */
@@ -117,6 +120,9 @@ function linesOf(
 ): readonly [CopyLine, CopyLine] {
   if (name === 'humanDied' && parts.subjectName === null) {
     return [copy.short.humanDiedUnknown, copy.full.humanDiedUnknown];
+  }
+  if (name === 'peaceRefused' && parts.peaceOrder === 'build') {
+    return [copy.short.peaceRefusedBuild, copy.full.peaceRefusedBuild];
   }
   if (name === 'canDoNewJob' && parts.training?.course === 'barracks') {
     return [copy.short.becameSoldier, copy.full.becameSoldier];

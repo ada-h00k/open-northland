@@ -101,6 +101,7 @@ import {
 } from './systems/footprint/index.js';
 import { type LandscapeEditView, landscapeEdits } from './systems/landscape/view.js';
 import { type MatchGoalProgress, matchGoalProgress } from './systems/match/index.js';
+import { peaceGroundFor } from './systems/match/peace.js';
 import {
   type InfoLineView,
   infoLines,
@@ -479,10 +480,15 @@ export class Simulation {
     );
   }
 
-  /** Collision probe for one data-described palisade or gate graphic. Null for an unknown row or mapless sim. */
-  palisadeProbe(gfxIndex: number): PlacementProbe | null {
+  /** Collision probe for one data-described palisade or gate graphic and, with a `player`, the ground a
+   *  peace keeps the seat off, as the `placePalisade` command reads them. Null for an unknown row or
+   *  mapless sim. */
+  palisadeProbe(gfxIndex: number, player?: number): PlacementProbe | null {
     if (this.terrain === undefined) return null;
-    return palisadePlacementProbe(this.world, this.content, this.terrain, gfxIndex);
+    const probe = palisadePlacementProbe(this.world, this.content, this.terrain, gfxIndex);
+    const peace = peaceGroundFor(this.world, player);
+    if (probe === null || peace === null) return probe;
+    return { canPlace: (x, y) => probe.canPlace(x, y) && !peace.bars(x, y) };
   }
 
   /** Authoritative gate-conversion preview at one hovered half-cell node, over the authored closed-gate
@@ -515,8 +521,8 @@ export class Simulation {
   }
 
   /** {@link palisadeProbe}'s verdict over every node of `area`, as plain data. */
-  palisadeAnswer(gfxIndex: number, area: NodeArea): NodeGridAnswer | null {
-    return palisadeAnswerFor(this.world, this.content, this.terrain, gfxIndex, area);
+  palisadeAnswer(gfxIndex: number, area: NodeArea, player?: number): NodeGridAnswer | null {
+    return palisadeAnswerFor(this.world, this.content, this.terrain, gfxIndex, area, player);
   }
 
   /** Where a road may be ordered over every node of `area`, as plain data; null for a mapless sim. */

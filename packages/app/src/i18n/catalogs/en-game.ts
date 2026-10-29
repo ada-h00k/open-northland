@@ -1777,7 +1777,8 @@ export const enGame = {
       settingsNeedRestart: 'Needs a restart',
       peaceEnding: 'Peace: {count} min',
       peaceEnded: 'Peace over',
-      peaceRefused: 'Peace: refused',
+      peaceRefused: 'Peace: no entry',
+      peaceRefusedBuild: 'Peace: no site',
       houseUpgraded: 'Upgraded',
       vehicleNoPath: 'No route',
       vehicleNoCommander: 'No commander',
@@ -1868,7 +1869,9 @@ export const enGame = {
       peaceEnding: 'The peace ends in {minutes}. Until then, the players cannot attack each other.',
       peaceEnded: 'The peace has ended. The players can attack each other again.',
       peaceRefused:
-        'While the peace holds, you cannot send people or build near the settlement of a player you are at peace with.',
+        'While the peace holds, you cannot send people near the settlement of a player you are at peace with.',
+      peaceRefusedBuild:
+        'While the peace holds, you cannot build near the settlement of a player you are at peace with.',
       houseUpgraded: 'Upgrade finished: {building}.',
       vehicleNoPath: '{vehicle} cannot find a way there. Pick another destination.',
       vehicleNoCommander: '{vehicle} has nobody to command it. Send a settler aboard.',
