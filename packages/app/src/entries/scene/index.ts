@@ -168,7 +168,10 @@ export async function renderSceneMode(canvas: HTMLCanvasElement, params: URLSear
     return;
   }
 
-  const renderer = await createWorldRenderer(app, params, sheet);
+  const { playerColours } = scene;
+  const playerColourOf =
+    playerColours === undefined ? undefined : (player: number) => playerColours[player] ?? player;
+  const renderer = await createWorldRenderer(app, params, sheet, playerColourOf);
   renderer.setTerrain(terrainGrid, terrain);
   // A presentation pack's own ground has no per-cell colours for a building's foot to take on.
   const groundColours = pack !== null ? null : await loadMinimapCellColours(terrainGrid, terrain);
@@ -232,6 +235,7 @@ export async function renderSceneMode(canvas: HTMLCanvasElement, params: URLSear
     // A presentation pack's trees have no falling clips of their own.
     ...(pack === null && ir !== null ? { fellingClips: await loadFellingClips(ir, sim.content.goods) } : {}),
     ...(scene.graphicTribes !== undefined ? { tribes: scene.graphicTribes } : {}),
+    ...(playerColourOf !== undefined ? { playerColourOf } : {}),
     host,
     driver: netPanel === null ? driver : stillWhileHeld(driver, netPanel),
     cameraCtl,

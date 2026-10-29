@@ -106,6 +106,7 @@ import { learningFoundationsScene } from './settlers/learning-foundations.js';
 import { mealBreakScene } from './settlers/meal-break.js';
 import { movementContinuityScene } from './settlers/movement-continuity.js';
 import { personalNamesScene } from './settlers/personal-names.js';
+import { playerColoursExtraScene, playerColoursScene } from './settlers/player-colours.js';
 import { schoolScene } from './settlers/school.js';
 import { schoolGraduatesScene } from './settlers/school-graduates.js';
 import { schoolQueueScene } from './settlers/school-queue.js';
@@ -189,6 +190,8 @@ export const SCENES: readonly SceneDefinition[] = [
   signpostsScene,
   mealBreakScene,
   familyScene,
+  playerColoursScene,
+  playerColoursExtraScene,
   familyAwayScene,
   childrenScene,
   grownUpTrainingScene,

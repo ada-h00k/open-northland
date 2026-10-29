@@ -735,6 +735,15 @@ export const deContent = {
       summary:
         'Ein Paar besiegelt seine Hochzeit mit einem Kuss. Eine Ehefrau versorgt das Wohnhaus mit Nahrung und bringt ein Kind zur Welt.',
     },
+    'player-colours': {
+      title: 'Spielerfarben 1-16',
+      summary:
+        'Die ersten sechzehn Spielerfarben, je ein Spieler: ein Haus mit Paar, eines mit Junggeselle, eines mit Kind und eine besetzte Bäckerei, zum Vergleich von Flaggen und Gebäudemarken.',
+    },
+    'player-colours-extra': {
+      title: 'Spielerfarben 17-24',
+      summary: 'Die übrigen Spielerfarben, je ein Spieler, angeordnet wie die ersten sechzehn.',
+    },
     'family-away': {
       title: 'Ein Mann, der nie nach Hause kommt',
       summary:

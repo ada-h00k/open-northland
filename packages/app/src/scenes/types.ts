@@ -51,6 +51,9 @@ export interface SceneDefinition extends SceneWorld {
   readonly graphicTribes?: WorldTribes;
   /** Ticks the headless acceptance test advances before checking. */
   readonly runTicks: number;
+  /** The colour each player id wears in the browser view, by player id; a player past the list, or
+   *  every player when omitted, wears the colour of its own id. */
+  readonly playerColours?: readonly number[];
   /** Starting camera zoom for the browser view; 1 when omitted. */
   readonly initialZoom?: number;
   readonly checks: readonly SceneCheck[];

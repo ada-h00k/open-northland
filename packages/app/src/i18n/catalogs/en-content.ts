@@ -729,6 +729,15 @@ export const enContent = {
       title: 'Marriage and children',
       summary: 'A couple weds with a kiss; a married wife stocks the dwelling with food and bears a child.',
     },
+    'player-colours': {
+      title: 'Player colours 1-16',
+      summary:
+        "The first sixteen player colours, one player each: a couple's home, a single man's home, a home with a child and a staffed bakery, for comparing flags and building marks.",
+    },
+    'player-colours-extra': {
+      title: 'Player colours 17-24',
+      summary: 'The remaining player colours, one player each, laid out like the first sixteen.',
+    },
     'family-away': {
       title: 'A husband who never comes home',
       summary:

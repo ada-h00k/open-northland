@@ -726,6 +726,15 @@ export const plContent = {
       title: 'Śluby i dzieci',
       summary: 'Para bierze ślub z pocałunkiem; żona znosi jedzenie do domu i rodzi dziecko.',
     },
+    'player-colours': {
+      title: 'Kolory graczy 1-16',
+      summary:
+        'Pierwsze szesnaście kolorów graczy, po jednym graczu: dom pary, dom samotnego, dom z dzieckiem i obsadzona piekarnia, do porównania flag i znaczników na budynkach.',
+    },
+    'player-colours-extra': {
+      title: 'Kolory graczy 17-24',
+      summary: 'Pozostałe kolory graczy, po jednym graczu, ułożone jak pierwsze szesnaście.',
+    },
     'family-away': {
       title: 'Mąż, który nie wraca do domu',
       summary:

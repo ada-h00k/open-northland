@@ -76,6 +76,11 @@ their own interpolation.
 towers, with a resident couple at every home. Open it with `&debug=geometry` and watch the idle
 residents: each stands beside its house, never on a red walk-block cell or inside a doorway arch.
 
+`?scene=player-colours` gives each of the first sixteen player colours one player, and
+`?scene=player-colours-extra` each of the remaining ones. Every player has a couple's home, a single
+man's home, a home with a child and a bakery with its baker and carrier. Compare the flags and marks
+on the buildings, and the settlers' team colours, across the colours.
+
 `?scene=clay-gatherers` places two collectors per civilization beside a clay deposit, in rows:
 viking, frank, byzantine, saracen, egyptian. Watch both heads through the shovel cycle and the return
 to the flag, especially the byzantine collector with a hat.
