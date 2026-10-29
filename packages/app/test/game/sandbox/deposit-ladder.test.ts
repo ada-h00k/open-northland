@@ -7,11 +7,10 @@ import {
 import { components, type Entity, Simulation } from '@open-northland/sim';
 import { describe, expect, it } from 'vitest';
 import { MINE_LEVELS, STONE_DEPOSIT_UNITS } from '../../../src/catalog/mining.js';
-import type { ContentIr } from '../../../src/content/ir/rows.js';
 import { stateIndexForLevel } from '../../../src/content/object-gfx/objects.js';
 import { sandboxContent } from '../../../src/game/sandbox/content/index.js';
-import { GOOD_GOLD, GOOD_STONE } from '../../../src/game/sandbox/ids/index.js';
 import { spawnMapResources } from '../../../src/game/sandbox/map-spawn.js';
+import { MINES, mineFixture, mineRecord } from '../../support/mine-deposit.js';
 
 /**
  * A mined placement's deposit is sized by its own `[GfxLandscape]` record's `LogicMaximumValency`, and
@@ -30,39 +29,9 @@ import { spawnMapResources } from '../../../src/game/sandbox/map-spawn.js';
 
 const { Resource, MineDeposit } = components;
 
-/** Mined goods against the `LogicMaximumValency` and `[landscapetype]` their real `ls_ground` records
- *  author: stone's 4-unit rock, and gold's 5-unit mine, a ladder that disagreed while a deposit was
- *  sized from the catalog instead. */
-const MINES = [
-  { id: 'stone', good: GOOD_STONE, logicType: 15, states: 4 },
-  { id: 'gold', good: GOOD_GOLD, logicType: 21, states: 5 },
-];
-
-/** One `[GfxLandscape]` mine record of `states` units: `GfxFrames` lists highest-first (the file order),
- *  one distinct bob per state, matching the real `ls_ground` deposit records. */
-function mineRecord(states: number) {
-  return Array.from({ length: states }, (_, i) => ({ state: states - i, bobIds: [(states - i) * 10] }));
-}
-
 /** The same record as a sprite-pool binding: per-good frames ordered empty→full (`state 1` first). */
 function mineBinding(good: number, states: number): ResourceTypeBinding {
   return { byGood: { [good]: Array.from({ length: states }, (_, i) => (i + 1) * 10) }, default: 0 };
-}
-
-/** The record placed once per authored level 1..states, so placement ordinal i is level i + 1. */
-function mineFixture(id: string, logicType: number, states: number) {
-  const levels = Array.from({ length: states }, (_, i) => i + 1);
-  const editName = `${id} ladder node`;
-  return {
-    objects: { types: [editName], placements: levels.flatMap((_, i) => [2 * i + 2, 4, 0]), levels },
-    ir: {
-      landscapeGfx: [{ index: 50, editName, logicType, maxValency: states, frames: mineRecord(states) }],
-      // `goodType` is the IR's own numbering, which this join ignores - it bridges on `goodId`.
-      gatheringPipeline: [
-        { goodType: 0, goodId: id, harvest: { landscapeType: logicType, gfxIndices: [50] } },
-      ],
-    } satisfies ContentIr,
-  };
 }
 
 describe('a mined placement is sized by its own record', () => {
@@ -79,27 +48,6 @@ describe('a mined placement is sized by its own record', () => {
     }));
     expect(spawned).toEqual(
       Array.from({ length: states }, (_, i) => ({ remaining: i + 1, initial: states, levels: states })),
-    );
-  });
-
-  it('multiplies a variant-boosted good by its factor, shrink ladder included, and no other good', () => {
-    const factor = 3;
-    const gold = MINES[1];
-    if (gold === undefined) throw new Error('missing gold fixture');
-    const sim = new Simulation({ seed: 1, content: sandboxContent() });
-    const { objects, ir } = mineFixture(gold.id, gold.logicType, gold.states);
-
-    spawnMapResources(sim, objects, ir, { [gold.id]: factor, stone: factor * factor });
-
-    const spawned = [...sim.world.query(Resource)].map((e) => ({
-      remaining: sim.world.get(e, Resource).remaining,
-      initial: sim.world.get(e, MineDeposit).initial,
-    }));
-    expect(spawned).toEqual(
-      Array.from({ length: gold.states }, (_, i) => ({
-        remaining: (i + 1) * factor,
-        initial: gold.states * factor,
-      })),
     );
   });
 
