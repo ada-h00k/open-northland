@@ -257,9 +257,8 @@ export function gameRuleControls(options: GameRuleControlOptions) {
     ];
     const change = (id: string) =>
       options.onChange({ peace: PEACE_MINUTES.find((minutes) => peaceChoiceId(minutes) === id) ?? null });
-    return options.presentation === 'select'
-      ? select(text.label, choices, change)
-      : segmentedRule(text.label, choices, change);
+    // Six lengths overflow a compact segment strip, so the peace is a dropdown in either presentation.
+    return select(text.label, choices, change);
   })();
   const peaceElements = peace?.elements ?? [];
   return {
