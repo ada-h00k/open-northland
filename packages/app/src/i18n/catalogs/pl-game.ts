@@ -1239,7 +1239,7 @@ export const plGame = {
       },
       clock: 'Czas gry',
       peace: 'Czas pokoju: {time}',
-      peaceTitle: 'Czas pokoju: walka między graczami zablokowana. Koniec za {time}.',
+      peaceTitle: 'Czas pokoju: walka między graczami zablokowana.',
     },
     notices: {
       label: 'Powiadomienia',

@@ -1257,7 +1257,7 @@ export const enGame = {
       clock: 'Game time',
       /** The peace chip's name, with its time left. */
       peace: 'Peace time: {time}',
-      peaceTitle: 'Peace time: fighting between players is blocked. Ends in {time}.',
+      peaceTitle: 'Peace time: fighting between players is blocked.',
     },
     notices: {
       label: 'Notifications',

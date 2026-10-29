@@ -1351,7 +1351,7 @@ export const deGame = {
       },
       clock: 'Spielzeit',
       peace: 'Friedenszeit: {time}',
-      peaceTitle: 'Friedenszeit: Kämpfe zwischen Spielern sind gesperrt. Endet in {time}.',
+      peaceTitle: 'Friedenszeit: Kämpfe zwischen Spielern sind gesperrt.',
     },
     notices: {
       label: 'Meldungen',

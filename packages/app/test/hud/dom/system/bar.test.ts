@@ -29,7 +29,7 @@ describe('the system bar', () => {
     expect(peace?.textContent).toBe('1:05');
     expect(peace?.querySelector('svg')).not.toBeNull();
     expect(peace?.getAttribute('aria-label')).toContain('1:05');
-    expect(peace?.dataset.tip).toContain('1:05');
+    expect(peace?.dataset.tip).not.toContain('1:05');
 
     bar.update(modelAt(endsAt), null);
     expect(peace?.hidden).toBe(true);

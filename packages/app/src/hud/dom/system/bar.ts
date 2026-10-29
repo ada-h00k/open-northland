@@ -85,6 +85,7 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
   clock.className = 'on-clock';
   clock.setAttribute('role', 'timer');
   const clockCopy = messages().hud.summary;
+  setTip(peace, clockCopy.peaceTitle);
   let shownClock = '';
 
   const speed = document.createElement('div');
@@ -173,8 +174,6 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
         peace.hidden = left === '';
         peaceTime.textContent = left;
         peace.setAttribute('aria-label', formatMessage(clockCopy.peace, { time: left }));
-        setTip(peace, formatMessage(clockCopy.peaceTitle, { time: left }));
-        peaceTips.refresh();
       }
       const text = formatSimClock(model.tick);
       if (text !== shownClock) {

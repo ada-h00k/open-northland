@@ -114,7 +114,10 @@ describe("lobby peace - orders and placements at a partner's door", () => {
   const CART_JOB = 55;
   /** Long past every setup step, short enough to step to its end. */
   const PEACE_UNTIL = 100;
-  const PARTNER_HQ = { x: 50, y: 16 };
+  /** Far enough east that a point short of its zone still lies on the map. */
+  const PARTNER_HQ = { x: PEACE_KEEP_OUT_RADIUS_NODES + 30, y: 16 };
+  const MAP_WIDTH = PARTNER_HQ.x + 14;
+  const MAP_HEIGHT = 32;
   const HOME = { x: 4, y: 16 };
   const OWN_HQ = { x: 20, y: 16 };
   /** The partner's building dropped beside {@link OWN_HQ}, nearer to it than its own town. */
@@ -190,7 +193,7 @@ describe("lobby peace - orders and placements at a partner's door", () => {
   }
 
   function partnerSim(content = aiContent()): { sim: Simulation; soldier: Entity; civilian: Entity } {
-    const sim = new Simulation({ seed: 1, content, map: grassNodeMap(64, 32) });
+    const sim = new Simulation({ seed: 1, content, map: grassNodeMap(MAP_WIDTH, MAP_HEIGHT) });
     sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: PEACE_UNTIL, players: [P0, P1] });
     placeHq(sim, PARTNER_HQ, P1);
     const soldier = spawnAt(sim, SPEARMAN, P0);
