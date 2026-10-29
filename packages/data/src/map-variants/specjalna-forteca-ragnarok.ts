@@ -283,5 +283,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
     },
     landings: { vehicle: 'ship_small', noticeKey: 'ragnarok.landing' },
     catapults: { respawnSeconds: CATAPULT_RESPAWN_MINUTES * MINUTE },
+    // Owner ruling: a computer seat starts building up with every man it has.
+    demobilizeComputerSeats: true,
   },
 };

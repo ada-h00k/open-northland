@@ -56,6 +56,8 @@ export interface MapEscalationProgress {
   landings: MapEscalationLandingRecord[];
   /** Each targeted seat's aim, ascending by seat; a seat without a record has not been aimed at yet. */
   focus: MapEscalationFocusRecord[];
+  /** Whether the start's computer seats were looked at for soldiers to turn civilian. */
+  demobilized: boolean;
 }
 
 /** No carrier exists until the escalation first writes, so a world before it hashes as one without it. */
@@ -67,6 +69,7 @@ const escalation = defineWorldSingleton<MapEscalationProgress>('MapEscalation', 
   catapults: null,
   landings: [],
   focus: [],
+  demobilized: false,
 }));
 
 export const MapEscalationState = escalation.component;

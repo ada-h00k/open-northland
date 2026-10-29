@@ -114,6 +114,9 @@ export const MapEscalation = z
     /** The fortress seat's catapults standing at the first turn come back at their spot this long
      *  after one is lost, one per guard refill beat, while the keep stands. */
     catapults: z.strictObject({ respawnSeconds: z.number().int().positive() }).optional(),
+    /** At match start every soldier of a seat the computer player runs becomes a civilian, so the
+     *  seat builds up with them; human, idle and map-scripted seats keep theirs. */
+    demobilizeComputerSeats: z.boolean().default(false),
   })
   .superRefine((value, ctx) => {
     if (!ascending(value.attacks.launches.map((row) => row.atSeconds)))

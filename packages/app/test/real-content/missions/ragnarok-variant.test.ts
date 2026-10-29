@@ -376,6 +376,29 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     expect(ships()).toEqual([]);
   }, 600_000);
 
+  it('turns the computer seats’ soldiers into civilians at the start, the human seat keeping its own', async () => {
+    const SETTLE_TICKS = 5 * TICKS_PER_SECOND;
+    const started = async (demobilizeComputerSeats: boolean) => {
+      const sim = await earlyAttackWorld({ ...ragnarok(), demobilizeComputerSeats });
+      sim.run(SETTLE_TICKS);
+      return sim;
+    };
+    const armed = await started(false);
+    const demobilized = await started(true);
+    const soldiers = (sim: Simulation, seat: number) =>
+      owned(sim, seat).filter((e) =>
+        systems.isSoldierJob(sim.content, sim.world.get(e, components.Settler).jobType),
+      ).length;
+
+    expect(soldiers(demobilized, HUMAN_SEAT)).toBeGreaterThan(0);
+    expect(soldiers(demobilized, HUMAN_SEAT)).toBe(soldiers(armed, HUMAN_SEAT));
+    for (const seat of COMPUTER_SEATS) {
+      expect(soldiers(armed, seat), `seat ${seat}`).toBeGreaterThan(0);
+      expect(soldiers(demobilized, seat), `seat ${seat}`).toBe(0);
+      expect(owned(demobilized, seat), `seat ${seat}`).toHaveLength(owned(armed, seat).length);
+    }
+  }, 300_000);
+
   it('schedules the owner’s waves: the first at 0:40, landings on the odd ones from the third', () => {
     const { launches, repeat } = ragnarok().attacks;
     const MINUTE = 60;

@@ -13,6 +13,7 @@ import { isBuilt, ownedBuildings, ownedSettlers, soldierCount } from '../ai-shar
 import type { System, SystemContext } from '../context.js';
 import { spawnSettler } from '../spawn/index.js';
 import { noteLostCatapults, rememberCatapults, respawnCatapult } from './catapults.js';
+import { demobilizeTurn } from './demobilize.js';
 import { focusTurn } from './focus.js';
 import { gearTurn } from './gear.js';
 import { landingsTurn, launchLanding } from './landings.js';
@@ -31,10 +32,12 @@ const END_CHECK_TICKS = TICKS_PER_SECOND;
  * catapults stop for good once the match counts the fortress seat out. The fortress side's
  * soldiers get the gear steps as they fall due. A wave with sea men also sends one ship per seat
  * (`landings.ts`), and a seat whose headquarters fell is attacked where its aim moved (`focus.ts`).
+ * A variant may turn the computer seats' soldiers into civilians at the start (`demobilize.ts`).
  */
 export const mapEscalationSystem: System = (world, ctx) => {
   const config = ctx.mapEscalation;
   if (config === undefined) return;
+  if (config.demobilizeComputerSeats) demobilizeTurn(world, ctx);
   const catapults = config.catapults;
   if (catapults !== undefined && mapEscalationProgress(world).catapults === null)
     rememberCatapults(world, ctx, config);
