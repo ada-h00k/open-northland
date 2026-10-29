@@ -20,7 +20,12 @@ export type SegmentTone = 'red' | 'dimmed';
  * is this book's approximation; the original stacks the blocks line by line.
  */
 export type BookSegment = (
-  | { readonly kind: 'heading'; readonly text: string }
+  | {
+      readonly kind: 'heading';
+      readonly text: string;
+      /** A red title, which no original page sets: our variants' solemn section heading. */
+      readonly tone?: 'red';
+    }
   | {
       readonly kind: 'para';
       readonly text: string;
@@ -144,7 +149,8 @@ function textSegment(
   if (text === '') return;
   const spaced = space === undefined ? {} : { space };
   if (p.style === 'title') {
-    segments.push({ kind: 'heading', text, ...spaced });
+    const tone = p.color === 'red' ? { tone: 'red' as const } : {};
+    segments.push({ kind: 'heading', text, ...tone, ...spaced });
     return;
   }
   if (p.link === undefined && SIGNATURE.test(text)) {

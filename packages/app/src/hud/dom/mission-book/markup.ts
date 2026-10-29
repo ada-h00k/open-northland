@@ -142,7 +142,9 @@ export function flowMarkup(page: BookPage, ctx: FlowContext): string {
     callbacksBefore(at);
     switch (s.kind) {
       case 'heading':
-        out.push(`<h4 class="on-book__sub${spaceClass(s)}">${escapeHtml(s.text)}</h4>`);
+        out.push(
+          `<h4 class="on-book__sub${s.tone === undefined ? '' : ` on-book__sub--${s.tone}`}${spaceClass(s)}">${escapeHtml(s.text)}</h4>`,
+        );
         break;
       case 'para':
         out.push(paragraph(s, first));

@@ -71,6 +71,8 @@ export interface MissionBook extends ToolWindow {
   refresh(): void;
   /** Live script messages and goal counters for the watched seat. */
   setInfoLines(rows: readonly MissionInfoRow[]): void;
+  /** The match mode the slip marks under it the whole match, as a map variant names it; null for none. */
+  setModeMark(text: string | null): void;
   /** The world views the open book shows, for the renderer to paint under its holes. */
   views(): readonly BookView[];
   /** A goal changed since the goal page last showed, which the beam and the folded slip mark. */
@@ -97,6 +99,7 @@ export function createMissionBook(deps: MissionBookDeps, parts: MissionBookParts
   let infoRows: readonly MissionInfoRow[] = [];
   let infoKey = '';
   let lastInfoInput: readonly MissionInfoRow[] | null = null;
+  let modeMark: string | null = null;
   let held = false;
   let arrival = false;
   /** The original's one-shot flag: one callback centres the view per opening of the window, a page
@@ -247,7 +250,10 @@ export function createMissionBook(deps: MissionBookDeps, parts: MissionBookParts
       const goals = deps.reader.goals();
       marks.observe(goals);
       book.refresh();
-      slip.update(goals, marks, book.isOpen(), infoRows);
+      slip.update(goals, marks, book.isOpen(), infoRows, modeMark);
+    },
+    setModeMark(text): void {
+      modeMark = text;
     },
     setInfoLines(rows): void {
       if (rows === lastInfoInput) return;

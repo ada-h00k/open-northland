@@ -11,6 +11,7 @@ export const chsGame = {
     escalation: {
       nextAttack: '下次进攻：{time} 后',
       attackRunning: '进攻进行中',
+      modeMark: '诸神黄昏模式',
       notices: {
         attack: { title: '要塞的爪牙发起了进攻！' },
         landing: { title: '暗地人的战船正在靠岸！' },

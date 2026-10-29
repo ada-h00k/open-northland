@@ -12,6 +12,7 @@ export const ruGame = {
     escalation: {
       nextAttack: 'Следующая атака через {time}',
       attackRunning: 'Идёт атака',
+      modeMark: 'Режим Рагнарёк',
       notices: {
         attack: { title: 'Приспешники Крепости идут в атаку!' },
         landing: { title: 'Корабли Страны Тьмы причаливают к берегу!' },

@@ -5659,6 +5659,39 @@ body.on-drag-scroll.on-drag-scroll-free * {
   padding-top: 0.9em;
   border-top: 1px solid #8d754980;
 }
+/* A red title: a solemn section heading in the title face and a deep red, set between two ornamental
+   rules of a diamond and a line, instead of the plain section rule. */
+.on-hud .on-book__sub--red {
+  --solemn-ink: #6a1a0e;
+  --solemn-rule: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 12'%3E%3Cpath d='M0 6h104M136 6h104' stroke='%23000' stroke-width='1'/%3E%3Cpath d='M120 1l5 5-5 5-5-5z' fill='none' stroke='%23000' stroke-width='1.3'/%3E%3Cpath d='M120 3.6l2.4 2.4-2.4 2.4-2.4-2.4z'/%3E%3Ccircle cx='109' cy='6' r='1.3'/%3E%3Ccircle cx='131' cy='6' r='1.3'/%3E%3C/svg%3E");
+  margin: 1.2em 0 0.9em;
+  text-align: center;
+  font: 700 27px / 1.15 var(--font-title);
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  color: var(--solemn-ink);
+  text-shadow: 0 1px 0 #f4ead080;
+}
+.on-hud .on-book__sub--red::before,
+.on-hud .on-book__sub--red::after {
+  content: "";
+  display: block;
+  width: min(240px, 80%);
+  height: 12px;
+  margin: 0 auto;
+  background: var(--solemn-ink);
+  mask: var(--solemn-rule) center / contain no-repeat;
+}
+.on-hud .on-book__sub--red::before {
+  margin-bottom: 0.3em;
+}
+.on-hud .on-book__sub--red::after {
+  margin-top: 0.3em;
+}
+.on-hud .on-book__flow > .on-book__sub--red.on-book__space--wide {
+  padding-top: 0.4em;
+  border-top: 0;
+}
 /* Keep the padded initial within two 21px prose lines so the third regains the full width. At this
    line height a capital rises about 2px above its content box, so the top padding clears it. */
 .on-hud .on-book__p--first::first-letter {
@@ -6500,6 +6533,42 @@ body.on-drag-scroll.on-drag-scroll-free * {
 }
 .on-hud .on-slip__tab--open {
   margin-top: 0;
+}
+/* The match mode's mark under the slip: a dark plate with a bronze rim, its name in the title face
+   between two flame ornaments, a dark-red ember behind it. */
+.on-hud .on-slip__mode {
+  --mode-flame: #c0432a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 10px 0 0;
+  padding: 3px 9px 4px;
+  pointer-events: none;
+  border: 1px solid #0d0906;
+  border-radius: 3px;
+  background:
+    radial-gradient(ellipse 70% 120% at 50% 50%, #6e1a1066, #0000 75%), linear-gradient(#2a1d14, #17100b);
+  box-shadow:
+    inset 0 0 0 1px #b08a5066,
+    inset 0 1px #efd28f22,
+    0 3px 6px #000a;
+  color: var(--bronze-hi);
+  text-shadow:
+    0 0 6px #a8281999,
+    0 1px 1px #000;
+  font: 700 11px var(--font-title);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.on-hud .on-slip__mode-ornament {
+  flex: none;
+  width: 24px;
+  height: 13px;
+  color: var(--bronze);
+}
+.on-hud .on-slip__mode-ornament:last-child {
+  transform: scaleX(-1);
 }
 .on-hud .on-slip__tab--open .on-slip__fold {
   transform: none;

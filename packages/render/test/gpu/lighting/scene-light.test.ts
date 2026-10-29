@@ -156,6 +156,40 @@ describe('SceneLight at night', () => {
   });
 });
 
+describe('SceneLight attack night', () => {
+  const camera = { offsetX: 0, offsetY: 0, scale: 1 };
+  const renderer = { resolution: 1, render: vi.fn() } as unknown as Renderer;
+  const frame = (gameSeconds: number) => ({ ...frameAt(gameSeconds), camera, renderer });
+
+  it('falls over a day as a lit night and lifts back to daylight', () => {
+    const light = new SceneLight();
+    light.update(frame(0));
+    light.setAttackNight(true);
+    light.update(frame(1));
+    expect(light.nightLevel()).toBeLessThan(1);
+    light.update(frame(4));
+    expect(light.nightLevel()).toBe(1);
+    expect(light.composite()).not.toBeNull();
+    light.setAttackNight(false);
+    light.update(frame(8));
+    expect(light.nightLevel()).toBe(0);
+    expect(light.container.visible).toBe(false);
+    light.destroy();
+  });
+
+  it('keeps a darker script night as the script draws it', () => {
+    const deep = [0.3, 0.32, 0.45] as const;
+    const light = new SceneLight();
+    light.setTarget(deep, true);
+    light.update(frame(0));
+    const before = [...light.drawnGrade()];
+    light.setAttackNight(true);
+    light.update(frame(4));
+    expect([...light.drawnGrade()]).toEqual(before);
+    light.destroy();
+  });
+});
+
 describe('WorldRenderer scene light', () => {
   it('mounts over the world and the weather, under the chrome and the HUD', () => {
     const stage = new Container();

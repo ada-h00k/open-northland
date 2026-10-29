@@ -21,34 +21,36 @@ export function formatCountdown(seconds: number): string {
   return `${Math.floor(minutes / MINUTES_PER_HOUR)}:${pad(minutes % MINUTES_PER_HOUR)}:${pad(secs)}`;
 }
 
-/** The goal panel's siege line at `tick`, on game time so it follows the speed and the pause; null
- *  on a map without a siege. */
-export function siegeCountdownText(
+/** The goal panel's siege lines at `tick`, on game time so they follow the speed and the pause: the
+ *  countdown to the next launch, under the running-attack line while an attack runs; null on a map
+ *  without a siege. */
+export function siegeCountdownLines(
   view: MapEscalationView | null,
   tick: number,
   copy: CountdownCopy,
-): string | null {
+): readonly string[] | null {
   if (view === null) return null;
-  if (view.attackRunning) return copy.attackRunning;
   const time = formatCountdown((view.nextAttackTick - tick) / TICKS_PER_SECOND);
-  return formatMessage(copy.nextAttack, { time });
+  const next = formatMessage(copy.nextAttack, { time });
+  return view.attackRunning ? [copy.attackRunning, next] : [next];
 }
 
-/** `rows` led by the siege line, keeping the last answer while neither input changed so the goal
+/** `rows` led by the siege lines, keeping the last answer while neither input changed so the goal
  *  panel sees the same list. */
 export function createSiegeRows(): (
   rows: readonly MissionInfoRow[],
-  line: string | null,
+  lines: readonly string[] | null,
 ) => readonly MissionInfoRow[] {
   let lastRows: readonly MissionInfoRow[] | null = null;
-  let lastLine: string | null = null;
+  let lastLines: readonly string[] = [];
   let answer: readonly MissionInfoRow[] = [];
-  return (rows, line) => {
-    if (line === null) return rows;
-    if (rows !== lastRows || line !== lastLine) {
+  return (rows, lines) => {
+    if (lines === null) return rows;
+    const same = lines.length === lastLines.length && lines.every((line, i) => line === lastLines[i]);
+    if (rows !== lastRows || !same) {
       lastRows = rows;
-      lastLine = line;
-      answer = [{ kind: 'text', text: line }, ...rows];
+      lastLines = lines;
+      answer = [...lines.map((text): MissionInfoRow => ({ kind: 'text', text })), ...rows];
     }
     return answer;
   };

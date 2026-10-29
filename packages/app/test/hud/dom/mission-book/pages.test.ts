@@ -68,6 +68,20 @@ describe('pageSegments', () => {
     ]);
   });
 
+  it('sets a red title as a solemn heading after a section gap', () => {
+    const page = pageSegments([
+      { kind: 'text', style: 'title', text: 'FORTECA' },
+      { kind: 'text', style: 'body', text: 'Opowieść.' },
+      { kind: 'blank', lines: 2 },
+      { kind: 'text', style: 'title', text: 'RAGNARÖK', color: 'red' },
+    ]);
+    expect(page.segments.at(-1)).toEqual({ kind: 'heading', text: 'RAGNARÖK', tone: 'red', space: 'wide' });
+    const context = { pictureUrl: (file: string) => file, iconBox: () => null, showOnMap: '', views: [] };
+    expect(flowMarkup(page, context)).toContain(
+      '<h4 class="on-book__sub on-book__sub--red on-book__space--wide">RAGNARÖK</h4>',
+    );
+  });
+
   it("keeps the author's empty lines, ink and justified lines", () => {
     const text = (t: string, more: Partial<HypertextParagraph> = {}): HypertextBlock => ({
       kind: 'text',

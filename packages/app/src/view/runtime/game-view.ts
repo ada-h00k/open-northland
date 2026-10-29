@@ -875,7 +875,8 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
     const siege = mountSiegePresentation({
       host,
       plane: hudDom.element,
-      setAlarm: (on) => renderer.setAlarm(on),
+      setAttackNight: (on) => renderer.setAttackNight(on),
+      setModeMark: (text) => toolPanel.controller.setModeMark(text),
       now: () => performance.now(),
     });
     cleanup.push(() => siege.dispose());

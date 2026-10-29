@@ -30,53 +30,69 @@ function slip() {
 describe('mission progress on the goal slip', () => {
   it('shows counters without visible mission goals, updates while folded and opens the book', () => {
     const { panel, marks, dock, open } = slip();
-    panel.update([], marks, false, count(3));
+    panel.update([], marks, false, count(3), null);
     expect(dock?.hidden).toBe(false);
     expect(dock?.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('3');
     dock?.querySelector<HTMLButtonElement>('[data-fold]')?.click();
-    panel.update([], marks, false, count(4));
+    panel.update([], marks, false, count(4), null);
     expect(folded(dock)).toBe(true);
     expect(dock?.querySelector('.on-slip__progress')?.textContent).toBe('4/10');
     expect(dock?.querySelector('.on-slip__sheet')).toBeNull();
     dock?.querySelector<HTMLButtonElement>('[data-fold]')?.click();
     dock?.querySelector<HTMLButtonElement>('[data-book]')?.click();
     expect(open).toHaveBeenCalledOnce();
-    panel.update([], marks, true, count(4));
+    panel.update([], marks, true, count(4), null);
     expect(dock?.hidden).toBe(true);
-    panel.update([], marks, false, []);
+    panel.update([], marks, false, [], null);
     expect(dock?.hidden).toBe(true);
   });
 
   it('keeps script text safe, removes departed rows and bounds over-target bars', () => {
     const { panel, marks, dock } = slip();
-    panel.update([], marks, false, [...count(14), { kind: 'text', text: '<img src=x> A team won!' }]);
+    panel.update([], marks, false, [...count(14), { kind: 'text', text: '<img src=x> A team won!' }], null);
     expect(dock?.querySelector('img')).toBeNull();
     expect(dock?.textContent).toContain('<img src=x> A team won!');
     expect(dock?.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('10');
     expect(dock?.querySelector('.on-goal-info__count')?.textContent).toContain('14');
-    panel.update([], marks, false, [{ kind: 'text', text: 'Next wave' }]);
+    panel.update([], marks, false, [{ kind: 'text', text: 'Next wave' }], null);
     expect(dock?.querySelector('[role="progressbar"]')).toBeNull();
     expect(dock?.textContent).toContain('Next wave');
   });
 
   it('does not replace unchanged DOM on another read or reset the folded state', () => {
     const { panel, marks, dock } = slip();
-    panel.update([], marks, false, count(3));
+    panel.update([], marks, false, count(3), null);
     const content = dock?.querySelector('.on-slip__content');
     if (content) content.scrollTop = 84;
     const button = dock?.querySelector<HTMLButtonElement>('[data-fold]');
     button?.focus();
-    panel.update([], marks, false, count(3));
+    panel.update([], marks, false, count(3), null);
     expect(dock?.querySelector('[data-fold]')).toBe(button);
-    panel.update([], marks, false, count(4));
+    panel.update([], marks, false, count(4), null);
     expect(dock?.querySelector('.on-slip__content')?.scrollTop).toBe(84);
     expect(document.activeElement).toBe(dock?.querySelector('[data-fold]'));
     dock?.querySelector<HTMLButtonElement>('[data-fold]')?.click();
-    panel.update([], marks, false, [...count(4), { kind: 'progress', label: 'People', have: 12, need: 20 }]);
+    panel.update(
+      [],
+      marks,
+      false,
+      [...count(4), { kind: 'progress', label: 'People', have: 12, need: 20 }],
+      null,
+    );
     expect(folded(dock)).toBe(true);
     expect(dock?.querySelector('.on-slip__progress')?.getAttribute('title')).toBe(
       'Diamonds 4/10, People 12/20',
     );
+  });
+
+  it('marks the match mode under the slip, open or folded', () => {
+    const { panel, marks, dock } = slip();
+    panel.update([], marks, false, count(3), 'Ragnarok mode');
+    expect(dock?.querySelector('.on-slip__mode')?.textContent).toBe('Ragnarok mode');
+    dock?.querySelector<HTMLButtonElement>('[data-fold]')?.click();
+    expect(dock?.querySelector('.on-slip__mode')?.textContent).toBe('Ragnarok mode');
+    panel.update([], marks, false, count(3), null);
+    expect(dock?.querySelector('.on-slip__mode')).toBeNull();
   });
 });
 

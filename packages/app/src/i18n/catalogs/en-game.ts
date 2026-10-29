@@ -12,6 +12,7 @@ export const enGame = {
     escalation: {
       nextAttack: 'Next attack in {time}',
       attackRunning: 'Attack under way',
+      modeMark: 'Ragnarök mode',
       notices: {
         attack: { title: 'The Fortress enforcers march to attack!' },
         landing: { title: 'Darkland ships are landing on the shore!' },

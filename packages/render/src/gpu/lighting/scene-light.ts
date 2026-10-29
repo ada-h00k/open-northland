@@ -7,7 +7,7 @@ import {
   Sprite,
   Texture,
 } from 'pixi.js';
-import { applyAlarm, fadeAlarm } from '../../data/lighting/alarm.js';
+import { darkenToAttackNight, fadeAttackNight } from '../../data/lighting/attack-night.js';
 import { fadeGrade } from '../../data/lighting/fade.js';
 import { nightLevel, shownGrade } from '../../data/lighting/grade.js';
 import { LIGHT_LOOKS, type LightSite, lightShare } from '../../data/lighting/light-sites.js';
@@ -24,7 +24,8 @@ import type { NightComposite } from '../world-renderer/offscreen-world.js';
  * multiplies by a light map cleared to the grade, with a warm pool round each house and fire, and what
  * a light-bearer marked lit (`lighting/night-mask.ts`) by {@link NIGHT_LIT_COLOUR}, so the settlers
  * and the lower walls of the houses keep part of their daylight colours with no light on the ground
- * round a walker, and each fire shows a flame. Screen sprites, never a `Filter` on the world layer
+ * round a walker, and each fire shows a flame. A siege attack darkens the script's grade into the
+ * attack night (`data/lighting/attack-night.ts`) before any of this, so it lights the same lamps. Screen sprites, never a `Filter` on the world layer
  * (see `world-renderer/post-fx.ts`).
  */
 
@@ -119,12 +120,16 @@ export class SceneLight {
   private target: LightGrade = NEUTRAL_GRADE;
   /** The script's grade after the fade; {@link shown} is what draws. */
   private readonly grade: [number, number, number] = [1, 1, 1];
+  /** {@link grade} darkened by the attack night, while it falls, stands or lifts. */
+  private readonly darkened: [number, number, number] = [1, 1, 1];
+  /** The grade the last frame lit by: {@link grade}, or {@link darkened} while the attack night shows. */
+  private lit: LightGrade = this.grade;
   private readonly shown: [number, number, number] = [1, 1, 1];
   private readonly clearColor: [number, number, number, number] = [1, 1, 1, 1];
   private lastSeconds: number | null = null;
-  /** Whether a siege attack runs, and the alarm grade's linear level fading toward it. */
-  private alarmOn = false;
-  private alarm = 0;
+  /** Whether a siege attack runs, and the attack night's linear level fading toward it. */
+  private attackOn = false;
+  private attack = 0;
   /** This frame's night composite, while the night lights the world. */
   private night: NightComposite | null = null;
   /** {@link night}'s record, refilled each night frame. */
@@ -151,14 +156,14 @@ export class SceneLight {
     }
   }
 
-  /** Whether the alarm grade (`data/lighting/alarm.ts`) fades in over the scene or out of it. */
-  setAlarm(on: boolean): void {
-    this.alarmOn = on;
+  /** Whether the attack night (`data/lighting/attack-night.ts`) falls over the scene or lifts. */
+  setAttackNight(on: boolean): void {
+    this.attackOn = on;
   }
 
   /** How strongly the night lights burn under the grade the last frame drew, 0 by day. */
   nightLevel(): number {
-    return nightLevel(this.grade);
+    return nightLevel(this.lit);
   }
 
   /** What the offscreen world composites this frame, null while no night lights it. */
@@ -184,14 +189,14 @@ export class SceneLight {
     this.lastSeconds = frame.gameSeconds;
     const dt = last === null ? Infinity : frame.gameSeconds - last;
     fadeGrade(this.grade, this.target, dt);
-    shownGrade(this.grade, this.shown);
-    // The alarm tints the shown grade but not the night level: it lights no lamps.
-    if (this.alarmOn || this.alarm > 0) {
-      this.alarm = fadeAlarm(this.alarm, this.alarmOn, dt);
-      applyAlarm(this.shown, this.alarm);
+    this.lit = this.grade;
+    if (this.attackOn || this.attack > 0) {
+      this.attack = fadeAttackNight(this.attack, this.attackOn, dt);
+      this.lit = darkenToAttackNight(this.grade, this.attack, this.darkened);
     }
+    shownGrade(this.lit, this.shown);
     const [r, g, b] = this.shown;
-    const level = frame.nightLights === false ? 0 : nightLevel(this.grade);
+    const level = frame.nightLights === false ? 0 : nightLevel(this.lit);
     if (r === 1 && g === 1 && b === 1) {
       this.container.visible = false;
       this.night = null;

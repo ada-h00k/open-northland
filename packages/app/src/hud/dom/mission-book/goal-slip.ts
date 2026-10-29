@@ -14,6 +14,16 @@ const SLIP_OPEN_ROWS = 4;
  *  the new one loses its tag. Real time, so a paused game reads it too. */
 const SLIP_READ_MS = 30_000;
 
+/** The mode mark's side ornament: a flame over a runic diamond, drawn in the mark's ink. */
+const MODE_ORNAMENT =
+  '<svg viewBox="0 0 30 16" class="on-slip__mode-ornament" aria-hidden="true"><path d="M1 8h9M20 8h9" stroke="currentColor" stroke-width="1"/><path d="M15 3l5 5-5 5-5-5z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M15 5.2c1.4 1.3 1.9 2.4 0 4.6-1.9-2.2-1.4-3.3 0-4.6z" fill="var(--mode-flame)"/><circle cx="4" cy="8" r="1" fill="currentColor"/><circle cx="26" cy="8" r="1" fill="currentColor"/></svg>';
+
+/** The match mode's mark under the slip, folded or open. */
+const modeMarkup = (text: string | null): string =>
+  text === null
+    ? ''
+    : `<div class="on-slip__mode" role="note">${MODE_ORNAMENT}<span>${escapeHtml(text)}</span>${MODE_ORNAMENT}</div>`;
+
 const FOLD =
   '<svg viewBox="0 0 20 20" class="on-book__ico on-slip__fold"><path d="M5 12.5l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -37,6 +47,8 @@ export interface GoalSlip {
     marks: GoalMarks,
     bookOpen: boolean,
     infoRows: readonly MissionInfoRow[],
+    /** The match mode marked under the slip; null for none. */
+    modeMark: string | null,
   ): void;
   dispose(): void;
 }
@@ -65,6 +77,7 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
     folded: boolean;
     bookKey: string | null;
     infoRows: readonly MissionInfoRow[];
+    modeMark: string | null;
   } | null = null;
 
   const markup = (
@@ -73,6 +86,7 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
     rows: readonly SlipRow[],
     more: number,
     infoRows: readonly MissionInfoRow[],
+    modeMark: string | null,
   ): string => {
     const open = openGoalCount(goals);
     const summary = folded ? infoRowsSummary(infoRows) : '';
@@ -82,7 +96,7 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
           ? `<i class="on-slip__seal" aria-label="${escapeHtml(copy.slipChanged)}"></i>`
           : ''
       }${FOLD}</button>`;
-    if (folded) return tab;
+    if (folded) return tab + modeMarkup(modeMark);
     const items = rows
       .map(({ goal, mark }) => {
         const tag =
@@ -103,7 +117,7 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
         <button type="button" class="on-slip__book" data-book><span>${moreText}</span><span>${escapeHtml(copy.openBook)}${
           key === null ? '' : ` <kbd class="on-key">${escapeHtml(key)}</kbd>`
         }</span></button>
-      </aside>${tab}`;
+      </aside>${tab}${modeMarkup(modeMark)}`;
   };
 
   let lastMarks: GoalMarks | null = null;
@@ -112,14 +126,16 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
     goals: readonly MissionGoal[],
     marks: GoalMarks,
     infoRows: readonly MissionInfoRow[],
+    modeMark: string | null,
   ): string =>
-    `${JSON.stringify(infoRows)}|${folded}|${marks.version}|${deps.bookKey()}|${goals.map((g) => `${g.key}:${g.state}:${g.text}`).join('\n')}`;
+    `${JSON.stringify(infoRows)}|${modeMark}|${folded}|${marks.version}|${deps.bookKey()}|${goals.map((g) => `${g.key}:${g.state}:${g.text}`).join('\n')}`;
 
   const paint = (
     goals: readonly MissionGoal[],
     marks: GoalMarks,
     bookOpen: boolean,
     infoRows: readonly MissionInfoRow[],
+    modeMark: string | null,
   ): void => {
     const hidden = bookOpen || (goals.length === 0 && infoRows.length === 0);
     setHidden(dock, hidden);
@@ -129,7 +145,7 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
       shownKey = '';
       return;
     }
-    const key = keyOf(goals, marks, infoRows);
+    const key = keyOf(goals, marks, infoRows, modeMark);
     if (key === shownKey) return;
     shownKey = key;
     const { rows, more } = folded ? { rows: [], more: 0 } : slipRows(goals, marks, SLIP_OPEN_ROWS);
@@ -143,7 +159,7 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
             ? '[data-book]'
             : null
         : null;
-    dock.innerHTML = markup(goals, marks, rows, more, infoRows);
+    dock.innerHTML = markup(goals, marks, rows, more, infoRows, modeMark);
     const content = dock.querySelector('.on-slip__content');
     if (content !== null) content.scrollTop = scrollTop;
     if (focus !== null) dock.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
@@ -160,6 +176,7 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
     marks: GoalMarks,
     bookOpen: boolean,
     infoRows: readonly MissionInfoRow[],
+    modeMark: string | null,
   ): void => {
     lastMarks = marks;
     const read = clock.due(performance.now());
@@ -173,16 +190,18 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
       seen.bookOpen === bookOpen &&
       seen.folded === folded &&
       seen.bookKey === bookKey &&
-      seen.infoRows === infoRows
+      seen.infoRows === infoRows &&
+      seen.modeMark === modeMark
     ) {
       return;
     }
-    seen = { goals, version: marks.version, bookOpen, folded, bookKey, infoRows };
-    paint(goals, marks, bookOpen, infoRows);
+    seen = { goals, version: marks.version, bookOpen, folded, bookKey, infoRows, modeMark };
+    paint(goals, marks, bookOpen, infoRows, modeMark);
   };
 
   const repaint = (): void => {
-    if (seen !== null && lastMarks !== null) update(seen.goals, lastMarks, seen.bookOpen, seen.infoRows);
+    if (seen !== null && lastMarks !== null)
+      update(seen.goals, lastMarks, seen.bookOpen, seen.infoRows, seen.modeMark);
   };
 
   dock.addEventListener('click', (event) => {

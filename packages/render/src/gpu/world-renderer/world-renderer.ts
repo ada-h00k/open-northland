@@ -380,9 +380,9 @@ export class WorldRenderer {
     this.sceneLight.setTarget(target, snap);
   }
 
-  /** While a siege attack runs the scene fades into a slight red, and back out once it ends. */
-  setAlarm(on: boolean): void {
-    this.sceneLight.setAlarm(on);
+  /** While a siege attack runs night falls over the scene, lamps lit, and lifts once it ends. */
+  setAttackNight(on: boolean): void {
+    this.sceneLight.setAttackNight(on);
   }
 
   brightnessField(): BrightnessField {

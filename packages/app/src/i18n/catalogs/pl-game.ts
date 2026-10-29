@@ -12,6 +12,7 @@ export const plGame = {
     escalation: {
       nextAttack: 'Następny atak za {time}',
       attackRunning: 'Atak trwa',
+      modeMark: 'Tryb Ragnarök',
       notices: {
         attack: { title: 'Siepacze Twierdzy ruszają do ataku!' },
         landing: { title: 'Okręty Krainy Ciemności przybijają do brzegu!' },

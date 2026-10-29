@@ -12,6 +12,7 @@ export const deGame = {
     escalation: {
       nextAttack: 'Nächster Angriff in {time}',
       attackRunning: 'Angriff läuft',
+      modeMark: 'Ragnarök-Modus',
       notices: {
         attack: { title: 'Die Schlächter der Festung ziehen zum Angriff!' },
         landing: { title: 'Schiffe der Dunkelländer legen am Ufer an!' },

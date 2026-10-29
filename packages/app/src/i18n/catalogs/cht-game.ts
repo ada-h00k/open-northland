@@ -11,6 +11,7 @@ export const chtGame = {
     escalation: {
       nextAttack: '下次進攻：{time} 後',
       attackRunning: '進攻進行中',
+      modeMark: '諸神黃昏模式',
       notices: {
         attack: { title: '要塞的爪牙發起了進攻！' },
         landing: { title: '暗地人的戰船正在靠岸！' },

@@ -12,6 +12,14 @@ const blank: HypertextBlock = { kind: 'blank', lines: 1 };
 const sectionGap: HypertextBlock = { kind: 'blank', lines: SECTION_GAP_LINES };
 
 const title = (text: string): HypertextBlock => ({ kind: 'text', style: 'title', text, align: 'center' });
+/** A red title, which the book sets as a solemn section heading. */
+const solemnTitle = (text: string): HypertextBlock => ({
+  kind: 'text',
+  style: 'title',
+  text,
+  align: 'center',
+  color: 'red',
+});
 
 /** Laid out like the map's own page: centred paragraphs a blank line apart. */
 const paragraphs = (texts: readonly string[]): HypertextBlock[] =>
@@ -229,7 +237,7 @@ export const SPECJALNA_FORTECA_RAGNAROK_BRIEFING: MapVariantBriefingPages = {
     title(intro.title),
     ...paragraphs(intro.paragraphs),
     sectionGap,
-    title(rules.title),
+    solemnTitle(rules.title),
     ...paragraphs(rules.paragraphs),
   ]),
   [VICTORY_PAGE]: byLanguage(({ victory }) => [
