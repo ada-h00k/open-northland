@@ -16,8 +16,8 @@ afterEach(() => {
 
 const SPEC: AdminPanelSpec = {
   owners: [
-    { player: 0, css: '#00f', name: 'Blue' },
-    { player: 1, css: '#f00', name: 'Red' },
+    { player: 0, slot: 1, css: '#00f', name: 'Blue' },
+    { player: 1, slot: 2, css: '#f00', name: 'Red' },
   ],
   owner: 0,
   hitpoints: 5000,

@@ -273,29 +273,3 @@ export const ADMIN_DROP_AMOUNT = 1;
 export function goodDropCommand(good: number, x: number, y: number): Command {
   return { kind: 'dropGood', good, x, y, amount: ADMIN_DROP_AMOUNT };
 }
-
-/**
- * Approximation: rough CSS stand-ins for the real team-colour LUT, so a swatch reads at a glance. Slot
- * order is the player id; a spawned unit is recoloured by the LUT, never by these hexes.
- */
-const PLAYER_SWATCH_CSS = [
-  '#4a7bd6', // blue (the human player)
-  '#d64a4a', // red
-  '#d6c84a', // yellow
-  '#4ad6d6', // cyan
-  '#5ad65a', // green
-  '#9a4ad6', // purple
-  '#9a9a9a', // grey
-  '#d6884a', // orange
-] as const;
-
-export interface PlayerSwatch {
-  readonly player: number;
-  readonly css: string;
-}
-
-/** The first N player slots with an authored swatch colour; the sim itself supports up to `MAX_PLAYERS`. */
-export const PLAYER_SWATCHES: readonly PlayerSwatch[] = PLAYER_SWATCH_CSS.map((css, player) => ({
-  player,
-  css,
-}));

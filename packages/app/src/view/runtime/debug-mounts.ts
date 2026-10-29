@@ -52,6 +52,10 @@ export interface DebugMountsOptions {
   readonly goodLabel: (typeId: number) => string | undefined;
   /** Owner slot to its roster tribe, so a spawned settler can work the buildings that slot raises. */
   readonly seatTribeOf: (player: number) => number;
+  /** The session's roster seats, for the owner picker. */
+  readonly seats: readonly number[];
+  /** Seat to the team colour the HUD and minimap paint it with. */
+  readonly seatColourOf?: (player: number) => number;
   /** Hand the HUD's placement tools a finished structure for `owner`; false when they cannot take it. */
   readonly enterStanding?: (structure: StandingStructure, owner: number, tribe: number) => boolean;
   /** Drop the HUD's held placement as a debug map tool is armed. */
@@ -163,6 +167,8 @@ function mountAdminPanel(
     claimPointer: (x, y) => opts.claimPointer(x, y),
     goodLabel: (typeId) => opts.goodLabel(typeId),
     seatTribeOf: (player) => opts.seatTribeOf(player),
+    seats: opts.seats,
+    ...(opts.seatColourOf !== undefined ? { seatColourOf: opts.seatColourOf } : {}),
     ...(opts.enterStanding !== undefined ? { enterStanding: opts.enterStanding } : {}),
     ...(opts.cancelPlacement !== undefined ? { cancelPlacement: opts.cancelPlacement } : {}),
     ...(opts.clock !== undefined ? { clock: opts.clock } : {}),

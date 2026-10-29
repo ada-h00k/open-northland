@@ -9434,12 +9434,20 @@ body.on-drag-scroll.on-drag-scroll-free * {
 }
 .on-hud .on-admin__swatches {
   display: flex;
+  flex: 1 1 0;
+  min-width: 0;
   gap: 5px;
+  flex-wrap: wrap;
 }
 .on-hud .on-admin__swatch {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   padding: 0;
+  font: 700 11px / 1 var(--font-body);
+  color: #fff;
+  text-shadow:
+    0 0 2px #000,
+    0 1px 1px #000;
   border: 1px solid #000a;
   border-radius: 50%;
   background: radial-gradient(circle at 38% 32%, #fff6, transparent 55%), var(--swatch);
@@ -9455,7 +9463,8 @@ body.on-drag-scroll.on-drag-scroll-free * {
   outline-offset: 2px;
 }
 .on-hud .on-admin__owner-name {
-  min-width: 0;
+  flex-shrink: 0;
+  max-width: 45%;
   margin-left: auto;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -46,7 +46,9 @@ export interface AdminAction {
 
 export interface AdminOwner {
   readonly player: number;
-  /** An approximate team colour for the swatch. */
+  /** The seat's number as the lobby shows it, written on the swatch. */
+  readonly slot: number;
+  /** The seat's team colour for the swatch. */
   readonly css: string;
   readonly name: string;
 }

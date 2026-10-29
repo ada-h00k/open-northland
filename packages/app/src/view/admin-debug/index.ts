@@ -19,6 +19,7 @@ import { formatMessage, messages } from '../../i18n/index.js';
 import type { DebugAction, DebugTargetKind } from './actions-catalog.js';
 import { createHoldRepeat } from './hold-repeat.js';
 import { createAdminLabels } from './labels.js';
+import { adminOwners } from './owners.js';
 import {
   type AnimalEntry,
   type ArmorEntry,
@@ -27,7 +28,6 @@ import {
   DEFAULT_SOLDIER_WEAPON,
   type GoodEntry,
   goodDropCommand,
-  PLAYER_SWATCHES,
   personSpawnCommand,
   SOLDIER_WEAPONS,
   soldierSpawnCommand,
@@ -60,6 +60,10 @@ export interface AdminDebugDeps {
   /** Owner slot to its roster tribe: a spawn is stamped for the slot it is dropped for, so it can work
    *  that slot's buildings. */
   readonly seatTribeOf: (player: number) => number;
+  /** The session's roster seats; empty or absent lists the first slots. */
+  readonly seats?: readonly number[];
+  /** Seat to the team colour it wears; absent keeps each slot's own colour. */
+  readonly seatColourOf?: (player: number) => number;
   /** Hand the HUD's placement tools a finished structure for an owner; false when they cannot take it.
    *  Absent hides the structures and buildings groups. */
   readonly enterStanding?: (structure: StandingStructure, owner: number, tribe: number) => boolean;
@@ -122,7 +126,8 @@ export function mountAdminDebug(deps: AdminDebugDeps): AdminDebugHandle {
   const { canvas } = deps;
   const msgs = messages();
   const copy = msgs.admin;
-  const labels = createAdminLabels(msgs, deps.goodLabel);
+  const seatColourOf = deps.seatColourOf ?? ((player: number): number => player);
+  const labels = createAdminLabels(msgs, deps.goodLabel, seatColourOf);
   const catalogue = createAdminToolCatalogue(msgs, labels, {
     goods: deps.goods,
     armors: deps.armors,
@@ -181,7 +186,7 @@ export function mountAdminDebug(deps: AdminDebugDeps): AdminDebugHandle {
   const panel: AdminPanel = createAdminPanel(
     deps.plane,
     {
-      owners: PLAYER_SWATCHES.map((s) => ({ player: s.player, css: s.css, name: labels.player(s.player) })),
+      owners: adminOwners(deps.seats ?? [], seatColourOf, labels.player),
       owner: player,
       hitpoints,
       weapons: catalogue.weapons,

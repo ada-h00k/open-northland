@@ -1,5 +1,6 @@
-import type { Messages } from '../../i18n/index.js';
+import { formatMessage, type Messages } from '../../i18n/index.js';
 import type { DebugAction } from './actions-catalog.js';
+import { seatSlotNumber } from './owners.js';
 import type { AnimalEntry, CreaturePreset } from './spawn-catalog.js';
 
 export interface AdminLabels {
@@ -9,12 +10,14 @@ export interface AdminLabels {
   /** The localized species name, falling back to the content tribe slug. */
   readonly animal: (entry: AnimalEntry) => string;
   readonly action: (action: DebugAction) => string;
+  /** The seat's slot number and the name of the colour it wears. */
   readonly player: (player: number) => string;
 }
 
 export function createAdminLabels(
   messages: Messages,
   goodLabel: ((typeId: number) => string | undefined) | undefined,
+  seatColourOf: (player: number) => number = (player) => player,
 ): AdminLabels {
   const copy = messages.admin;
   const goodNames = messages.goods;
@@ -27,7 +30,13 @@ export function createAdminLabels(
     copy.creaturesCatalog[preset.id as keyof typeof copy.creaturesCatalog] ?? preset.id;
   const animalLabel = (entry: AnimalEntry): string =>
     copy.wildlifeCatalog[entry.tribe as keyof typeof copy.wildlifeCatalog] ?? entry.id.replace(/_/g, ' ');
-  const playerName = (player: number): string => messages.animation.playerColors[player] ?? String(player);
+  const playerName = (player: number): string => {
+    const colour = seatColourOf(player);
+    return formatMessage(copy.ownerName, {
+      player: seatSlotNumber(player),
+      name: messages.animation.playerColors[colour] ?? String(colour),
+    });
+  };
 
   return {
     good: localizedGood,

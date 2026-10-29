@@ -1217,6 +1217,8 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
       claimPointer: (x, y) => controls.claimsPointer(x, y),
       goodLabel,
       seatTribeOf,
+      seats: deps.rosterPlayers ?? [],
+      ...(deps.playerColourOf !== undefined ? { seatColourOf: deps.playerColourOf } : {}),
       enterStanding: (structure, owner, tribe) => toolPanel.controller.enterStanding(structure, owner, tribe),
       cancelPlacement: () => toolPanel.controller.cancelPlacement(),
       cancelStanding: () => toolPanel.controller.cancelStanding(),

@@ -185,7 +185,15 @@ describe('createAdminLabels', () => {
     expect(createAdminLabels(messages(), undefined).good(entry)).toBe('test_good');
   });
 
-  it('falls back to the raw player index past the color table', () => {
-    expect(labels.player(999)).toBe('999');
+  it('names a seat by its lobby slot number and the colour it wears', () => {
+    const orange = 7;
+    const name = createAdminLabels(messages(), undefined, () => orange).player(2);
+    expect(name).toBe(
+      formatMessage(copy.ownerName, { player: 3, name: messages().animation.playerColors[orange] ?? '' }),
+    );
+  });
+
+  it('falls back to the raw colour index past the color table', () => {
+    expect(labels.player(999)).toBe(formatMessage(copy.ownerName, { player: 1000, name: '999' }));
   });
 });

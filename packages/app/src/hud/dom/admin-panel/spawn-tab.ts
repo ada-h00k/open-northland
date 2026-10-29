@@ -81,10 +81,9 @@ export function createSpawnTab(
     const swatch = button('on-admin__swatch');
     swatch.setAttribute('role', 'radio');
     swatch.style.setProperty('--swatch', entry.css);
-    swatch.setAttribute(
-      'aria-label',
-      formatMessage(copy.ownerName, { player: entry.player, name: entry.name }),
-    );
+    swatch.textContent = String(entry.slot);
+    swatch.setAttribute('aria-label', entry.name);
+    swatch.title = entry.name;
     swatch.addEventListener('click', () => {
       owner = entry.player;
       paintOwner();
