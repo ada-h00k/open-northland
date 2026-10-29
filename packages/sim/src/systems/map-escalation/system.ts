@@ -12,26 +12,37 @@ import { hexDistanceBetween, nodeOfPosition } from '../../nav/halfcell.js';
 import { isBuilt, ownedBuildings, ownedSettlers, soldierCount } from '../ai-shared/seat-roster.js';
 import type { System, SystemContext } from '../context.js';
 import { spawnSettler } from '../spawn/index.js';
+import { noteLostCatapults, rememberCatapults, respawnCatapult } from './catapults.js';
+import { gearTurn } from './gear.js';
 import { apportion, attackEndsTick, guardCap, launchTick, refillMen, waveSize } from './schedule.js';
 
-/** Ticks between two checks of whether the running attack's men are all dead. */
+/** Ticks between two checks of whether the running attack's men are all dead, and of lost catapults. */
 const END_CHECK_TICKS = TICKS_PER_SECOND;
 
 /**
  * A map's escalating siege (`ctx.mapEscalation`): on each scheduled launch the fortress spawns a fresh
  * band at its keep for every occupied target seat, owned by the raider seat that targets it, and the
  * raider's own `[AIData]` Attack task marches it; the garrison is never drawn in. On each refill beat
- * it tops its own soldiers up toward a cap that grows with game time and the occupied seats. Nothing
- * spawns while no finished keep stands.
+ * it tops its own soldiers up toward a cap that grows with game time and the occupied seats, and raises
+ * one lost catapult whose wait ran out. Nothing spawns while no finished keep stands. The fortress side's
+ * soldiers get the gear steps as they fall due.
  */
 export const mapEscalationSystem: System = (world, ctx) => {
   const config = ctx.mapEscalation;
   if (config === undefined) return;
+  const catapults = config.catapults;
+  if (catapults !== undefined && mapEscalationProgress(world).catapults === null)
+    rememberCatapults(world, ctx, config);
   const progress = mapEscalationProgress(world);
-  if (progress.attack !== null && ctx.tick % END_CHECK_TICKS === 0) checkAttackEnd(world, ctx, config);
+  const checkBeat = ctx.tick % END_CHECK_TICKS === 0;
+  if (progress.attack !== null && checkBeat) checkAttackEnd(world, ctx, config);
+  if (catapults !== undefined && checkBeat) noteLostCatapults(world, ctx, config);
   if (ctx.tick >= launchTick(config, progress.launches)) launch(world, ctx, config, progress.launches);
   const refill = refillMen(config, ctx.tick);
   if (refill > 0) refillGuard(world, ctx, config, refill);
+  if (refill > 0 && catapults !== undefined && keepStands(world, config))
+    respawnCatapult(world, ctx, config, catapults.respawnSeconds);
+  if (config.gear !== undefined) gearTurn(world, ctx, config.gear);
 };
 
 /**

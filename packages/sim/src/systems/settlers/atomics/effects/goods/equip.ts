@@ -1,9 +1,7 @@
 import type { EquipCategory } from '@open-northland/data';
 import {
-  Equipment,
-  type EquipmentSlot,
   EquipOrder,
-  MISC_EQUIP_SLOTS,
+  ensureEquipment,
   PickupClaim,
   wornSlot,
   writeEquipSlot,
@@ -27,18 +25,6 @@ import { isUsed } from './wear.js';
 // Take-off rule: a part-used unit is destroyed when it is taken off or swapped out, a fresh one survives.
 // Source basis, the game manual p. 27: "Partly used items (potions, shoes, ...) you drop are lost. Unused
 // items such as weapons, armour and amulets can be used again."
-
-/** Give the settler an empty Equipment component on first wear; a bare settler carries none. */
-function ensureEquipment(world: World, settler: Entity): void {
-  if (world.has(settler, Equipment)) return;
-  world.add(settler, Equipment, {
-    boots: null,
-    tool: null,
-    weapon: null,
-    armor: null,
-    misc: new Array<EquipmentSlot | null>(MISC_EQUIP_SLOTS).fill(null),
-  });
-}
 
 /** Advance the settler's live equip errand to `stage` (a raced/cancelled order is simply absent). */
 function advanceOrder(world: World, settler: Entity, stage: 'stow' | 'return'): void {

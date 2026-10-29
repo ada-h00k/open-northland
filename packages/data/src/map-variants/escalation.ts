@@ -32,6 +32,21 @@ const MapEscalationRefill = z.strictObject({
   men: count,
 });
 
+/** One piece of a gear step: each soldier draws `chancePct` for it, then one of `goods` (content good
+ *  slugs) at random; the good's own equip category names the slot, a misc good the first free one. */
+const MapEscalationGearGrant = z.strictObject({
+  goods: z.array(z.string().min(1)).min(1),
+  chancePct: z.number().int().min(1).max(100).default(100),
+});
+
+/** At `atSeconds` every soldier of the gear seats gets the step's grants, and so does every soldier
+ *  they create later; `noticeKey` names the notice the app shows. */
+const MapEscalationGearStep = z.strictObject({
+  atSeconds: seconds,
+  noticeKey: z.string().min(1),
+  grants: z.array(MapEscalationGearGrant).min(1),
+});
+
 const ascending = (values: readonly number[]) => values.every((v, i) => i === 0 || (values[i - 1] ?? v) < v);
 
 /**
@@ -74,6 +89,16 @@ export const MapEscalation = z
       /** Ascending by `fromSeconds`, the first from 0. */
       refill: z.array(MapEscalationRefill).min(1),
     }),
+    /** The fortress side's gear over time: the seats whose soldiers get it, and the steps, ascending. */
+    gear: z
+      .strictObject({
+        seats: z.array(seat).min(1),
+        steps: z.array(MapEscalationGearStep).min(1),
+      })
+      .optional(),
+    /** The fortress seat's catapults standing at the first turn come back at their spot this long
+     *  after one is lost, one per guard refill beat, while the keep stands. */
+    catapults: z.strictObject({ respawnSeconds: z.number().int().positive() }).optional(),
   })
   .superRefine((value, ctx) => {
     if (!ascending(value.attacks.launches.map((row) => row.atSeconds)))
@@ -81,6 +106,8 @@ export const MapEscalation = z
     const refill = value.guard.refill.map((row) => row.fromSeconds);
     if (refill[0] !== 0 || !ascending(refill))
       ctx.addIssue({ code: 'custom', path: ['guard', 'refill'], message: 'refill beats must ascend from 0' });
+    if (value.gear !== undefined && !ascending(value.gear.steps.map((row) => row.atSeconds)))
+      ctx.addIssue({ code: 'custom', path: ['gear', 'steps'], message: 'gear steps must ascend' });
     const seats = value.attacks.targets.map((row) => row.seat);
     if (new Set(seats).size !== seats.length)
       ctx.addIssue({ code: 'custom', path: ['attacks', 'targets'], message: 'a seat is targeted twice' });

@@ -1,7 +1,7 @@
-import type { MapAiSeat, MapEscalationInput } from '@open-northland/data';
-import { MapEscalation } from '@open-northland/data';
+import type { ContentSet, MapAiSeat, MapEscalationInput } from '@open-northland/data';
+import { MapEscalation, parseContentSet } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
-import { Building, Owner, Position, Settler } from '../../../src/components/index.js';
+import { Building, Equipment, Owner, Position, Settler, Vehicle } from '../../../src/components/index.js';
 import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import {
@@ -13,9 +13,12 @@ import {
 } from '../../../src/index.js';
 import { hexDistanceBetween, nodeOfPosition } from '../../../src/nav/halfcell.js';
 import { soldierCount } from '../../../src/systems/ai-shared/seat-roster.js';
+import { damageTakenBy } from '../../../src/systems/equipment/index.js';
 import { removeSettlerSilently } from '../../../src/systems/lifecycle/death.js';
 import { CONDITION_ALWAYS } from '../../../src/systems/map-ai/index.js';
+import { removeVehicle } from '../../../src/systems/vehicles/remove.js';
 import { aiContent } from '../../fixtures/ai-content.js';
+import { ctxOf } from '../../fixtures/context.js';
 import { grassNodeMap } from '../../fixtures/terrain.js';
 
 /**
@@ -100,10 +103,13 @@ const SCRIPT: MapAiSeat[] = [
   ]),
 ];
 
-function setup(config: MapEscalationInput = ESCALATION): { sim: Simulation; garrison: Entity[] } {
+function setup(
+  config: MapEscalationInput = ESCALATION,
+  content: ContentSet = aiContent(),
+): { sim: Simulation; garrison: Entity[] } {
   const sim = new Simulation({
     seed: 3,
-    content: aiContent(),
+    content,
     map: grassNodeMap(MAP, MAP),
     mapAiScript: SCRIPT,
     mapEscalation: MapEscalation.parse(config),
@@ -260,3 +266,156 @@ describe('map escalation - a save', () => {
     expect(() => restoreSimulation(save, inputs)).toThrow(/mapEscalationFingerprint/);
   });
 });
+
+const WOOL = 60;
+const LEATHER = 61;
+const SHOES = 62;
+const DEFENSE_AMULET = 63;
+const CATAPULT = 5;
+const LIGHT_ARMOR_SECONDS = 20;
+const AMULET_SECONDS = 30;
+const CATAPULT_RESPAWN_SECONDS = 10;
+const CATAPULT_SPOT = { x: 52, y: 80 };
+
+/** {@link aiContent} with two armors, shoes, the defense amulet and a catapult the soldiers crew. */
+function gearContent(): ContentSet {
+  const base = aiContent();
+  return parseContentSet({
+    ...base,
+    goods: [
+      ...base.goods,
+      { typeId: WOOL, id: 'armor_wool', weight: 0, equip: { category: 'armor' } },
+      { typeId: LEATHER, id: 'armor_leather', weight: 0, equip: { category: 'armor' } },
+      { typeId: SHOES, id: 'shoes', weight: 0, equip: { category: 'boots', wears: true, uses: 10000 } },
+      {
+        typeId: DEFENSE_AMULET,
+        id: 'amulet_defense',
+        weight: 0,
+        equip: { category: 'misc', damageTakenPct: 50 },
+      },
+    ],
+    vehicles: [
+      {
+        typeId: CATAPULT,
+        id: 'catapult',
+        jobId: 54,
+        stockSlots: 0,
+        logicSize: 1,
+        passengerJobs: [SPEARMAN, BOWMAN],
+        commanderJob: SPEARMAN,
+        hitpoints: 3000,
+      },
+    ],
+  });
+}
+
+const GEARED: MapEscalationInput = {
+  ...ESCALATION,
+  gear: {
+    seats: [FORTRESS, RAIDER],
+    steps: [
+      {
+        atSeconds: LIGHT_ARMOR_SECONDS,
+        noticeKey: 'light',
+        grants: [{ goods: ['armor_wool', 'armor_leather'] }, { goods: ['shoes'] }],
+      },
+      { atSeconds: AMULET_SECONDS, noticeKey: 'amulets', grants: [{ goods: ['amulet_defense'] }] },
+    ],
+  },
+  catapults: { respawnSeconds: CATAPULT_RESPAWN_SECONDS },
+};
+
+function gearOf(sim: Simulation, e: Entity) {
+  const eq = sim.world.tryGet(e, Equipment);
+  return {
+    armor: eq?.armor?.goodType ?? null,
+    boots: eq?.boots?.goodType ?? null,
+    misc: (eq?.misc ?? []).flatMap((slot) => (slot === null ? [] : [slot.goodType])),
+  };
+}
+
+function gearSteps(sim: Simulation, seconds: number): string[] {
+  const seen: string[] = [];
+  while (sim.tick < seconds * TICKS_PER_SECOND) {
+    sim.step();
+    for (const ev of sim.events.current())
+      if (ev.kind === 'mapEscalationGearStep') seen.push(`${ev.step} ${ev.noticeKey}`);
+  }
+  return seen;
+}
+
+describe('map escalation - gear', () => {
+  it('gears every soldier of the gear seats at each step, and each one they gain later with every step passed', () => {
+    const { sim, garrison } = setup(GEARED, gearContent());
+    expect(gearSteps(sim, LIGHT_ARMOR_SECONDS + 1)).toEqual(['1 light']);
+    const band = ownedFighters(sim, RAIDER);
+    expect(band.length).toBeGreaterThan(0);
+    for (const e of [...garrison, ...band]) {
+      expect(gearOf(sim, e)).toMatchObject({ boots: SHOES, misc: [] });
+      expect([WOOL, LEATHER]).toContain(gearOf(sim, e).armor);
+    }
+
+    expect(gearSteps(sim, AMULET_SECONDS + 1)).toEqual(['2 amulets']);
+    for (const e of garrison) expect(gearOf(sim, e).misc).toEqual([DEFENSE_AMULET]);
+    // The cap grew at 30 s, so the next refill beat brings a newcomer.
+    runToSecond(sim, AMULET_SECONDS + REFILL_EVERY_SECONDS + 1);
+    const newcomers = ownedFighters(sim, FORTRESS).filter((e) => !garrison.includes(e));
+    expect(newcomers.length).toBeGreaterThan(0);
+    for (const e of newcomers) {
+      expect(gearOf(sim, e)).toMatchObject({ boots: SHOES, misc: [DEFENSE_AMULET] });
+      expect(damageTakenBy(sim.world, ctxOf(sim), e, 10)).toBe(5);
+    }
+  });
+});
+
+describe('map escalation - catapults', () => {
+  it('raises a lost fortress catapult at its spot once its wait ran out, on a refill beat', () => {
+    const { sim } = setupWithCatapult();
+    const fortressCatapults = () =>
+      [...sim.world.query(Vehicle, Owner)].filter((e) => sim.world.get(e, Owner).player === FORTRESS);
+    const [first] = fortressCatapults();
+    if (first === undefined) throw new Error('no catapult placed');
+    removeVehicle(sim.world, ctxOf(sim), first, 'destroyed');
+    // Seen lost at the next second; the first beat a full wait after that raises it.
+    const seen = Math.ceil(sim.tick / TICKS_PER_SECOND);
+    const beat = Math.ceil((seen + CATAPULT_RESPAWN_SECONDS) / REFILL_EVERY_SECONDS) * REFILL_EVERY_SECONDS;
+    sim.run(beat * TICKS_PER_SECOND - 1 - sim.tick);
+    expect(fortressCatapults()).toEqual([]);
+    sim.step();
+    const raised = fortressCatapults();
+    expect(raised).toHaveLength(1);
+    const at = sim.world.get(raised[0] as Entity, Vehicle).guard;
+    expect(at).toEqual({ hx: CATAPULT_SPOT.x, hy: CATAPULT_SPOT.y });
+    expect(sim.checkInvariants()).toEqual([]);
+  });
+});
+
+function setupWithCatapult(): { sim: Simulation } {
+  const content = gearContent();
+  const sim = new Simulation({
+    seed: 3,
+    content,
+    map: grassNodeMap(MAP, MAP),
+    mapAiScript: SCRIPT,
+    mapEscalation: MapEscalation.parse(GEARED),
+  });
+  sim.enqueueSetup({ kind: 'setAiControl', player: FORTRESS, enabled: true, modules: { military: false } });
+  sim.enqueueSetup({
+    kind: 'placeBuilding',
+    buildingType: HQ_TYPE,
+    ...KEEP,
+    tribe: VIKING,
+    owner: FORTRESS,
+    force: true,
+    underConstruction: false,
+  });
+  sim.enqueueSetup({
+    kind: 'createVehicle',
+    vehicleType: CATAPULT,
+    ...CATAPULT_SPOT,
+    tribe: VIKING,
+    owner: FORTRESS,
+  });
+  sim.step();
+  return { sim };
+}

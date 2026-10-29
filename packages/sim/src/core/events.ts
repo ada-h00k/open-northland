@@ -603,6 +603,13 @@ export type SimEvent =
       readonly kind: 'mapEscalationAttackEnded';
       readonly wave: number;
       readonly cause: 'defeated' | 'expired';
+    }
+  | {
+      /** A gear step fell due for the fortress side; `noticeKey` names the notice the app shows. */
+      readonly kind: 'mapEscalationGearStep';
+      /** The step's number, from 1. */
+      readonly step: number;
+      readonly noticeKey: string;
     };
 
 /** A pass's pending map change: into a campaign's sub map, or back to the parent from mission `mission`. */

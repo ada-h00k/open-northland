@@ -42,6 +42,16 @@ const INNER_POST_RANGE = 12;
 /** The condition reference that always holds (`[AIData]`). */
 const ALWAYS = 100000;
 
+/** The fortress side's gear, by content good slug: the light and heavy armor pairs, the four combat
+ *  amulets and the large healing draught, with the share of soldiers that draws each misc piece. */
+const LIGHT_ARMOR = ['armor_wool', 'armor_leather'];
+const HEAVY_ARMOR = ['armor_chain', 'armor_plate'];
+const COMBAT_AMULETS = ['amulet_strength', 'amulet_defense', 'amulet_speed', 'amulet_crithit'];
+const AMULET_CHANCE_PCT = 35;
+const HEAL_DRAUGHT_CHANCE_PCT = 30;
+/** How long a lost fortress catapult stays gone. */
+const CATAPULT_RESPAWN_MINUTES = 10;
+
 const MINUTE = 60;
 const HALF_HOUR = 30 * MINUTE;
 const HOUR = 60 * MINUTE;
@@ -187,5 +197,27 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         { fromSeconds: HOUR, everySeconds: 40, men: 4 },
       ],
     },
+    gear: {
+      seats: [FORTRESS_SEAT, ...RAIDER_SEATS],
+      steps: [
+        {
+          atSeconds: HOUR,
+          noticeKey: 'ragnarok.gear.lightArmor',
+          grants: [{ goods: LIGHT_ARMOR }, { goods: ['shoes'] }],
+        },
+        { atSeconds: 2 * HOUR, noticeKey: 'ragnarok.gear.heavyArmor', grants: [{ goods: HEAVY_ARMOR }] },
+        {
+          atSeconds: 150 * MINUTE,
+          noticeKey: 'ragnarok.gear.amulets',
+          grants: [{ goods: COMBAT_AMULETS, chancePct: AMULET_CHANCE_PCT }],
+        },
+        {
+          atSeconds: 3 * HOUR,
+          noticeKey: 'ragnarok.gear.healDraughts',
+          grants: [{ goods: ['potion_heal_big'], chancePct: HEAL_DRAUGHT_CHANCE_PCT }],
+        },
+      ],
+    },
+    catapults: { respawnSeconds: CATAPULT_RESPAWN_MINUTES * MINUTE },
   },
 };

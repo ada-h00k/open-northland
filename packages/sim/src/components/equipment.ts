@@ -62,6 +62,18 @@ export function wornSlot(world: World, e: Entity, group: EquipCategory, slot: nu
   return { goodType: held.goodType, degreeOfUse: walked };
 }
 
+/** Give `e` an empty Equipment component on first wear; a bare settler carries none. */
+export function ensureEquipment(world: World, e: Entity): void {
+  if (world.has(e, Equipment)) return;
+  world.add(e, Equipment, {
+    boots: null,
+    tool: null,
+    weapon: null,
+    armor: null,
+    misc: new Array<EquipmentSlot | null>(MISC_EQUIP_SLOTS).fill(null),
+  });
+}
+
 /** Write one addressed slot of `e`'s equipment (the misc array is replaced, never mutated in place).
  *  Writing the boots slot replaces the wear a walk under way carried for the old pair. */
 export function writeEquipSlot(

@@ -107,6 +107,7 @@ describe.runIf(hasRealIr())('a Ragnarök world on specjalna_forteca', () => {
 
 describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
   const FORTRESS = 6;
+  const HUMAN_SEAT = 0;
   const COMPUTER_SEATS = [1, 2, 3];
   /** Left idle: its people stand, so it is attacked like any played seat. */
   const IDLE_SEAT = 4;
@@ -128,18 +129,22 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     return escalation;
   }
 
-  async function earlyAttackWorld(): Promise<Simulation> {
+  /** The escalation with its first launch at {@link EARLY_LAUNCH_SECONDS}. */
+  function earlyAttack(): MapEscalation {
+    const real = ragnarok();
+    const [first, ...later] = real.attacks.launches;
+    if (first === undefined) throw new Error('no first launch');
+    return {
+      ...real,
+      attacks: { ...real.attacks, launches: [{ ...first, atSeconds: EARLY_LAUNCH_SECONDS }, ...later] },
+    };
+  }
+
+  async function earlyAttackWorld(escalation: MapEscalation = earlyAttack()): Promise<Simulation> {
     const ir = rawIrUnderTest() as ContentIr;
     const { merge } = await loadContentUnderTest();
     const map = TerrainMapFile.parse(JSON.parse(readFileSync(realMapPath(MAP_ID), 'utf8')));
     const { ragnarok: script } = scripts();
-    const real = ragnarok();
-    const [first, ...later] = real.attacks.launches;
-    if (first === undefined) throw new Error('no first launch');
-    const escalation = {
-      ...real,
-      attacks: { ...real.attacks, launches: [{ ...first, atSeconds: EARLY_LAUNCH_SECONDS }, ...later] },
-    };
     return buildMapWorld({
       seed: 7,
       map,
@@ -208,6 +213,75 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     const standing = garrison.filter((e) => sim.world.has(e, components.Position));
     for (const e of garrison) expect(sim.world.tryGet(e, components.Owner)?.player).toBe(FORTRESS);
     expect(meanDistance(sim, standing, keep)).toBeLessThan(GARRISON_REACH);
+  }, 300_000);
+
+  it('gears the fortress side’s soldiers, existing and new, and raises a lost catapult again', async () => {
+    const early = earlyAttack();
+    const gear = early.gear;
+    const respawn = early.catapults;
+    if (gear === undefined || respawn === undefined) throw new Error('Ragnarök ships no gear or catapults');
+    /** Every gear step one second apart from the second second on, all passed before the first launch. */
+    const FIRST_STEP_SECONDS = 2;
+    const CATAPULT_RESPAWN_SECONDS = 30;
+    const escalation: MapEscalation = {
+      ...early,
+      gear: { ...gear, steps: gear.steps.map((step, i) => ({ ...step, atSeconds: FIRST_STEP_SECONDS + i })) },
+      catapults: { respawnSeconds: CATAPULT_RESPAWN_SECONDS },
+    };
+    const sim = await earlyAttackWorld(escalation);
+    const goods = new Map(sim.content.goods.map((good) => [good.id, good]));
+    const typeOf = (slug: string): number => goods.get(slug)?.typeId ?? -1;
+    const heavyArmor = (gear.steps[1]?.grants[0]?.goods ?? []).map(typeOf);
+    const amulets = (gear.steps[2]?.grants[0]?.goods ?? []).map(typeOf);
+    const healDraught = typeOf('potion_heal_big');
+    // The goods carry the effects the combat reads: armor tiers, the amulets' effects and a heal.
+    for (const step of gear.steps)
+      for (const grant of step.grants)
+        for (const slug of grant.goods) expect(goods.get(slug)?.equip, slug).toBeDefined();
+    expect(goods.get('potion_heal_big')?.equip?.restorePct?.healthMax).toBeGreaterThan(0);
+    expect(goods.get('amulet_defense')?.equip?.damageTakenPct).toBeDefined();
+
+    const fortressCatapults = () =>
+      [...sim.world.query(components.Vehicle, components.Owner)].filter(
+        (e) => sim.world.get(e, components.Owner).player === FORTRESS,
+      );
+    const catapults = fortressCatapults();
+    expect(catapults.length).toBeGreaterThan(0);
+
+    sim.run((FIRST_STEP_SECONDS + gear.steps.length) * TICKS_PER_SECOND - sim.tick);
+    const garrison = owned(sim, FORTRESS).filter((e) => sim.world.has(e, components.Equipment));
+    expect(garrison.length).toBeGreaterThan(gear.steps.length);
+    const misc = (e: Entity) =>
+      (sim.world.get(e, components.Equipment).misc ?? []).flatMap((slot) =>
+        slot === null ? [] : [slot.goodType],
+      );
+    for (const e of garrison) {
+      const eq = sim.world.get(e, components.Equipment);
+      expect(heavyArmor).toContain(eq.armor?.goodType);
+      expect(eq.boots?.goodType).toBe(typeOf('shoes'));
+      expect(eq.weapon).not.toBeNull();
+    }
+    expect(garrison.some((e) => misc(e).some((good) => amulets.includes(good)))).toBe(true);
+    expect(garrison.some((e) => misc(e).includes(healDraught))).toBe(true);
+
+    const [lost] = catapults;
+    if (lost === undefined) throw new Error('no catapult');
+    const spot = sim.world.get(lost, components.Vehicle).guard;
+    sim.world.mut(lost, components.Health).hitpoints = 0;
+    sim.run((EARLY_LAUNCH_SECONDS + 1) * TICKS_PER_SECOND - sim.tick);
+    const humanRaider = escalation.attacks.targets.find((target) => target.seat === HUMAN_SEAT)?.raider;
+    const band = humanRaider === undefined ? [] : owned(sim, humanRaider);
+    expect(band.length).toBeGreaterThan(0);
+    for (const e of band)
+      expect(heavyArmor).toContain(sim.world.tryGet(e, components.Equipment)?.armor?.goodType);
+    expect(fortressCatapults()).toHaveLength(catapults.length - 1);
+
+    // Seen lost within a second; the first refill beat a full wait after that raises it.
+    const firstBeat = (escalation.guard.refill[0]?.everySeconds ?? 0) * TICKS_PER_SECOND;
+    sim.run(firstBeat + TICKS_PER_SECOND - sim.tick);
+    const back = fortressCatapults().filter((e) => !catapults.includes(e));
+    expect(back).toHaveLength(1);
+    expect(sim.world.get(back[0] as Entity, components.Vehicle).guard).toEqual(spot);
   }, 300_000);
 
   it('schedules the owner’s waves: the first at 0:40, landings on the odd ones from the third', () => {

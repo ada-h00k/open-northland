@@ -142,15 +142,17 @@ describe('applyMapVariantSlots', () => {
 });
 
 describe('MapEscalation', () => {
-  it('refuses a schedule out of order or a seat targeted twice', () => {
+  it('refuses a schedule or gear steps out of order, or a seat targeted twice', () => {
     const variant = MAP_VARIANTS.find((row) => row.escalation !== undefined);
     if (variant?.escalation === undefined) throw new Error('no committed escalation to vary');
-    const { attacks, guard } = variant.escalation;
+    const { attacks, guard, gear } = variant.escalation;
+    if (gear === undefined) throw new Error('no committed gear to vary');
     const target = attacks.targets[0];
     for (const bad of [
       { attacks: { ...attacks, launches: [...attacks.launches].reverse() } },
       { attacks: { ...attacks, targets: [target, target] } },
       { guard: { ...guard, refill: guard.refill.slice(1) } },
+      { gear: { ...gear, steps: [...gear.steps].reverse() } },
     ]) {
       expect(MapEscalation.safeParse({ ...variant.escalation, ...bad }).success).toBe(false);
     }
