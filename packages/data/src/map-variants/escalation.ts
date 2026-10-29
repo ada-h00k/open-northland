@@ -134,6 +134,17 @@ export const MapEscalation = z
     /** The fortress seat's catapults standing at the first turn come back at their spot this long
      *  after one is lost, one per guard refill beat, while the keep stands. */
     catapults: z.strictObject({ respawnSeconds: z.number().int().positive() }).optional(),
+    /** The fortress seat's builders kept at `count`, the missing ones made at the keep on each guard
+     *  refill beat while the fortress holds; the seat's map-AI town pass sends them to its sites. */
+    builders: z.strictObject({ count }).optional(),
+    /** The fortress seat's porters: up to `count` carriers posted at its storehouse nearest the keep,
+     *  each pulling a `vehicle` hauling cart (a content vehicle slug) and holding a flag at (`x`, `y`)
+     *  whose area reaches `radius` half-cell nodes (Manhattan, as any flag's work area), so they carry
+     *  the goods lying there into the store. Made at the keep, cart and post included, on each guard
+     *  refill beat while the fortress holds; a porter whose cart is gone gets a new one. */
+    porters: z
+      .strictObject({ count, vehicle: z.string().min(1), x: mapPoint, y: mapPoint, radius: count })
+      .optional(),
     /** At match start every soldier of a seat the computer player runs becomes a civilian, so the
      *  seat builds up with them; human, idle and map-scripted seats keep theirs. */
     demobilizeComputerSeats: z.boolean().default(false),

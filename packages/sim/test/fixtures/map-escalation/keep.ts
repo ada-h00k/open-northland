@@ -94,11 +94,12 @@ export const SCRIPT: MapAiSeat[] = [
   ]),
 ];
 
-/** The keep world after its setup tick. `inMatch` makes the player and fortress match participants. */
+/** The keep world after its setup tick. `inMatch` makes the player and fortress match participants;
+ *  `scriptedFortress` leaves the fortress seat to its map AI alone, as a map's scripted seat is. */
 export function keepWorld(
   config: MapEscalationInput = ESCALATION,
   content: ContentSet = aiContent(),
-  options: { readonly inMatch?: boolean } = {},
+  options: { readonly inMatch?: boolean; readonly scriptedFortress?: boolean } = {},
 ): { sim: Simulation; garrison: Entity[] } {
   const sim = new Simulation({
     seed: 3,
@@ -111,7 +112,8 @@ export function keepWorld(
     sim.enqueueSetup({ kind: 'setMatchParticipants', players: [PLAYER, FORTRESS] });
   const fortressSide = [FORTRESS, RAIDER, IDLE_RAIDER];
   for (const player of fortressSide) {
-    sim.enqueueSetup({ kind: 'setAiControl', player, enabled: true, modules: { military: false } });
+    const enabled = !(options.scriptedFortress === true && player === FORTRESS);
+    sim.enqueueSetup({ kind: 'setAiControl', player, enabled, modules: { military: false } });
     for (const ally of fortressSide) {
       if (ally !== player)
         sim.enqueueSetup({ kind: 'setDiplomacy', from: player, to: ally, state: 'friend' });

@@ -99,7 +99,7 @@ export function orderAttachToVehicle(
  * for the walk, since the walk order would set down a route unit it carries. The caller has passed
  * {@link canTakeHaulingCart}.
  */
-function orderHaulingCart(world: World, ctx: SystemContext, settler: Entity, vehicle: Entity): void {
+export function orderHaulingCart(world: World, ctx: SystemContext, settler: Entity, vehicle: Entity): void {
   if (world.tryGet(settler, HaulingCart)?.vehicle === vehicle) return;
   releaseHaulingCart(world, ctx, settler);
   world.add(settler, HaulingCart, { vehicle, taken: false, parked: false, lift: null });

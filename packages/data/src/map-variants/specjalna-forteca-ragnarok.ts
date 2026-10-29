@@ -99,6 +99,11 @@ const RAIDS = [
   },
 ];
 const RAIDER_SEATS = RAIDS.map((raid) => raid.raider);
+const FORTRESS_BUILDERS = 8;
+const FORTRESS_PORTERS = 3;
+/** The porters' flag area around the keep, in Manhattan half-cell nodes: the farthest palisade lies 68
+ *  away, and the rest reaches the heaps a fight leaves just outside the gates. */
+const PORTER_RADIUS = 76;
 const RAID_RANGE = 120;
 const RAID_PRIORITY = 100;
 const RAID_STANCE = 1;
@@ -312,6 +317,8 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
       revealNodes: SHIP_REVEAL_NODES,
     },
     catapults: { respawnSeconds: CATAPULT_RESPAWN_MINUTES * MINUTE },
+    builders: { count: FORTRESS_BUILDERS },
+    porters: { count: FORTRESS_PORTERS, vehicle: 'handcart', x: KEEP.x, y: KEEP.y, radius: PORTER_RADIUS },
     // Owner ruling: a computer seat starts building up with every man it has.
     demobilizeComputerSeats: true,
   },

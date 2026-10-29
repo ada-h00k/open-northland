@@ -269,9 +269,13 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     expect(goods.get('potion_heal_big')?.equip?.restorePct?.healthMax).toBeGreaterThan(0);
     expect(goods.get('amulet_defense')?.equip?.damageTakenPct).toBeDefined();
 
+    // The porters' hauling carts are the fortress's vehicles too.
+    const catapultType = sim.content.vehicles.find((v) => v.id === 'catapult')?.typeId;
     const fortressCatapults = () =>
       [...sim.world.query(components.Vehicle, components.Owner)].filter(
-        (e) => sim.world.get(e, components.Owner).player === FORTRESS,
+        (e) =>
+          sim.world.get(e, components.Owner).player === FORTRESS &&
+          sim.world.get(e, components.Vehicle).vehicleType === catapultType,
       );
     const catapults = fortressCatapults();
     expect(catapults.length).toBeGreaterThan(0);
@@ -399,6 +403,77 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
       expect(soldiers(demobilized, seat), `seat ${seat}`).toBe(0);
       expect(owned(demobilized, seat), `seat ${seat}`).toHaveLength(owned(armed, seat).length);
     }
+  }, 300_000);
+
+  it('keeps the fortress’s builders and porters: a razed palisade goes up again, a pile at a gate is carted in', async () => {
+    const escalation = ragnarok();
+    const { builders, porters, keep } = escalation;
+    if (builders === undefined || porters === undefined) throw new Error('Ragnarök keeps no fortress crew');
+    const sim = await earlyAttackWorld(escalation);
+    const w = sim.world;
+    const jobOf = (slug: string) => sim.content.jobs.find((job) => job.id === slug)?.typeId ?? -1;
+    const crew = (slug: string) =>
+      owned(sim, FORTRESS).filter((e) => w.get(e, components.Settler).jobType === jobOf(slug));
+    const store = [...w.query(components.Building, components.Owner)].find(
+      (e) =>
+        w.get(e, components.Owner).player === FORTRESS &&
+        sim.content.buildings.find((b) => b.typeId === w.get(e, components.Building).buildingType)?.kind ===
+          'storage',
+    );
+    if (store === undefined) throw new Error('the fortress has no store');
+    /** The first refill beat makes the crew; the first launch lies half an hour out. */
+    const CREWED_SECONDS = escalation.guard.refill.everySeconds + 1;
+    /** Beside the north gate, 47 map points from the keep. */
+    const GATE_PILE = { x: 252, y: 196 };
+    /** The outermost palisade stands 56 map points from the keep. */
+    const FORTRESS_REACH = 60;
+    const HAUL_SECONDS = 360;
+
+    sim.run(CREWED_SECONDS * TICKS_PER_SECOND - sim.tick);
+    expect(crew('builder')).toHaveLength(builders.count);
+    const carriers = crew('carrier').filter(
+      (e) => w.tryGet(e, components.JobAssignment)?.workplace === store,
+    );
+    expect(carriers).toHaveLength(porters.count);
+    for (const e of carriers) expect(w.has(e, components.HaulingCart)).toBe(true);
+
+    const nodeOf = (e: Entity) => {
+      const at = w.get(e, components.Position);
+      return nodeOfPosition(at.x, at.y);
+    };
+    const walls = [...w.query(components.Palisade, components.Owner)].filter(
+      (e) => w.get(e, components.Owner).player === FORTRESS,
+    );
+    const fromKeep = (e: Entity) => hexDistanceBetween(nodeOf(e).hx, nodeOf(e).hy, keep.x, keep.y);
+    const [razed] = walls.sort((a, b) => fromKeep(a) - fromKeep(b) || a - b);
+    if (razed === undefined) throw new Error('the fortress has no palisade');
+    const spot = nodeOf(razed);
+    w.mut(razed, components.Health).hitpoints = 0;
+    const sword = sim.content.goods.find((good) => good.id === 'sword_long')?.typeId ?? -1;
+    const stocked = () => w.get(store, components.Stockpile).amounts.get(sword) ?? 0;
+    const before = stocked();
+    const pile = systems.createGroundGoods(w, { goodType: sword, amount: 4, ...GATE_PILE });
+    const rebuilt = () =>
+      [...w.query(components.Palisade, components.Position)].some((e) => {
+        const at = nodeOf(e);
+        return at.hx === spot.hx && at.hy === spot.hy && !w.has(e, components.UnderConstruction);
+      });
+    let most = before;
+    let reach = 0;
+    let raisedAt: number | null = null;
+    const end = (CREWED_SECONDS + HAUL_SECONDS) * TICKS_PER_SECOND;
+    while (sim.tick < end && (raisedAt === null || w.isAlive(pile) || most === before)) {
+      sim.step();
+      most = Math.max(most, stocked());
+      if (raisedAt === null && sim.tick % TICKS_PER_SECOND === 0 && rebuilt()) raisedAt = sim.tick;
+      for (const e of [...crew('builder'), ...carriers])
+        if (w.has(e, components.Position)) reach = Math.max(reach, fromKeep(e));
+    }
+    // Without the crew the seat's four civilians stand at its posts and the site is never built.
+    expect(raisedAt).not.toBeNull();
+    expect(w.isAlive(pile)).toBe(false);
+    expect(most).toBeGreaterThan(before);
+    expect(reach).toBeLessThan(FORTRESS_REACH);
   }, 300_000);
 
   it('schedules the owner’s waves: the first at 0:30, ships from the fourth, three a wave from the seventh', () => {

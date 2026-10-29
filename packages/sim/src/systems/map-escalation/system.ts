@@ -14,6 +14,7 @@ import { isBuilt, ownedBuildings, ownedSettlers, soldierCount } from '../ai-shar
 import type { System, SystemContext } from '../context.js';
 import { spawnSettler } from '../spawn/index.js';
 import { noteLostCatapults, rememberCatapults, respawnCatapult } from './catapults.js';
+import { keepBuilders, keepPorters } from './crew.js';
 import { demobilizeTurn } from './demobilize.js';
 import { focusTurn } from './focus.js';
 import { gearTurn } from './gear.js';
@@ -36,9 +37,10 @@ const END_CHECK_TICKS = TICKS_PER_SECOND;
  * A map's escalating siege (`ctx.mapEscalation`): on each scheduled launch the fortress spawns a fresh
  * band at its keep for every occupied target seat, owned by the raider seat that targets it, and the
  * raider's own `[AIData]` Attack task marches it; the garrison is never drawn in. On each refill beat
- * it tops its own soldiers up toward a cap that grows with game time and the occupied seats, and raises
- * one lost catapult whose wait ran out. Nothing spawns while no finished keep stands, and the guard and
- * catapults stop for good once the match counts the fortress seat out. The fortress side's
+ * it tops its own soldiers up toward a cap that grows with game time and the occupied seats, raises
+ * one lost catapult whose wait ran out and makes its missing builders and porters (`crew.ts`). Nothing
+ * spawns while no finished keep stands, and the guard, catapults and crew stop for good once the match
+ * counts the fortress seat out. The fortress side's
  * soldiers get the gear steps as they fall due. A wave with ships also sends them against each seat
  * (`landings.ts`), and a seat whose headquarters fell is attacked where its aim moved (`focus.ts`).
  * A variant may turn the computer seats' soldiers into civilians at the start (`demobilize.ts`).
@@ -60,8 +62,11 @@ export const mapEscalationSystem: System = (world, ctx) => {
   if (ctx.tick >= launchTick(config, progress.launches)) launch(world, ctx, config, progress.launches);
   const refill = refillMen(config, ctx.tick);
   if (refill > 0) refillGuard(world, ctx, config, refill);
-  if (refill > 0 && catapults !== undefined && fortressHolds(world, config))
-    respawnCatapult(world, ctx, config, catapults.respawnSeconds);
+  if (refill > 0 && fortressHolds(world, config)) {
+    if (catapults !== undefined) respawnCatapult(world, ctx, config, catapults.respawnSeconds);
+    if (config.builders !== undefined) keepBuilders(world, ctx, config, config.builders);
+    if (config.porters !== undefined) keepPorters(world, ctx, config, config.porters);
+  }
   if (config.gear !== undefined) gearTurn(world, ctx, config.gear);
 };
 

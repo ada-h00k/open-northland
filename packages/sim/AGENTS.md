@@ -123,7 +123,7 @@ The hygiene suite enforces the import and nondeterminism boundary. Normal change
 | `spawn`, `livestock`, `wildlife`, `chests` | entity creation; farm animals; wild animals; chests |
 | `missions`, `match` | map scripts and goals; match goals, standing and teardown |
 | `computer-player`, `map-ai`, `ai-shared` | see AI ownership below |
-| `map-escalation` | a map variant's siege schedule: attacks spawned at a keep, sea landings, an attack's aim past a fallen headquarters, the growing guard, gear steps, lost catapults raised again, computer seats' soldiers retrained at the start |
+| `map-escalation` | a map variant's siege schedule: attacks spawned at a keep, sea landings, an attack's aim past a fallen headquarters, the growing guard, gear steps, lost catapults raised again, the fortress's builders and carting porters kept up, computer seats' soldiers retrained at the start |
 | `readviews` | content read views shared across systems |
 
 `test/` mirrors `src/`: system tests live in `test/systems/<system>/` and its subfolders (a
@@ -145,5 +145,6 @@ must remain distinct in names, state, tests and debug output. `systems/map-escal
 ships: an attack's men belong to a raider seat whose map-AI tasks order them while the target's
 headquarters stands; past it the escalation gives those men alone their attack orders, as that seat's
 map-AI orders. The guard it refills and the catapults it raises again are posted and crewed by the
-fortress seat's own program. Its one touch of a computer seat is the start's optional retraining of
+fortress seat's own program, and the builders and porters it keeps work through that seat's map-AI
+town pass and the settlers' planner. Its one touch of a computer seat is the start's optional retraining of
 that seat's soldiers as civilians; from then on the computer player employs them.
