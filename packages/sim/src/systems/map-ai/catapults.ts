@@ -18,6 +18,10 @@ import { crewInside } from '../vehicles/movement.js';
 // The seat's catapults, as the scripted handler keeps its vehicles (`docs/formats/MISSIONS.md`, AI data):
 // a listed man crews each one without a commander, and a crewed one guards its own spot.
 
+/** The stance a crewed catapult guards its spot in: it fires only at what its band reaches from there and
+ *  never drives after a target (original behavior: a vehicle joining the handler's list gets it). */
+const GUARD_STANCE = 'hold';
+
 /** How far, in map points, from a commanderless catapult the handler looks for a man to crew it.
  *  Original behavior. */
 export const CREW_REACH_POINTS = 20;
@@ -35,8 +39,8 @@ export interface CatapultDecision {
 /**
  * One turn for the seat's catapults: each one without a commander takes the nearest listed man within
  * {@link CREW_REACH_POINTS} who may crew it, the lowest id on a tie, and that man leaves `soldiers`. A
- * commanded catapult holds the defence stance, whose scan answers an enemy around its guard spot, and
- * one left idle off that spot after a fight drives back to it.
+ * commanded catapult takes the hold stance at its guard spot, so its scan answers only an enemy its band
+ * reaches from there, and one left idle off that spot drives back to it.
  */
 export function catapultOrders(
   world: World,
@@ -56,8 +60,8 @@ export function catapultOrders(
       drafted.add(driver);
       commands.push({ kind: 'attachToVehicle', entity: driver, vehicle });
     }
-    if (state.stance !== 'defence') {
-      commands.push({ kind: 'setVehicleStance', vehicle, stance: 'defence' });
+    if (state.stance !== GUARD_STANCE) {
+      commands.push({ kind: 'setVehicleStance', vehicle, stance: GUARD_STANCE });
       continue;
     }
     if (

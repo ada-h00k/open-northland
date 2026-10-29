@@ -704,10 +704,10 @@ enemy catapult, else soldier or hero, else defended house (a reading); a vehicle
 gets the hold stance. Of the 537 catapults the decoded maps place, 516 have a soldier or hero of
 their seat within 20 points, most within five. This build crews every catapult of the seat, with no
 cap on how many, and only while the computer player's military module, which crews and parks its
-own, is off. A crewed catapult takes the defence stance at its spot instead of the turn's search:
-its own scan answers an enemy out to 40 map points around the spot and gives the chase up past 60,
-and once idle more than 4 points off the spot it drives back (project rule; the original's search
-from wherever the catapult stands lets it drift after its targets).
+own, is off. A crewed catapult keeps the hold stance at its spot instead of the turn's search: it
+fires only at an enemy its band (8 to 24 map points for the catapult) reaches from the spot, never
+drives after one, and once idle more than 4 points off the spot it drives back (project rule; the
+original's search from wherever the catapult stands lets it drift after its targets).
 
 Every radius below is a hex distance between map points, the radius itself included.
 
