@@ -235,7 +235,7 @@ describe.runIf(hasRealIr())('the fortress map’s authored AI seats', () => {
       const state = sim.world.get(e, components.Vehicle);
       expect(components.vehicleCommander(state), `catapult ${e}`).not.toBeNull();
       expect(components.vehiclePassengers(state).every((seat) => seat.inside)).toBe(true);
-      expect(state.stance).toBe('defence');
+      expect(state.stance).toBe('hold');
     }
     const first = catapults[0];
     if (first === undefined) throw new Error('no catapult');
