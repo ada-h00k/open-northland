@@ -3,6 +3,7 @@ import {
   AttackOrder,
   Building,
   Engagement,
+  isPlayerDead,
   type MapEscalationFocusRecord,
   mapEscalationProgress,
   Owner,
@@ -28,16 +29,18 @@ type Focus = Pick<MapEscalationFocusRecord, 'kind' | 'entity'>;
 
 /**
  * Re-aim every seat whose aim fell and order the attack's men of every seat aimed past its headquarters
- * onto the aim. `men` are the running attack's living men. A man already fighting is left to it.
+ * onto the aim. `men` are the running attack's living men. A man already fighting is left to it. Returns
+ * the seats with men ashore and nothing left to aim at: counted out, or without a building or a person.
  */
 export function focusTurn(
   world: World,
   ctx: SystemContext,
   config: MapEscalation,
   men: readonly Entity[],
-): void {
+): ReadonlySet<number> {
+  const spent = new Set<number>();
   const bySeat = menByTarget(world, config, men);
-  if (bySeat.size === 0) return;
+  if (bySeat.size === 0) return spent;
   const held = mapEscalationProgress(world).focus;
   const next: MapEscalationFocusRecord[] = [];
   let changed = false;
@@ -48,17 +51,23 @@ export function focusTurn(
       if (own !== undefined) next.push({ ...own });
       continue;
     }
-    const aim =
-      own !== undefined && stands(world, target.seat, own) ? own : pickFocus(world, ctx, target, own, band);
+    let aim: DeepReadonly<Focus> | null = null;
+    if (!isPlayerDead(world, target.seat))
+      aim =
+        own !== undefined && stands(world, target.seat, own) ? own : pickFocus(world, ctx, target, own, band);
     if (aim !== (own ?? null)) changed = true;
-    if (aim === null) continue;
+    if (aim === null) {
+      spent.add(target.seat);
+      continue;
+    }
     next.push({ seat: target.seat, kind: aim.kind, entity: aim.entity });
     if (aim.kind !== 'headquarters') orderOnto(world, ctx, target.raider, band, aim.entity);
   }
-  if (!changed) return;
-  writeMapEscalation(world, (progress) => {
-    progress.focus = next;
-  });
+  if (changed)
+    writeMapEscalation(world, (progress) => {
+      progress.focus = next;
+    });
+  return spent;
 }
 
 /** The living men standing on the map, by the seat their raider targets. */

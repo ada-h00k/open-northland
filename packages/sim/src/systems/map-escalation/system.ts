@@ -3,6 +3,7 @@ import {
   Building,
   isPlayerDead,
   mapEscalationProgress,
+  Owner,
   Position,
   writeMapEscalation,
 } from '../../components/index.js';
@@ -51,9 +52,8 @@ export const mapEscalationSystem: System = (world, ctx) => {
     rememberCatapults(world, ctx, config);
   const progress = mapEscalationProgress(world);
   const checkBeat = ctx.tick % END_CHECK_TICKS === 0;
-  if (progress.attack !== null && checkBeat) checkAttackEnd(world, ctx, config);
-  const attack = mapEscalationProgress(world).attack;
-  if (attack !== null && checkBeat) focusTurn(world, ctx, config, attack.men);
+  if (progress.attack !== null && checkBeat)
+    checkAttackEnd(world, ctx, config, focusTurn(world, ctx, config, progress.attack.men));
   if (checkBeat) landingsTurn(world, ctx, config);
   revealShips(world, ctx, config);
   if (catapults !== undefined && checkBeat) noteLostCatapults(world, ctx, config);
@@ -108,10 +108,25 @@ function launch(world: World, ctx: SystemContext, config: MapEscalation, index: 
     ctx.events.emit({ kind: 'mapEscalationLanding', wave, seats: landed, noticeKey });
 }
 
-function checkAttackEnd(world: World, ctx: SystemContext, config: MapEscalation): void {
+/**
+ * End the attack once enough of its men are dead or its time ran out. The men against a `spent` seat,
+ * one with nothing left to attack, no longer hold it: the raider would only walk them home to the keep
+ * and stand them there. They count as lost and fight on outside the attack.
+ */
+function checkAttackEnd(
+  world: World,
+  ctx: SystemContext,
+  config: MapEscalation,
+  spent: ReadonlySet<number>,
+): void {
   const attack = mapEscalationProgress(world).attack;
   if (attack === null) return;
-  const living = attack.men.filter((e) => world.isAlive(e));
+  const spentRaiders = new Set(
+    config.attacks.targets.filter((target) => spent.has(target.seat)).map((target) => target.raider),
+  );
+  const living = attack.men.filter(
+    (e) => world.isAlive(e) && !spentRaiders.has(world.tryGet(e, Owner)?.player ?? -1),
+  );
   if (attackBeaten(config, attack.sent, living.length)) {
     endAttack(world, ctx, 'defeated');
     return;
@@ -126,7 +141,8 @@ function checkAttackEnd(world: World, ctx: SystemContext, config: MapEscalation)
   });
 }
 
-/** `defeated`: enough of the men it sent died; `expired`: its time ran out. Survivors fight on. */
+/** `defeated`: enough of the men it sent are dead or have nothing left to attack; `expired`: its time
+ *  ran out. Survivors fight on. */
 function endAttack(world: World, ctx: SystemContext, cause: 'defeated' | 'expired'): void {
   const attack = mapEscalationProgress(world).attack;
   if (attack === null) return;

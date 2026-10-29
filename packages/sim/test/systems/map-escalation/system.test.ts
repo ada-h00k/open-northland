@@ -99,6 +99,18 @@ describe('map escalation - an attack', () => {
     });
   });
 
+  it('lets a band whose seat has nothing left hold the attack no longer, its men fighting on', () => {
+    const { sim } = keepWorld();
+    runToSecond(sim, FIRST_LAUNCH_SECONDS + 1);
+    const band = ownedFighters(sim, RAIDER);
+    expect(band).toHaveLength(3);
+    // The seat loses every building and person; the raider would walk its band home to the keep.
+    for (const e of [...sim.world.query(Owner)])
+      if (sim.world.get(e, Owner).player === PLAYER) sim.world.destroy(e);
+    expect(eventsUntil(sim, FIRST_LAUNCH_SECONDS + 3)).toEqual(['ended 1 defeated']);
+    for (const e of band) expect(sim.world.isAlive(e)).toBe(true);
+  });
+
   it('launches nothing while no finished keep stands', () => {
     const { sim } = keepWorld();
     for (const e of [...sim.world.query(Building, Owner)]) {
