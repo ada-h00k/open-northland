@@ -434,8 +434,9 @@ export class Simulation {
    * A buildability test for one building type, reading the same rules the `placeBuilding` command gates on.
    * Blockers come from the incrementally maintained placement count grid, so probing a viewport costs
    * O(visible tiles); with a `player` the probe also refuses the ground a hostile army the seat can see
-   * contests and the ground a lobby peace keeps the seat off. A supplied tribe picks the footprint and, while `gated`, adds its player-scoped technology
-   * gate, which a placing paper waives. Null for a mapless sim.
+   * contests and the ground a lobby peace keeps the seat off. A supplied tribe picks the footprint and,
+   * while `gated`, adds its player-scoped technology gate, which a placing paper waives. Null for a
+   * mapless sim.
    */
   placementProbe(buildingType: number, player?: number, tribe?: number, gated = true): PlacementProbe | null {
     return placementProbeFor(

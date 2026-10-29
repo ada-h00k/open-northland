@@ -64,6 +64,19 @@ interface ZoneAnchor {
   readonly own: boolean;
 }
 
+/** Which side of the peace `building` stands on for `player`: its own, a partner's, or neither. */
+function sideOf(world: World, building: Entity, player: number, partners: number): 'own' | 'partner' | null {
+  const seat = world.tryGet(building, Owner)?.player;
+  if (seat === undefined) return null;
+  if (seat === player) return 'own';
+  return (partners & (1 << seat)) !== 0 ? 'partner' : null;
+}
+
+/** Whether the nearest partner building is within the radius and nearer than every own building. */
+function barredBy(nearestOwn: number, nearestPartner: number): boolean {
+  return nearestPartner <= PEACE_KEEP_OUT_RADIUS_NODES && nearestPartner < nearestOwn;
+}
+
 /** Fills `into` with the own and partner buildings anchored in the box `reach` nodes around `(hx, hy)`. */
 function collectZoneAnchors(
   world: World,
@@ -75,10 +88,8 @@ function collectZoneAnchors(
   into: ZoneAnchor[],
 ): void {
   forEachBuildingNear(world, hx, hy, reach, (building, bx, by) => {
-    const seat = world.tryGet(building, Owner)?.player;
-    if (seat === undefined) return;
-    if (seat === player) into.push({ hx: bx, hy: by, own: true });
-    else if ((partners & (1 << seat)) !== 0) into.push({ hx: bx, hy: by, own: false });
+    const side = sideOf(world, building, player, partners);
+    if (side !== null) into.push({ hx: bx, hy: by, own: side === 'own' });
   });
 }
 
@@ -90,26 +101,40 @@ function barredAmong(anchors: readonly ZoneAnchor[], x: number, y: number): bool
     if (anchor.own) nearestOwn = Math.min(nearestOwn, distance);
     else nearestPartner = Math.min(nearestPartner, distance);
   }
-  return nearestPartner <= PEACE_KEEP_OUT_RADIUS_NODES && nearestPartner < nearestOwn;
+  return barredBy(nearestOwn, nearestPartner);
 }
 
 /**
  * The peace's {@link PeaceGround} for `player`, null while no peace binds the seat, so a seat outside the
  * peace, a map AI camp included, and every seat after it ends pay nothing. Cost per node: the buildings
- * anchored in the region-index box of the radius around it, at most nine regions, never a seat's roster.
+ * anchored in the region-index regions that the radius box around it overlaps, never a seat's roster.
  */
 export function peaceGroundFor(world: World, player: number | undefined): PeaceGround | null {
   if (player === undefined) return null;
   const partners = peacePartnerBits(world, player);
   if (partners === 0) return null;
-  const anchors: ZoneAnchor[] = [];
+  // One visitor per ground folds the nearest distances in place, so a probe allocates nothing per building.
+  let x = 0;
+  let y = 0;
+  let nearestOwn = Infinity;
+  let nearestPartner = Infinity;
+  const visit = (building: Entity, bx: number, by: number): void => {
+    const side = sideOf(world, building, player, partners);
+    if (side === null) return;
+    const distance = hexDistanceBetween(bx, by, x, y);
+    if (side === 'own') nearestOwn = Math.min(nearestOwn, distance);
+    else nearestPartner = Math.min(nearestPartner, distance);
+  };
   return {
-    bars: (x, y) => {
-      anchors.length = 0;
+    bars: (atX, atY) => {
+      x = atX;
+      y = atY;
+      nearestOwn = Infinity;
+      nearestPartner = Infinity;
       // A building outside the box lies past the radius, so it can neither bar the node nor beat a
       // partner's building that does.
-      collectZoneAnchors(world, player, partners, x, y, PEACE_KEEP_OUT_RADIUS_NODES, anchors);
-      return barredAmong(anchors, x, y);
+      forEachBuildingNear(world, x, y, PEACE_KEEP_OUT_RADIUS_NODES, visit);
+      return barredBy(nearestOwn, nearestPartner);
     },
   };
 }

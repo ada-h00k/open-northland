@@ -182,7 +182,7 @@ export const deSurfaces = {
       peace: {
         label: 'Friedenszeit',
         detail:
-          'Bis zu ihrem Ende können sich die Spieler nicht angreifen und keine Soldaten in die Nähe fremder Gebäude schicken. Die eigenen Computerspieler der Karte sind nicht gebunden.',
+          'Bis zu ihrem Ende können die Spieler nicht gegeneinander kämpfen und weder Leute in die Nähe fremder Siedlungen schicken noch dort bauen. Vom Kartenskript gesteuerte Stämme kämpfen weiter.',
         off: 'Aus',
         minutes: '{minutes} Min.',
       },

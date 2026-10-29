@@ -152,7 +152,8 @@ export const chsSurfaces = {
       alliedVisionDetail: '互为友好的玩家共享已探明的地面。',
       peace: {
         label: '和平时间',
-        detail: '结束前，玩家之间不能互相攻击，也不能派士兵靠近对方的建筑。地图自带的电脑玩家不受约束。',
+        detail:
+          '结束前，玩家之间不能互相交战，也不能派人靠近其他玩家的定居点或在那里建造。由地图脚本控制的部落照常作战。',
         off: '关闭',
         minutes: '{minutes} 分钟',
       },

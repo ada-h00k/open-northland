@@ -1864,8 +1864,8 @@ export const chtGame = {
       wall: '木柵欄',
       road: '道路',
     },
-    /** An attack notice's hit bodies, counted per kind, and the name it gives unowned strikers. */
     peaceMinutes: { one: '{count} 分鐘', few: '{count} 分鐘', many: '{count} 分鐘' },
+    /** An attack notice's hit bodies, counted per kind, and the name it gives unowned strikers. */
     attack: {
       buildings: { one: '{count} 座建築', few: '{count} 座建築', many: '{count} 座建築' },
       walls: {

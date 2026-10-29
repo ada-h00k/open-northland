@@ -1905,9 +1905,9 @@ export const enGame = {
       wall: 'Stockade',
       road: 'Road',
     },
-    /** An attack notice's hit bodies, counted per kind, and the name it gives unowned strikers. */
     /** A peace note's minutes, as its full line counts them. */
     peaceMinutes: { one: '{count} minute', few: '{count} minutes', many: '{count} minutes' },
+    /** An attack notice's hit bodies, counted per kind, and the name it gives unowned strikers. */
     attack: {
       buildings: { one: '{count} building', few: '{count} buildings', many: '{count} buildings' },
       walls: {

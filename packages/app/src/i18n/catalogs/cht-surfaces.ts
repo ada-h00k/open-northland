@@ -152,7 +152,8 @@ export const chtSurfaces = {
       alliedVisionDetail: '互為友好的玩家共用已探索的地面。',
       peace: {
         label: '和平時間',
-        detail: '結束前，玩家之間不能互相攻擊，也不能派士兵靠近對方的建築。地圖自帶的電腦玩家不受約束。',
+        detail:
+          '結束前，玩家之間不能互相交戰，也不能派人靠近其他玩家的聚落或在那裡建造。由地圖腳本控制的部落照常作戰。',
         off: '關閉',
         minutes: '{minutes} 分鐘',
       },

@@ -1864,8 +1864,8 @@ export const chsGame = {
       wall: '木栅栏',
       road: '道路',
     },
-    /** An attack notice's hit bodies, counted per kind, and the name it gives unowned strikers. */
     peaceMinutes: { one: '{count} 分钟', few: '{count} 分钟', many: '{count} 分钟' },
+    /** An attack notice's hit bodies, counted per kind, and the name it gives unowned strikers. */
     attack: {
       buildings: { one: '{count} 座建筑', few: '{count} 座建筑', many: '{count} 座建筑' },
       walls: {

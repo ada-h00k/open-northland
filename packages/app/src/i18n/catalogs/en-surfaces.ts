@@ -155,7 +155,7 @@ export const enSurfaces = {
       peace: {
         label: 'Peace time',
         detail:
-          "Until it ends, the players cannot attack each other or send soldiers near each other's buildings. The map's own computer players are not bound.",
+          "Until it ends, the players cannot fight each other, send people near another player's settlement or build there. Tribes run by the map's script keep fighting.",
         off: 'Off',
         minutes: '{minutes} min',
       },

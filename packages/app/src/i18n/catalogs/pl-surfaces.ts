@@ -154,7 +154,7 @@ export const plSurfaces = {
       peace: {
         label: 'Czas pokoju',
         detail:
-          'Do jego końca gracze nie mogą się atakować ani wysyłać żołnierzy w pobliże cudzych budynków. Nie obowiązuje komputerowych graczy samej mapy.',
+          'Do końca pokoju gracze nie mogą ze sobą walczyć, wysyłać ludzi ani budować pod osadami innych graczy. Plemiona sterowane skryptem mapy walczą dalej.',
         off: 'Wyłączony',
         minutes: '{minutes} min',
       },

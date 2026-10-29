@@ -15,6 +15,8 @@ const COMPUTER = 1;
 const THIRD = 2;
 /** The rounds in which the computer's cursor has reached the third slot. */
 const ROUNDS_TO_THIRD = 3;
+/** The slots the cursor walks before it looks at the same player again. */
+const PLAYER_SLOTS = 20;
 
 function stances(
   rows: readonly { from: number; to: number; state: DiplomacyState }[],
@@ -73,6 +75,18 @@ describe('the computer seat answering a stance', () => {
     expect(diplomacyStance(sim.world, COMPUTER, THIRD)).toBe('neutral'); // round 0 looked at slot 0
     sim.run((ROUNDS_TO_THIRD - 1) * AI_HANDLER_ROUND_TICKS);
     expect(diplomacyStance(sim.world, COMPUTER, THIRD)).toBe('enemy');
+  });
+
+  it('keeps a neutral member neutral toward a partner while the peace holds, and answers once it ends', () => {
+    const sim = stances([
+      { from: COMPUTER, to: HUMAN, state: 'neutral' },
+      { from: HUMAN, to: COMPUTER, state: 'enemy' },
+    ]);
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: AI_HANDLER_ROUND_TICKS, players: [HUMAN, COMPUTER] });
+    sim.run(AI_HANDLER_ROUND_TICKS);
+    expect(diplomacyStance(sim.world, COMPUTER, HUMAN)).toBe('neutral');
+    sim.run(PLAYER_SLOTS * AI_HANDLER_ROUND_TICKS);
+    expect(diplomacyStance(sim.world, COMPUTER, HUMAN)).toBe('enemy');
   });
 
   it('keeps autonomous diplomacy when only map AI is disabled', () => {
