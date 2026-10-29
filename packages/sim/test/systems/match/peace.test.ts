@@ -11,6 +11,7 @@ import {
 import { TICKS_PER_MINUTE } from '../../../src/core/loop.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import { type SimEvent, Simulation } from '../../../src/index.js';
+import { anchorNodeOf } from '../../../src/systems/ai-shared/node-geometry.js';
 import { PEACE_KEEP_OUT_RADIUS_NODES } from '../../../src/systems/match/peace.js';
 import { WEAPON_MAIN_TYPE } from '../../../src/systems/readviews/index.js';
 import { resolveCombatHit } from '../../../src/systems/settlers/atomics/effects/combat/hit/resolution.js';
@@ -100,20 +101,27 @@ describe('lobby peace - harm between seats', () => {
   });
 });
 
-describe('lobby peace - orders that send arms near a partner', () => {
+describe("lobby peace - orders and placements at a partner's door", () => {
   const SPEARMAN = 32;
   const CIVILIST = 6;
   const HQ_TYPE = 1;
+  /** A point-footprint house, so a test site never collides with the towns. */
+  const HOME_TYPE = 2;
   const CATAPULT = 5;
   const CART = 6;
   /** The catapult crew's class, which binds the siege weapon; a cart's class binds none. */
   const CATAPULT_JOB = 54;
   const CART_JOB = 55;
+  /** Long past every setup step, short enough to step to its end. */
+  const PEACE_UNTIL = 100;
   const PARTNER_HQ = { x: 50, y: 16 };
   const HOME = { x: 4, y: 16 };
   const OWN_HQ = { x: 20, y: 16 };
   /** The partner's building dropped beside {@link OWN_HQ}, nearer to it than its own town. */
   const PARTNER_OUTPOST = { x: 27, y: 16 };
+  const DOOR = { x: PARTNER_HQ.x - PEACE_KEEP_OUT_RADIUS_NODES + 2, y: PARTNER_HQ.y };
+  /** Inside the outpost's radius, yet nearer {@link OWN_HQ}. */
+  const BESIDE_OWN_HQ = { x: OWN_HQ.x - 8, y: OWN_HQ.y };
 
   /** {@link aiContent} with an armed catapult and an unarmed cart. */
   function vehicleContent(): ContentSet {
@@ -161,9 +169,29 @@ describe('lobby peace - orders that send arms near a partner', () => {
     });
   }
 
+  /** A player's unforced house placement, past the technology gate the test content does not unlock. */
+  function placeHome(sim: Simulation, at: { x: number; y: number }, owner: number): void {
+    sim.enqueueSetup({
+      kind: 'placeBuilding',
+      buildingType: HOME_TYPE,
+      ...at,
+      tribe: VIKING,
+      owner,
+      underConstruction: true,
+      ignoreTechnology: true,
+    });
+  }
+
+  function homesAt(sim: Simulation, at: { x: number; y: number }): number {
+    return [...sim.world.query(Building)].filter((e) => {
+      const node = sim.world.get(e, Building).buildingType === HOME_TYPE ? anchorNodeOf(sim.world, e) : null;
+      return node !== null && node.hx === at.x && node.hy === at.y;
+    }).length;
+  }
+
   function partnerSim(content = aiContent()): { sim: Simulation; soldier: Entity; civilian: Entity } {
     const sim = new Simulation({ seed: 1, content, map: grassNodeMap(64, 32) });
-    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: 10_000, players: [P0, P1] });
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: PEACE_UNTIL, players: [P0, P1] });
     placeHq(sim, PARTNER_HQ, P1);
     const soldier = spawnAt(sim, SPEARMAN, P0);
     const civilian = spawnAt(sim, CIVILIST, P0);
@@ -171,71 +199,69 @@ describe('lobby peace - orders that send arms near a partner', () => {
     return { sim, soldier, civilian };
   }
 
-  function refusals(sim: Simulation): Extract<SimEvent, { kind: 'peaceRefusedWalk' }>[] {
-    return sim.events.current().flatMap((ev) => (ev.kind === 'peaceRefusedWalk' ? [ev] : []));
+  function refusals(sim: Simulation): Extract<SimEvent, { kind: 'peaceRefused' }>[] {
+    return sim.events.current().flatMap((ev) => (ev.kind === 'peaceRefused' ? [ev] : []));
   }
 
-  it("refuses soldiers sent to a partner's door, with one note, while a civilian of the same order goes", () => {
+  it("refuses a soldier and a civilian sent to a partner's door, with one note", () => {
     const { sim, soldier, civilian } = partnerSim();
-    const second = spawnAt(sim, SPEARMAN, P0);
-    const door = { x: PARTNER_HQ.x - PEACE_KEEP_OUT_RADIUS_NODES + 2, y: PARTNER_HQ.y };
 
     sim.enqueueSetup({
       kind: 'moveUnitGroup',
       members: [
-        { entity: soldier, ...door },
-        { entity: second, ...door },
-        { entity: civilian, ...door },
+        { entity: soldier, ...DOOR },
+        { entity: civilian, ...DOOR },
       ],
     });
     sim.step();
 
-    expect(sim.world.has(soldier, PlayerOrder) || sim.world.has(second, PlayerOrder)).toBe(false);
-    expect(sim.world.has(civilian, PlayerOrder)).toBe(true);
-    expect(refusals(sim)).toEqual([{ kind: 'peaceRefusedWalk', player: P0, ...door }]);
+    expect(sim.world.has(soldier, PlayerOrder) || sim.world.has(civilian, PlayerOrder)).toBe(false);
+    expect(refusals(sim)).toEqual([{ kind: 'peaceRefused', player: P0, ...DOOR, what: 'walk' }]);
   });
 
-  it('lets a soldier walk short of the zone', () => {
-    const { sim, soldier } = partnerSim();
+  it('lets a unit walk short of the zone', () => {
+    const { sim, civilian } = partnerSim();
     const short = { x: PARTNER_HQ.x - PEACE_KEEP_OUT_RADIUS_NODES - 4, y: PARTNER_HQ.y };
 
-    sim.enqueueSetup({ kind: 'attackMoveUnit', entity: soldier, ...short });
+    sim.enqueueSetup({ kind: 'attackMoveUnit', entity: civilian, ...short });
     sim.step();
 
-    expect(sim.world.has(soldier, PlayerOrder)).toBe(true);
+    expect(sim.world.has(civilian, PlayerOrder)).toBe(true);
   });
 
   /** A seat with its own town and a partner's building dropped right beside it. */
-  function outpostSim(): { sim: Simulation; soldier: Entity } {
-    const { sim, soldier } = partnerSim();
+  function outpostSim(): { sim: Simulation; civilian: Entity } {
+    const { sim, civilian } = partnerSim();
     placeHq(sim, OWN_HQ, P0);
     placeHq(sim, PARTNER_OUTPOST, P1);
     sim.step();
-    return { sim, soldier };
+    return { sim, civilian };
   }
 
-  it("lets a soldier defend its own town beside a partner's building, since own ground wins", () => {
-    const { sim, soldier } = outpostSim();
+  it("lets a seat walk and build beside its own town by a partner's building, since own ground wins", () => {
+    const { sim, civilian } = outpostSim();
 
-    sim.enqueueSetup({ kind: 'moveUnit', entity: soldier, x: OWN_HQ.x + 2, y: OWN_HQ.y });
+    sim.enqueueSetup({ kind: 'moveUnit', entity: civilian, ...BESIDE_OWN_HQ });
+    placeHome(sim, BESIDE_OWN_HQ, P0);
     sim.step();
 
-    expect(sim.world.has(soldier, PlayerOrder)).toBe(true);
+    expect(sim.world.has(civilian, PlayerOrder)).toBe(true);
+    expect(homesAt(sim, BESIDE_OWN_HQ)).toBe(1);
+    expect(refusals(sim)).toEqual([]);
   });
 
-  it("still refuses a soldier sent deep into the partner's base", () => {
-    const { sim, soldier } = outpostSim();
+  it("still refuses a unit sent deep into the partner's base", () => {
+    const { sim, civilian } = outpostSim();
 
-    sim.enqueueSetup({ kind: 'moveUnit', entity: soldier, x: PARTNER_HQ.x - 3, y: PARTNER_HQ.y });
+    sim.enqueueSetup({ kind: 'moveUnit', entity: civilian, x: PARTNER_HQ.x - 3, y: PARTNER_HQ.y });
     sim.step();
 
-    expect(sim.world.has(soldier, PlayerOrder)).toBe(false);
+    expect(sim.world.has(civilian, PlayerOrder)).toBe(false);
   });
 
-  it("refuses a catapult driven to a partner's door, while a cart goes", () => {
+  it("refuses a catapult and a cart driven to a partner's door, with one note", () => {
     const content = vehicleContent();
     const { sim } = partnerSim(content);
-    const door = { x: PARTNER_HQ.x - PEACE_KEEP_OUT_RADIUS_NODES + 2, y: PARTNER_HQ.y };
     const vehicleAt = (vehicleType: number, y: number): Entity => {
       const e = createVehicle(sim.world, ctxOf(sim), { vehicleType, ...HOME, y, tribe: VIKING, owner: P0 });
       if (e === null) throw new Error('setup: the vehicle is not in the content');
@@ -244,17 +270,49 @@ describe('lobby peace - orders that send arms near a partner', () => {
     const catapult = vehicleAt(CATAPULT, HOME.y - 8);
     const cart = vehicleAt(CART, HOME.y + 8);
 
-    sim.enqueueSetup({ kind: 'moveVehicle', vehicle: catapult, ...door });
-    sim.enqueueSetup({ kind: 'moveVehicle', vehicle: cart, ...door });
+    sim.enqueueSetup({ kind: 'moveVehicle', vehicle: catapult, ...DOOR });
+    sim.enqueueSetup({ kind: 'moveVehicle', vehicle: cart, ...DOOR });
     sim.step();
 
-    // Neither has a commander: the cart's order reaches the drive and is refused there, the catapult's
-    // never does.
-    const moveRefused = sim.events
-      .current()
-      .flatMap((ev) => (ev.kind === 'vehicleMoveRefused' ? [ev.entity] : []));
-    expect(moveRefused).toEqual([cart]);
-    expect(refusals(sim)).toEqual([{ kind: 'peaceRefusedWalk', player: P0, ...door }]);
+    // Neither has a commander, so an order that reached the drive would be refused there instead.
+    expect(sim.events.current().some((ev) => ev.kind === 'vehicleMoveRefused')).toBe(false);
+    expect(refusals(sim)).toEqual([{ kind: 'peaceRefused', player: P0, ...DOOR, what: 'walk' }]);
+  });
+
+  it("refuses a member's house and signpost at a partner's door, as the probes show, with a note", () => {
+    const { sim } = partnerSim();
+
+    expect(sim.placementProbe(HOME_TYPE, P0)?.canPlace(DOOR.x, DOOR.y)).toBe(false);
+    expect(sim.placementProbe(HOME_TYPE, P2)?.canPlace(DOOR.x, DOOR.y)).toBe(true);
+    expect(sim.signpostProbe(P0)?.canPlace(DOOR.x, DOOR.y)).toBe(false);
+    expect(sim.signpostProbe(P2)?.canPlace(DOOR.x, DOOR.y)).toBe(true);
+    placeHome(sim, DOOR, P0);
+    sim.step();
+
+    expect(homesAt(sim, DOOR)).toBe(0);
+    expect(refusals(sim)).toEqual([{ kind: 'peaceRefused', player: P0, ...DOOR, what: 'build' }]);
+  });
+
+  it('lets a seat outside the peace build there', () => {
+    const { sim } = partnerSim();
+
+    placeHome(sim, DOOR, P2);
+    sim.step();
+
+    expect(homesAt(sim, DOOR)).toBe(1);
+    expect(refusals(sim)).toEqual([]);
+  });
+
+  it('allows every walk and placement once the peace ended', () => {
+    const { sim, civilian } = partnerSim();
+    stepTo(sim, PEACE_UNTIL);
+
+    sim.enqueueSetup({ kind: 'moveUnit', entity: civilian, ...DOOR });
+    placeHome(sim, { x: DOOR.x, y: DOOR.y + 4 }, P0);
+    sim.step();
+
+    expect(sim.world.has(civilian, PlayerOrder)).toBe(true);
+    expect(homesAt(sim, { x: DOOR.x, y: DOOR.y + 4 })).toBe(1);
   });
 });
 

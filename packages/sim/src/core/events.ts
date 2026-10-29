@@ -459,12 +459,14 @@ export type SimEvent =
       readonly kind: 'peaceEnded';
     }
   | {
-      /** The lobby peace refused a person's order sending `player`'s arms to node `(x, y)`, by a peace
-       *  partner's settlement. Once per player per command pass, however many of a group it held back. */
-      readonly kind: 'peaceRefusedWalk';
+      /** The lobby peace refused a person's order of `player`'s to walk or drive to node `(x, y)`, or to
+       *  build there, by a peace partner's settlement. Once per player per command pass, however many
+       *  orders it held back. */
+      readonly kind: 'peaceRefused';
       readonly player: number;
       readonly x: number;
       readonly y: number;
+      readonly what: 'walk' | 'build';
     }
   | {
       /**

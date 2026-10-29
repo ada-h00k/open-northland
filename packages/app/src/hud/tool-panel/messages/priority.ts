@@ -55,7 +55,7 @@ const NOTABLE: readonly UserMessageTypeName[] = [
   'explorationFinished',
   'workerRefused',
   'tradeRefused',
-  'peaceRefusedWalk',
+  'peaceRefused',
 ];
 
 const IMPORTANT_LEVEL: MessagePriorityLevel = 2;

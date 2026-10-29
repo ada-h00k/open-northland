@@ -18,7 +18,7 @@ import type { MessageText } from './text.js';
  * a trader's route took no house of another tribe.
  * `settingsNeedRestart` reports the player's own settings change that waits for the map's next start, not
  * anything in the world. `peaceEnding` and `peaceEnded` tell of the lobby peace, which the original lacks, and
- * `peaceRefusedWalk` of an order it held back.
+ * `peaceRefused` of a walk, drive or placement it held back.
  */
 export const USER_MESSAGE_TYPE = {
   lostWithoutSignposts: 0x03,
@@ -65,7 +65,7 @@ export const USER_MESSAGE_TYPE = {
   tradeRefused: 0x88,
   peaceEnding: 0x89,
   peaceEnded: 0x8a,
-  peaceRefusedWalk: 0x8b,
+  peaceRefused: 0x8b,
 } as const;
 
 export type UserMessageTypeName = keyof typeof USER_MESSAGE_TYPE;

@@ -27,13 +27,13 @@ export function peaceNote(minutesLeft: number | null, naming: Pick<MessageNaming
   };
 }
 
-/** The note that the peace held back the player's arms sent to `at`, by a peace partner's settlement. One
- *  card stands for every refusal while it shows, wherever the order went. */
+/** The note that the peace held back the player's order to send someone to `at`, or to build there, by a
+ *  peace partner's settlement. One card stands for every refusal while it shows, wherever the order went. */
 export function peaceRefusalNote(
   at: HalfCellNode | null,
   naming: Pick<MessageNaming, 'text'>,
 ): RaisedMessage {
-  const type = USER_MESSAGE_TYPE.peaceRefusedWalk;
+  const type = USER_MESSAGE_TYPE.peaceRefused;
   return {
     pending: { type, subject: null, at, about: null, goodType: null, technologies: null, jobType: null },
     compose: () => naming.text(type, { subjectName: null, jobLabel: null, goodName: null, stanceName: null }),

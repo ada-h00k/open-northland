@@ -19,6 +19,7 @@ import {
   nearestWorkFlagPlacement,
   workFlagPlacementTest,
 } from '../footprint/index.js';
+import { peaceGroundFor, peaceGroundWithin } from '../match/peace.js';
 import { canonicalById, entityNode } from '../spatial/nodes.js';
 import { settleSignpostLinks, unlinkSignpost } from './links.js';
 import { signpostNetwork } from './network.js';
@@ -26,8 +27,9 @@ import { plannedSignposts, type SignpostSpot } from './planned.js';
 
 /**
  * Whether `player` may erect a signpost at `node`: open walkable ground under the work-flag rule, off any
- * existing signpost's cell, and not inside {@link SIGNPOST_SPACING_NODES} of a same-player signpost.
- * Signposts do not block walking, so walkability is a ground-quality gate only.
+ * existing signpost's cell, not inside {@link SIGNPOST_SPACING_NODES} of a same-player signpost, and off
+ * the ground a lobby peace keeps the seat off. Signposts do not block walking, so walkability is a
+ * ground-quality gate only.
  */
 export function canPlaceSignpost(
   world: World,
@@ -40,7 +42,8 @@ export function canPlaceSignpost(
   // cells; the spacing is the signpost-specific extra gate, same-player only as in the original.
   if (!canPlaceWorkFlag(world, ctx, terrain, node)) return false;
   const c = terrain.coordsOf(node);
-  return !insideSpacing(signpostNetwork(world).get(player) ?? [], c.x, c.y);
+  if (insideSpacing(signpostNetwork(world).get(player) ?? [], c.x, c.y)) return false;
+  return !(peaceGroundFor(world, player)?.bars(c.x, c.y) ?? false);
 }
 
 /** Whether `post`'s spacing can cover a node of `area`: the hex distance is at least the row gap and at
@@ -91,9 +94,14 @@ export function signpostProbe(
     ? [...network, ...plannedSignposts(world, terrain, player)]
     : network;
   const posts = within === undefined ? spots : spots.filter((post) => spacingReaches(post, within));
+  const peace =
+    within === undefined ? peaceGroundFor(world, player) : peaceGroundWithin(world, player, within);
   return {
     canPlace: (x, y) =>
-      terrain.inBounds(x, y) && placeable(terrain.nodeAt(x, y)) && !insideSpacing(posts, x, y),
+      terrain.inBounds(x, y) &&
+      placeable(terrain.nodeAt(x, y)) &&
+      !insideSpacing(posts, x, y) &&
+      !(peace?.bars(x, y) ?? false),
   };
 }
 

@@ -492,7 +492,7 @@ export function messagesFromEvents(
         raiser.raise(`${note.pending.type}|minutes:${note.pending.about ?? ''}`, note.pending, note.compose);
         break;
       }
-      case 'peaceRefusedWalk': {
+      case 'peaceRefused': {
         if (ev.player !== localPlayer) break;
         const note = peaceRefusalNote({ hx: ev.x, hy: ev.y }, naming);
         raiser.raise(`${note.pending.type}|peace`, note.pending, note.compose);

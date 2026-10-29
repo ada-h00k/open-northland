@@ -186,7 +186,7 @@ export function galleryMessages(
       raiser.raise(`${type}|peace`, note.pending, note.compose);
       continue;
     }
-    if (name === 'peaceRefusedWalk') {
+    if (name === 'peaceRefused') {
       const note = peaceRefusalNote(null, naming);
       raiser.raise(`${type}|peace`, note.pending, note.compose);
       continue;

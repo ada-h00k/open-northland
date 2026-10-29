@@ -93,17 +93,17 @@ describe('user messages from sim events', () => {
     ]);
   });
 
-  it("notes the peace's refusal of this seat's orders once, at the first refused spot, and no other seat's", () => {
+  it("notes the peace's refusal of this seat's walks and builds once, at the first refused spot, and no other seat's", () => {
     const notes = run(
       [
-        { kind: 'peaceRefusedWalk', player: ENEMY, x: 1, y: 1 },
-        { kind: 'peaceRefusedWalk', player: LOCAL, x: 4, y: 6 },
-        { kind: 'peaceRefusedWalk', player: LOCAL, x: 8, y: 6 },
+        { kind: 'peaceRefused', player: ENEMY, x: 1, y: 1, what: 'walk' },
+        { kind: 'peaceRefused', player: LOCAL, x: 4, y: 6, what: 'build' },
+        { kind: 'peaceRefused', player: LOCAL, x: 8, y: 6, what: 'walk' },
       ],
       snapshot(1, []),
     );
     expect(notes.map((note) => [note.type, note.at])).toEqual([
-      [USER_MESSAGE_TYPE.peaceRefusedWalk, { hx: 4, hy: 6 }],
+      [USER_MESSAGE_TYPE.peaceRefused, { hx: 4, hy: 6 }],
     ]);
   });
 

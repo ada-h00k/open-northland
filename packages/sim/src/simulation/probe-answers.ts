@@ -4,7 +4,7 @@
  * live probe the command gates on, so the two cannot disagree.
  */
 import type { ContentSet } from '@open-northland/data';
-import { bioGroundWaived } from '../components/rules.js';
+import { bioGroundWaived, peaceHoldsUntilTick } from '../components/rules.js';
 import type { Entity, World } from '../ecs/world.js';
 import type { HalfCellNode, NodeArea } from '../nav/halfcell.js';
 import type { NodeId, TerrainGraph } from '../nav/terrain/index.js';
@@ -21,6 +21,7 @@ import {
   type PlacementGrid,
   placementBlockerGrid,
 } from '../systems/footprint/placement/blocker-grid.js';
+import { peaceGroundWithin } from '../systems/match/peace.js';
 import { ownPalisadeNodeList, palisadePlacementProbe } from '../systems/palisades/index.js';
 import { buildingEnabled } from '../systems/progression/index.js';
 import { roadAreaKey } from '../systems/roads/index.js';
@@ -206,8 +207,9 @@ function footprintGrid(
   return fresh;
 }
 
-/** The building placement probe's answer over `area`: `tribe`'s footprint, contested ground and, with a
- *  tribe while `gated`, the seat's technology gate. Null for a mapless sim. */
+/** The building placement probe's answer over `area`: `tribe`'s footprint, contested ground, the ground a
+ *  peace keeps the seat off and, with a tribe while `gated`, the seat's technology gate. Null for a
+ *  mapless sim. */
 export function placementAnswerFor(
   world: World,
   content: ContentSet,
@@ -231,25 +233,27 @@ export function placementAnswerFor(
     };
   }
   const ground = contestedGroundFor(world, content, fog, player);
+  const peace = peaceGroundWithin(world, player, area);
   const width = nodeAreaWidth(area);
   const accepted = new Uint8Array(footprint.length);
   if (enabled) {
     for (let i = 0; i < footprint.length; i++) {
-      if (
-        footprint[i] === 1 &&
-        !ground.contested(area.minHx + (i % width), area.minHy + Math.floor(i / width))
-      )
-        accepted[i] = 1;
+      if (footprint[i] !== 1) continue;
+      const hx = area.minHx + (i % width);
+      const hy = area.minHy + Math.floor(i / width);
+      if (!ground.contested(hx, hy) && !(peace?.bars(hx, hy) ?? false)) accepted[i] = 1;
     }
   }
   const contestedKey = ground.keyWithin(area.minHx, area.maxHx, area.minHy, area.maxHy);
-  return { area, accepted, key: `${version}:${enabled}:${contestedKey}` };
+  const peaceKey = peace === null ? '-' : peace.key;
+  return { area, accepted, key: `${version}:${enabled}:${contestedKey}:${peaceKey}` };
 }
 
-/** What the signpost overlay's answer reads: the work-flag blockers, the player's posts and the posts its
- *  scouts plan. */
+/** What the signpost overlay's answer reads: the work-flag blockers, the player's posts, the posts its
+ *  scouts plan and whether a lobby peace still holds, whose ground a building's placement moves with the
+ *  work-flag blockers. */
 export function signpostBlockerVersionOf(world: World): string {
-  return `${workFlagBlockerVersion(world)}.${signpostNetworkRevision(world)}.${plannedSignpostsVersion(world)}`;
+  return `${workFlagBlockerVersion(world)}.${signpostNetworkRevision(world)}.${plannedSignpostsVersion(world)}.${peaceHoldsUntilTick(world) ?? ''}`;
 }
 
 /** The signpost probe's answer over `area`, the planned posts' spacing included; null for a mapless sim. */

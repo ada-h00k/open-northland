@@ -143,11 +143,11 @@ function wakeAddressed(world: World, command: Command): void {
 }
 
 /** Tell a player once per pass that the peace refused a person's order of theirs, naming the first refused
- *  destination, so a group order raises one note however many members it held back. */
+ *  node, so a group order or a wall line raises one note however many orders it held back. */
 function tellPeaceRefusal(ctx: SystemContext, pass: CommandPass, refusal: PeaceRefusal): void {
   if (pass.peaceRefused.has(refusal.player)) return;
   pass.peaceRefused.add(refusal.player);
-  ctx.events.emit({ kind: 'peaceRefusedWalk', ...refusal });
+  ctx.events.emit({ kind: 'peaceRefused', ...refusal });
 }
 
 /** What the commands of one pass share. */
@@ -180,9 +180,8 @@ function applyCommand(
     !jobCanPray(ctx.content.jobs, world.tryGet(command.entity, Settler)?.jobType ?? null)
   )
     return;
-  // Arms sent to a peace partner's door are held back; a civilian of the same group still goes. A computer
-  // seat's planner hears no note.
-  const refused = peaceRefusal(world, ctx, command);
+  // Nobody is sent, and nothing built, at a peace partner's door. A computer seat's planner hears no note.
+  const refused = peaceRefusal(world, command);
   if (refused !== null) {
     if (origin === undefined) tellPeaceRefusal(ctx, pass, refused);
     return;
