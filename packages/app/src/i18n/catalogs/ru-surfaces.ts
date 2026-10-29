@@ -190,8 +190,11 @@ export const ruSurfaces = {
         on: 'Растут со временем',
         off: 'Отключены',
       },
-      variantLabel: 'Режим карты',
-      variantModes: { authored: 'Обычный', ragnarok: 'Рагнарёк' },
+      variantNames: { ragnarok: 'Рагнарёк' },
+      variantDetails: {
+        ragnarok:
+          'Более сложный режим: крепость атакует по расписанию всё более крупными армиями и высадками с моря, её воины получают лучшее снаряжение, а месторождения дают больше.',
+      },
       weatherLabel: 'Погода',
       weatherModes: {
         map: {

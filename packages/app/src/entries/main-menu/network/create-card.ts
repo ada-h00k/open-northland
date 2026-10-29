@@ -10,7 +10,7 @@ import { browserSaveStore } from '../../../view/runtime/save-load/store-browser.
 import { SCENE_TOKEN_PREFIX } from '../../../view/runtime/save-load/world-names.js';
 import { segControl } from '../../../view/settings/controls.js';
 import { node } from '../dom.js';
-import { mapVariantControl } from '../lobby-controls/variant.js';
+import { mapVariantToggles } from '../lobby-controls/variant.js';
 import { metaLine, paintMapThumb } from '../map-select/card.js';
 import type { MapSelectItem } from '../map-select/model.js';
 import { button, field } from './parts.js';
@@ -88,7 +88,7 @@ export function createRoomCard(options: CreateCardOptions) {
   // Not a `field()`: a label would hand a click on the thumb or the name to the button.
   const mapField = node('div', 'network-menu__field');
   mapField.append(node('span', '', copy.map), mapRow);
-  // The map mode picker of a map that ships variants; empty for any other.
+  // The variant toggles of a map that ships variants; empty for any other.
   const variantField = node('div');
   let chosenVariant: MapVariantKind | null = null;
   const status = node('p', 'network-menu__notice');
@@ -185,19 +185,18 @@ export function createRoomCard(options: CreateCardOptions) {
       mapsEmpty = item === null;
       chosenVariant = null;
       const lobby = messages().mainMenu.lobby;
-      const variant =
-        item === null
-          ? null
-          : mapVariantControl(
+      variantField.replaceChildren(
+        ...(item === null
+          ? []
+          : mapVariantToggles(
               item.id,
-              { label: lobby.variantLabel, modes: lobby.variantModes },
+              { names: lobby.variantNames, details: lobby.variantDetails },
               chosenVariant,
               (next) => {
                 chosenVariant = next;
               },
-              'network-menu__field',
-            );
-      variantField.replaceChildren(...(variant === null ? [] : [variant]));
+            )),
+      );
       mapName.textContent = item?.title ?? copy.noMaps;
       mapMeta.textContent = item === null ? '' : metaLine(item);
       if (item === null) thumb.replaceChildren();

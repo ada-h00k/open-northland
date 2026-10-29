@@ -5,7 +5,7 @@ import { drawSessionSeed } from '../../../game/match/session-url.js';
 import { messages } from '../../../i18n/index.js';
 import type { LaunchEntry } from '../../../launch.js';
 import { targetSearch } from '../../../view/target-search.js';
-import { mapVariantControl } from '../lobby-controls/variant.js';
+import { mapVariantToggles } from '../lobby-controls/variant.js';
 import { createMapDetailsCard } from '../map-select/card.js';
 import type { MapSelectItem } from '../map-select/model.js';
 import type { MenuScreen, MountedScreen } from '../model.js';
@@ -107,9 +107,9 @@ export function lobbyScreen(
   start.type = 'button';
   start.className = 'main-menu__primary main-menu__lobby-start';
   start.textContent = lobby.start;
-  const variantControl = mapVariantControl(
+  const variantToggles = mapVariantToggles(
     item.id,
-    { label: lobby.variantLabel, modes: lobby.variantModes },
+    { names: lobby.variantNames, details: lobby.variantDetails },
     variant,
     (next) => {
       variant = next;
@@ -118,7 +118,7 @@ export function lobbyScreen(
       update(rosters.get(rosterKey()) ?? initialLobbyState(players));
     },
   );
-  launchPanel.append(lobbyOptionsCard(options, isMultiplayerMapType(item.types), variantControl), start);
+  launchPanel.append(lobbyOptionsCard(options, isMultiplayerMapType(item.types), variantToggles), start);
   side.append(card.root, launchPanel);
 
   body.append(main, side);

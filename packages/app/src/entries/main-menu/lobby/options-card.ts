@@ -4,13 +4,13 @@ import { gameRuleControls } from '../lobby-controls/rules.js';
 import type { LobbyOptions } from './model.js';
 
 /**
- * `offersPeace` shows the peace choice, which only a multiplayer map has. `variant` is the map
- * mode picker, for a map that ships variants.
+ * `offersPeace` shows the peace choice, which only a multiplayer map has. `variants` are the
+ * toggles of the variants the map ships, listed last.
  */
 export function lobbyOptionsCard(
   options: LobbyOptions,
   offersPeace: boolean,
-  variant: HTMLElement | null = null,
+  variants: readonly HTMLElement[] = [],
 ): HTMLElement {
   const lobby = messages().mainMenu.lobby;
   const card = document.createElement('div');
@@ -54,6 +54,6 @@ export function lobbyOptionsCard(
     );
   }
   paint();
-  card.append(title, ...(variant === null ? [] : [variant]), ...controls.elements);
+  card.append(title, ...controls.elements, ...variants);
   return card;
 }

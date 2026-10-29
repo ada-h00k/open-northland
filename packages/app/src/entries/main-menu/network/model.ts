@@ -26,7 +26,7 @@ export function escapeLeavesRoom(target: EventTarget | null): boolean {
 }
 
 /** A room's world as the player reads it: the map's or scene's title in `lang`, else its id, followed
- *  by the variant's lobby label when the room plays one. */
+ *  by the variant's name when the room plays one. */
 export function worldTitle(
   world: SessionWorld,
   mapNames: ReadonlyMap<string, MapText | undefined>,
@@ -35,6 +35,6 @@ export function worldTitle(
   if (world.kind === 'scene') return sceneCopy(world.sceneId, lang)?.title ?? world.sceneId;
   const title = localizedMapText(mapNames.get(world.mapId), lang) ?? world.mapId;
   if (world.variant === undefined) return title;
-  const modes: Readonly<Record<string, string>> = messages(lang).mainMenu.lobby.variantModes;
-  return `${title} · ${Object.hasOwn(modes, world.variant) ? modes[world.variant] : world.variant}`;
+  const names: Readonly<Record<string, string>> = messages(lang).mainMenu.lobby.variantNames;
+  return `${title} · ${Object.hasOwn(names, world.variant) ? names[world.variant] : world.variant}`;
 }

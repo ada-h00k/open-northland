@@ -163,8 +163,11 @@ export const plSurfaces = {
         on: 'Rosną z czasem',
         off: 'Wyłączone',
       },
-      variantLabel: 'Tryb mapy',
-      variantModes: { authored: 'Zwykły', ragnarok: 'Ragnarök' },
+      variantNames: { ragnarok: 'Ragnarök' },
+      variantDetails: {
+        ragnarok:
+          'Trudniejszy tryb: twierdza atakuje według harmonogramu coraz liczniejszymi armiami i desantami z morza, jej wojownicy dostają lepszy ekwipunek, a złoża dają więcej.',
+      },
       weatherLabel: 'Pogoda',
       weatherModes: {
         map: { label: 'Mapa', detail: 'Tylko pogoda ustalona przez mapę.' },

@@ -10,6 +10,7 @@ import { formatMessage } from '../../../i18n/index.js';
 import { segControl } from '../../../view/settings/controls.js';
 import { fogRuleComposer, isMapMode, MAP_MODES, type MapModeName, ruleChoiceState } from './rules-state.js';
 import { selectControl } from './select.js';
+import { switchRow } from './switch-row.js';
 
 export interface GameRules {
   /** A `FOG_MODE` id, as the session and room descriptors carry it. */
@@ -121,16 +122,7 @@ export function gameRuleControls(options: GameRuleControlOptions) {
       choices.map((choice) => choice.value),
       change,
     );
-    const row = document.createElement('div');
-    row.className = 'main-menu__lobby-option-row';
-    const label = document.createElement('span');
-    label.textContent = text.label;
-    const pill = document.createElement('button');
-    pill.type = 'button';
-    pill.className = 'main-menu__toggle';
-    pill.setAttribute('role', 'switch');
-    pill.setAttribute('aria-label', text.label);
-    pill.addEventListener('click', () => state.request(!state.value()));
+    const { row, label, pill, paint } = switchRow(text.label, () => state.request(!state.value()));
     if (text.detail !== undefined) {
       const detail = document.createElement('small');
       detail.id = `lobby-rule-${++ruleIds}`;
@@ -139,15 +131,12 @@ export function gameRuleControls(options: GameRuleControlOptions) {
       label.append(detail);
       pill.setAttribute('aria-describedby', detail.id);
     }
-    row.append(label, pill);
     const fallback = inherited !== undefined ? select(text.label, choices, change) : null;
     return {
       elements: [row, ...(fallback?.elements ?? [])],
       update(value: boolean | null, disabled: boolean): void {
         state.update(value, disabled);
-        pill.disabled = disabled;
-        pill.classList.toggle('is-on', value === true);
-        pill.setAttribute('aria-checked', String(value === true));
+        paint(value === true, disabled);
         pill.title = value === true ? text.on : text.off;
         if (fallback !== null) {
           row.hidden = value === null;

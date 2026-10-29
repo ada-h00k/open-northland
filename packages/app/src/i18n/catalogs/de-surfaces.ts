@@ -191,8 +191,11 @@ export const deSurfaces = {
         on: 'Nehmen mit der Zeit zu',
         off: 'Deaktiviert',
       },
-      variantLabel: 'Kartenmodus',
-      variantModes: { authored: 'Normal', ragnarok: 'Ragnarök' },
+      variantNames: { ragnarok: 'Ragnarök' },
+      variantDetails: {
+        ragnarok:
+          'Ein schwererer Modus: Die Festung greift nach Zeitplan mit wachsenden Heeren und Landungen von See an, ihre Krieger erhalten bessere Ausrüstung, und Vorkommen geben mehr her.',
+      },
       weatherLabel: 'Wetter',
       weatherModes: {
         map: {
