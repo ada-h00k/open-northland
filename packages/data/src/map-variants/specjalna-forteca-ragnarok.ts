@@ -109,6 +109,10 @@ const HOUR = 60 * MINUTE;
 const PLAIN_HEADQUARTERS = 1;
 const RAGNAROK_DEPOSIT_YIELD = 3;
 
+/** The highlanders start with one woman, so the match would count their seat out at once. They get
+ *  the plain's six men, placed off their headquarters (315, 378) as the plain's stand off its own. */
+const HIGHLAND_MEN = { tribe: 'viking', role: 'civilist', hx: 318, hy: 388, count: 6 };
+
 /** The authored map's seat 0-3 lobby offer, which Ragnarök extends to the two villages. */
 const PLAYER_SEAT_OFFER = ['human', 'ai', 'none'] as const;
 
@@ -203,6 +207,13 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
       })),
     ],
   },
+  startHumans: Array.from({ length: HIGHLAND_MEN.count }, () => ({
+    tribe: HIGHLAND_MEN.tribe,
+    role: HIGHLAND_MEN.role,
+    player: HIGHLAND_SEAT,
+    hx: HIGHLAND_MEN.hx,
+    hy: HIGHLAND_MEN.hy,
+  })),
   depositYield: {
     gold: RAGNAROK_DEPOSIT_YIELD,
     iron: RAGNAROK_DEPOSIT_YIELD,

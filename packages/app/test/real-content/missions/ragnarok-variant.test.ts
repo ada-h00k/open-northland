@@ -11,7 +11,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import type { ContentIr } from '../../../src/content/ir/rows.js';
 import { buildMapWorld } from '../../../src/entries/map/world.js';
-import { mapSessionWorld, variantMapScript } from '../../../src/game/map/variant.js';
+import { mapSessionWorld, variantMap, variantMapScript } from '../../../src/game/map/variant.js';
 import { GATHERERS, GOOD_GOLD } from '../../../src/game/sandbox/ids/index.js';
 import { mapScriptWorld, resolveMissionScript } from '../../../src/game/world/mission-script.js';
 import { hasRealIr, loadContentUnderTest, rawIrUnderTest } from '../helpers.js';
@@ -105,6 +105,28 @@ describe.runIf(hasRealIr())('a Ragnarök world on specjalna_forteca', () => {
   });
 });
 
+describe.runIf(hasRealIr())('the highlanders’ seat in a Ragnarök world', () => {
+  const HIGHLAND_SEAT = 5;
+  const HIGHLAND_MEN = 6;
+
+  it('starts with men of its own and is still in the match after the first death check', async () => {
+    const sim = await realMapSessionWorld(
+      '?map=specjalna_forteca&player=0&missions=off&seed=7&variant=ragnarok',
+    );
+    const men = () =>
+      [...sim.world.query(components.Person, components.Owner)].filter(
+        (e) =>
+          sim.world.get(e, components.Owner).player === HIGHLAND_SEAT && !sim.world.has(e, components.Female),
+      );
+    expect(men()).toHaveLength(HIGHLAND_MEN);
+    expect(components.isMatchParticipant(sim.world, HIGHLAND_SEAT)).toBe(true);
+
+    sim.run(systems.MATCH_DEATH_GRACE_TICKS + systems.MATCH_DEATH_CHECK_INTERVAL_TICKS - sim.tick);
+    expect(components.isPlayerDead(sim.world, HIGHLAND_SEAT)).toBe(false);
+    expect(men()).toHaveLength(HIGHLAND_MEN);
+  }, 300_000);
+});
+
 describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
   const FORTRESS = 6;
   const HUMAN_SEAT = 0;
@@ -146,7 +168,8 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
   ): Promise<Simulation> {
     const ir = rawIrUnderTest() as ContentIr;
     const { merge } = await loadContentUnderTest();
-    const map = TerrainMapFile.parse(JSON.parse(readFileSync(realMapPath(MAP_ID), 'utf8')));
+    const authoredMap = TerrainMapFile.parse(JSON.parse(readFileSync(realMapPath(MAP_ID), 'utf8')));
+    const map = variantMap(authoredMap, mapSessionWorld(MAP_ID, 'ragnarok'));
     const { ragnarok: script } = scripts();
     return buildMapWorld({
       seed: 7,

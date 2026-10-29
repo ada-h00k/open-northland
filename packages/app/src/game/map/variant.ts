@@ -1,9 +1,11 @@
 import {
+  applyMapVariantEntities,
   applyMapVariantScript,
   findMapVariant,
   type MapScript,
   type MapVariant,
   type MapVariantKind,
+  type TerrainMapFile,
 } from '@open-northland/data';
 import type { SessionWorld } from '@open-northland/lockstep';
 import type { MapScriptWorld } from '../world/build.js';
@@ -33,6 +35,13 @@ export function variantMapScript(script: MapScript | null, world: SessionWorld):
 export function variantMapScript(script: MapScript | null, world: SessionWorld): MapScript | null {
   const variant = sessionMapVariant(world);
   return script === null || variant === null ? script : applyMapVariantScript(script, variant);
+}
+
+/** The map's placements as the session's world starts them. */
+export function variantMap(map: TerrainMapFile | null, world: SessionWorld): TerrainMapFile | null {
+  const variant = sessionMapVariant(world);
+  if (map?.entities === undefined || variant === null) return map;
+  return { ...map, entities: applyMapVariantEntities(map.entities, variant) };
 }
 
 /** The script world with the session variant's escalation, which the build and every restore pass on. */

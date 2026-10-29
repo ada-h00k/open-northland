@@ -4,7 +4,7 @@ export {
   MapEscalationJobShare,
   MapEscalationWaveSize,
 } from './escalation.js';
-export { applyMapVariantScript, applyMapVariantSlots } from './patch.js';
+export { applyMapVariantEntities, applyMapVariantScript, applyMapVariantSlots } from './patch.js';
 export { findMapVariant, MAP_VARIANTS, mapVariantsOf } from './registry.js';
 export {
   MapVariant,

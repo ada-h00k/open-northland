@@ -20,6 +20,52 @@ const AuthoredGoods = z
 
 const HalfCell = z.strictObject({ hx: z.number().int().nonnegative(), hy: z.number().int().nonnegative() });
 
+/** A `sethuman` placement: tribe + `[jobtype]` role names; `player` is the verb's first value (0-based). */
+export const AuthoredHuman = z.strictObject({
+  tribe: z.string(),
+  role: z.string(),
+  player: z.number().int().nonnegative(),
+  hx: z.number().int().nonnegative(),
+  hy: z.number().int().nonnegative(),
+  missionId: MissionObjectId,
+  /** The 32-bit behaviour mask the `*BehaviourFlag` results share. */
+  behaviourFlags: z.number().int().nonnegative().optional(),
+  /** A gatherer's authored resource pick, the `setproducedgood` in this settler's `sethuman`
+   *  block (goodtype name verbatim). Absent = gather every good the trade may harvest. */
+  producedGood: z.string().optional(),
+  /** The buildings this settler is authored into (`attachtohouse`), each naming a `sethouse` anchor
+   *  half-cell. `slot` is the source's own column, kept verbatim and read by nothing. */
+  attach: z
+    .array(
+      z.strictObject({
+        hx: z.number().int().nonnegative(),
+        hy: z.number().int().nonnegative(),
+        slot: z.number().int().nonnegative(),
+      }),
+    )
+    .optional(),
+  /** The vehicle this settler crews (`attachtovehicle`), by the `setvehicle` half-cell it stands on;
+   *  `inside` when a `moveintovehicle` follows, which boards the settler off the map. */
+  boardVehicleAt: z
+    .strictObject({
+      hx: z.number().int().nonnegative(),
+      hy: z.number().int().nonnegative(),
+      inside: z.boolean(),
+    })
+    .optional(),
+  /** Starting experience (`setexpierence`) per `humanjobexperiencetype` track, in the unit of the
+   *  tribe's `needfor*` amounts; a repeated track adds up. */
+  experience: z
+    .array(
+      z.strictObject({
+        track: z.number().int().nonnegative(),
+        amount: z.number().int().positive(),
+      }),
+    )
+    .optional(),
+});
+export type AuthoredHuman = z.infer<typeof AuthoredHuman>;
+
 export const TerrainEntities = z.strictObject({
   /**
    * `sethouse` placements: `[GfxHouse]` EditName + level pick the building type. `player` is the
@@ -40,54 +86,7 @@ export const TerrainEntities = z.strictObject({
       }),
     )
     .default([]),
-  /** `sethuman` placements: tribe + `[jobtype]` role names; `player` is the verb's first value (0-based). */
-  humans: z
-    .array(
-      z.strictObject({
-        tribe: z.string(),
-        role: z.string(),
-        player: z.number().int().nonnegative(),
-        hx: z.number().int().nonnegative(),
-        hy: z.number().int().nonnegative(),
-        missionId: MissionObjectId,
-        /** The 32-bit behaviour mask the `*BehaviourFlag` results share. */
-        behaviourFlags: z.number().int().nonnegative().optional(),
-        /** A gatherer's authored resource pick, the `setproducedgood` in this settler's `sethuman`
-         *  block (goodtype name verbatim). Absent = gather every good the trade may harvest. */
-        producedGood: z.string().optional(),
-        /** The buildings this settler is authored into (`attachtohouse`), each naming a `sethouse` anchor
-         *  half-cell. `slot` is the source's own column, kept verbatim and read by nothing. */
-        attach: z
-          .array(
-            z.strictObject({
-              hx: z.number().int().nonnegative(),
-              hy: z.number().int().nonnegative(),
-              slot: z.number().int().nonnegative(),
-            }),
-          )
-          .optional(),
-        /** The vehicle this settler crews (`attachtovehicle`), by the `setvehicle` half-cell it stands on;
-         *  `inside` when a `moveintovehicle` follows, which boards the settler off the map. */
-        boardVehicleAt: z
-          .strictObject({
-            hx: z.number().int().nonnegative(),
-            hy: z.number().int().nonnegative(),
-            inside: z.boolean(),
-          })
-          .optional(),
-        /** Starting experience (`setexpierence`) per `humanjobexperiencetype` track, in the unit of the
-         *  tribe's `needfor*` amounts; a repeated track adds up. */
-        experience: z
-          .array(
-            z.strictObject({
-              track: z.number().int().nonnegative(),
-              amount: z.number().int().positive(),
-            }),
-          )
-          .optional(),
-      }),
-    )
-    .default([]),
+  humans: z.array(AuthoredHuman).default([]),
   /** `setanimal` placements: the species is the verb's `[animaltype]` tribe (e.g. `hares`), and
    *  `player` 20 is the wild owner the corpus uses for all but a few hundred herds. */
   animals: z

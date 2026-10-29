@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AuthoredHuman } from '../schema/maps/entities.js';
 import { MapAiTask, MapMultiplayerSlot, MapScriptLine } from '../schema/maps/script.js';
 import { MapEscalation } from './escalation.js';
 
@@ -46,6 +47,8 @@ export const MapVariant = z.strictObject({
   mapId: z.string().min(1),
   kind: MapVariantKind,
   script: MapVariantScriptPatch,
+  /** Settlers placed after the map's own as if it authored them, so an absent seat's stay out too. */
+  startHumans: z.array(AuthoredHuman).default([]),
   /** Each spawned deposit node of the named good (a content good id) starts with its authored amount
    *  times this factor. */
   depositYield: z.record(z.string().min(1), z.number().int().min(1)).default({}),

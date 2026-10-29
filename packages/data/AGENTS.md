@@ -23,7 +23,7 @@
 - `src/missions/`: mission goal and result decoding. `src/names/`: personal-name tables.
   `src/catalog/`: committed tables no source file supplies.
 - `src/map-variants/`: committed per-map variants (one file each), their schema, the script patch
-  they apply and the escalation schedule the sim runs. A variant is our own authored data, outside `IR_VERSION`; it names missions by
+  and starting settlers they apply, and the escalation schedule the sim runs. A variant is our own authored data, outside `IR_VERSION`; it names missions by
   `debuginfo` label and never renumbers them.
 - `src/` root: lookups and pure helpers over parsed content.
 

@@ -1,4 +1,5 @@
 import { mapSlotEligibility } from '../map-lobby.js';
+import type { TerrainEntities } from '../schema/maps/entities.js';
 import type { MapsIndexPlayerSlot } from '../schema/maps/listing.js';
 import type { MapMission, MapScript } from '../schema/maps/script.js';
 import type { MapVariant } from './schema.js';
@@ -45,6 +46,13 @@ export function applyMapVariantScript(script: MapScript, variant: MapVariant): M
     tradeAgreements: script.tradeAgreements.filter((row) => !dropped.has(row.missionId)),
     missions,
   };
+}
+
+/** The map's placements as the variant starts them: its settlers after the authored ones, so every
+ *  authored placement keeps its place in the order entity ids are minted in. */
+export function applyMapVariantEntities(entities: TerrainEntities, variant: MapVariant): TerrainEntities {
+  if (variant.startHumans.length === 0) return entities;
+  return { ...entities, humans: [...entities.humans, ...variant.startHumans] };
 }
 
 /** The lobby rows of a map index entry as the variant offers them: only the eligibility a replaced
