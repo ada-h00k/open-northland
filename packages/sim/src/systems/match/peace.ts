@@ -12,10 +12,10 @@ const PEACE_NOTICE_MINUTES = [5, 1] as const;
 
 /**
  * How near a peace partner's building a seat may neither send its people and vehicles nor build while the
- * peace holds, in map points (`hexDistance`) from the building's anchor: about forty cells. A project choice
+ * peace holds, in map points (`hexDistance`) from the building's anchor: about thirty cells. A project choice
  * with no source, so nobody camps or builds at a partner's door to strike the tick the peace ends.
  */
-export const PEACE_KEEP_OUT_RADIUS_NODES = 80;
+export const PEACE_KEEP_OUT_RADIUS_NODES = 60;
 
 /**
  * Ends the lobby peace at the head of its deadline tick, ahead of the commands, so no order or pass
