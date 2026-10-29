@@ -5,12 +5,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { mapLobbySlots } from '@open-northland/data';
-import {
-  DEFAULT_PEACE_MINUTES,
-  type GameSession,
-  OBSERVER_SEAT,
-  type SessionSeat,
-} from '@open-northland/lockstep';
+import { type GameSession, OBSERVER_SEAT, type SessionSeat } from '@open-northland/lockstep';
 import type { RoomSeatSetup, RoomSettings } from '@open-northland/net-protocol';
 import type { SaveGame } from '@open-northland/sim';
 import type { ContentIr } from '../../src/content/ir/rows.js';
@@ -31,8 +26,6 @@ import type { LabSeats } from './report.js';
 
 /** A network room starts with allies sharing the map, as the main menu creates it. */
 const ROOM_ALLIED_VISION = true;
-/** And with the peace the main menu offers it. */
-const ROOM_PEACE = DEFAULT_PEACE_MINUTES;
 
 export interface SeatRequest {
   readonly mapId: string;
@@ -155,7 +148,7 @@ export function savedLabSeats(save: SaveGame, humans: number, computers: number 
 
 /** The rules a fresh room starts with: the main menu's defaults. */
 export function roomRules(): RoomSettings['rules'] {
-  const options = initialLobbyOptions(new URLSearchParams(), ROOM_ALLIED_VISION, ROOM_PEACE);
+  const options = initialLobbyOptions(new URLSearchParams(), ROOM_ALLIED_VISION);
   return {
     fog: FOG_MODE_BY_NAME[options.fog],
     progression: options.professionProgression,

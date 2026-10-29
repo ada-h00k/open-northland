@@ -49,12 +49,9 @@ export interface LobbyOptions {
 }
 
 /** Progression and needs default on, so only an explicit `off` in the URL clears the box. Allied vision
- *  and the peace are not carried between menu visits: the caller picks them for the kind of game. */
-export function initialLobbyOptions(
-  params: URLSearchParams,
-  alliedVision: boolean,
-  peace: PeaceMinutes | null,
-): LobbyOptions {
+ *  is not carried between menu visits: the caller picks it for the kind of game. Every lobby starts
+ *  without a peace. */
+export function initialLobbyOptions(params: URLSearchParams, alliedVision: boolean): LobbyOptions {
   const fog = params.get('fog');
   return {
     fog: LOBBY_FOG_MODES.find((mode) => mode === fog) ?? DEFAULT_FOG_MODE,
@@ -62,7 +59,7 @@ export function initialLobbyOptions(
     settlerNeeds: onOffParam(params, 'needs') !== false,
     weather: weatherModeParam(params) ?? DEFAULT_WEATHER_MODE,
     alliedVision,
-    peace,
+    peace: null,
   };
 }
 

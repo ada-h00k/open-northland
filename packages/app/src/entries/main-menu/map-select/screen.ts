@@ -1,5 +1,5 @@
 import type { MusicSilencer } from '../../../campaign/movie.js';
-import { localAlliedVision, localPeace } from '../../../game/match/session-rules.js';
+import { localAlliedVision } from '../../../game/match/session-rules.js';
 import { drawSessionSeed } from '../../../game/match/session-url.js';
 import { messages } from '../../../i18n/index.js';
 import type { LaunchEntry } from '../../../launch.js';
@@ -41,7 +41,6 @@ export function mapSelectScreen(
         const options = initialLobbyOptions(
           new URLSearchParams(window.location.search),
           localAlliedVision(item.types),
-          localPeace(item.types),
         );
         launch(targetSearch(lobbyStartEntry(item.id, state, item.players, options, drawSessionSeed())));
       } else openLobby(item);

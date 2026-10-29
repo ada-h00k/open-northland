@@ -9,7 +9,6 @@ export {
   absentSeatsOf,
   type ComputerDifficulty,
   DEFAULT_LOCAL_PLAYER,
-  DEFAULT_PEACE_MINUTES,
   DEFAULT_WEATHER_MODE,
   type GameSession,
   humanSeatsOf,

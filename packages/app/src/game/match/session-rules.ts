@@ -1,6 +1,5 @@
 import { isMultiplayerMapType } from '@open-northland/data';
 import {
-  DEFAULT_PEACE_MINUTES,
   PEACE_MINUTES,
   type PeaceMinutes,
   type SessionRules,
@@ -66,10 +65,4 @@ export function applySessionRuleOverrides(sim: WorldSetup, overrides: Omit<SimSe
  *  single-player one. A network room always starts with it on. */
 export function localAlliedVision(mapTypes: readonly number[]): boolean {
   return isMultiplayerMapType(mapTypes);
-}
-
-/** The peace a local game starts a map with: the default length on a multiplayer map, none on a
- *  single-player one, which offers no peace at all. */
-export function localPeace(mapTypes: readonly number[]): PeaceMinutes | null {
-  return isMultiplayerMapType(mapTypes) ? DEFAULT_PEACE_MINUTES : null;
 }

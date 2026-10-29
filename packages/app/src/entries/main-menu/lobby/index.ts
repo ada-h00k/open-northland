@@ -1,5 +1,5 @@
 import { isMultiplayerMapType } from '@open-northland/data';
-import { localAlliedVision, localPeace } from '../../../game/match/session-rules.js';
+import { localAlliedVision } from '../../../game/match/session-rules.js';
 import { drawSessionSeed } from '../../../game/match/session-url.js';
 import { messages } from '../../../i18n/index.js';
 import type { LaunchEntry } from '../../../launch.js';
@@ -91,7 +91,6 @@ export function lobbyScreen(
   const options = initialLobbyOptions(
     new URLSearchParams(window.location.search),
     localAlliedVision(item.types),
-    localPeace(item.types),
   );
 
   const start = document.createElement('button');

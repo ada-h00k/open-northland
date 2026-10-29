@@ -58,9 +58,6 @@ export const PEACE_MINUTES = [30, 45, 60, 75, 90] as const;
 
 export type PeaceMinutes = (typeof PEACE_MINUTES)[number];
 
-/** The peace a lobby offers a multiplayer map with until a person picks another. */
-export const DEFAULT_PEACE_MINUTES: PeaceMinutes = 60;
-
 /** The world rules the session overrides; null keeps whatever the world set for itself. */
 export interface SessionRules {
   /** A `FOG_MODE` id. */
