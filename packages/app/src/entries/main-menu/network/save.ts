@@ -11,7 +11,7 @@ import {
   type VerifiedMapDocuments,
 } from '../../../content/transfer/index.js';
 import { assertMultiplayerMap } from '../../../game/map/multiplayer.js';
-import { variantMapScript } from '../../../game/map/variant.js';
+import { variantMapScript, variantScriptWorld } from '../../../game/map/variant.js';
 import { mapScriptWorld } from '../../../game/world/mission-script.js';
 import { decodeSaveText, type SaveBytes } from '../../../view/runtime/save-load/codec.js';
 import { evaluateSaveDocument } from '../../../view/runtime/save-load/evaluate.js';
@@ -32,7 +32,8 @@ export async function validateNetworkSave(save: SaveGame, handle: VerifiedMapDoc
   if (ir === null || runtime === null) throw new Error('Missing game content');
   const documents = readVerifiedMapDocuments(handle);
   const { map } = documents;
-  const script = variantMapScript(documents.script, savedMapWorld(save, handle.mapId));
+  const world = savedMapWorld(save, handle.mapId);
+  const script = variantMapScript(documents.script, world);
   assertMultiplayerMap(script);
   restoreSavedSeats(
     save,
@@ -49,7 +50,7 @@ export async function validateNetworkSave(save: SaveGame, handle: VerifiedMapDoc
       map,
       ir,
       playerRoster: script?.players ?? [],
-      script: mapScriptWorld(script, ir),
+      script: variantScriptWorld(mapScriptWorld(script, ir), world),
       content: { content: runtime.content, footprints: buildingFootprints(ir) },
     },
     save,

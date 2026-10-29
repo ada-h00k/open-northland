@@ -3,6 +3,7 @@ import {
   applyMapVariantScript,
   applyMapVariantSlots,
   MAP_VARIANTS,
+  MapEscalation,
   MapScript,
   MapVariant,
   mapLobbySlots,
@@ -86,6 +87,36 @@ describe('applyMapVariantScript', () => {
     expect(mapLobbySlots(SCRIPT).map((slot) => slot.claimable)).toEqual([true, false]);
   });
 
+  it('appends AI tasks after a seat’s authored ones and refuses a seat without rows', () => {
+    const defend = {
+      kind: 'defend' as const,
+      priority: 5,
+      condition: 0,
+      x: 1,
+      y: 1,
+      range: 4,
+      min: 0,
+      max: 0,
+    };
+    const seat = {
+      player: VILLAGE_SEAT,
+      allDisabled: false,
+      computerDisabled: true,
+      disabledComputerModules: [],
+    };
+    const script = MapScript.parse({ ...SCRIPT, ai: [{ ...seat, tasks: [defend] }] });
+    const appended = { ...defend, x: 2 };
+    const patched = applyMapVariantScript(script, {
+      ...VARIANT,
+      script: { ...VARIANT.script, appendedAiTasks: [{ player: VILLAGE_SEAT, tasks: [appended] }] },
+    });
+    expect(patched.ai[0]?.tasks).toEqual([defend, appended]);
+    const stray = { ...VARIANT.script, appendedAiTasks: [{ player: OPEN_SEAT, tasks: [appended] }] };
+    expect(() => applyMapVariantScript(script, { ...VARIANT, script: stray })).toThrow(
+      /no \[AIData\] rows for seat 0/,
+    );
+  });
+
   it('refuses a variant naming a mission the script lacks', () => {
     const stale = { ...VARIANT, script: { ...VARIANT.script, neutralizedMissions: ['Gone'] } };
     expect(() => applyMapVariantScript(SCRIPT, stale)).toThrow(/no single mission named Gone/);
@@ -107,6 +138,22 @@ describe('applyMapVariantSlots', () => {
 
     expect(patched[0]).toBe(slots[0]);
     expect(patched[1]).toMatchObject({ claimable: true, aiAllowed: true, noneAllowed: true });
+  });
+});
+
+describe('MapEscalation', () => {
+  it('refuses a schedule out of order or a seat targeted twice', () => {
+    const variant = MAP_VARIANTS.find((row) => row.escalation !== undefined);
+    if (variant?.escalation === undefined) throw new Error('no committed escalation to vary');
+    const { attacks, guard } = variant.escalation;
+    const target = attacks.targets[0];
+    for (const bad of [
+      { attacks: { ...attacks, launches: [...attacks.launches].reverse() } },
+      { attacks: { ...attacks, targets: [target, target] } },
+      { guard: { ...guard, refill: guard.refill.slice(1) } },
+    ]) {
+      expect(MapEscalation.safeParse({ ...variant.escalation, ...bad }).success).toBe(false);
+    }
   });
 });
 

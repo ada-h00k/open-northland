@@ -1,4 +1,4 @@
-import { type ContentSet, jsonFingerprint } from '@open-northland/data';
+import { type ContentSet, jsonFingerprint, type MapEscalation } from '@open-northland/data';
 import {
   type MapAiScript,
   MapAiState,
@@ -33,6 +33,8 @@ export interface RestoreOptions {
   missions?: MissionScript;
   /** The map's `[AIData]` rows, on the same terms for a save that carries a seat's program state. */
   mapAiScript?: MapAiScript;
+  /** The map variant's escalation, which must be the one the run was saved under. */
+  mapEscalation?: MapEscalation;
 }
 
 /**
@@ -63,12 +65,17 @@ export function restoreSimulation(save: SaveGame, opts: RestoreOptions): Simulat
   if (header.mapAiScriptFingerprint !== aiFingerprint) {
     throw new Error('save.header.mapAiScriptFingerprint: the loaded map AI script differs from the save');
   }
+  const escalationFingerprint = opts.mapEscalation === undefined ? null : jsonFingerprint(opts.mapEscalation);
+  if (header.mapEscalationFingerprint !== escalationFingerprint) {
+    throw new Error('save.header.mapEscalationFingerprint: the loaded map escalation differs from the save');
+  }
   const sim = new Simulation({
     seed: header.seed,
     content: opts.content,
     ...(opts.map !== undefined ? { map: opts.map } : {}),
     ...(opts.missions !== undefined ? { missions: opts.missions } : {}),
     ...(opts.mapAiScript !== undefined ? { mapAiScript: opts.mapAiScript } : {}),
+    ...(opts.mapEscalation !== undefined ? { mapEscalation: opts.mapEscalation } : {}),
   });
   const fingerprint = sim.mapFingerprint ?? null;
   if (fingerprint !== header.mapFingerprint) {

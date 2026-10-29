@@ -1,6 +1,8 @@
-import { Building, Owner, Person } from '../../components/index.js';
+import type { ContentSet } from '@open-northland/data';
+import { Building, Owner, Person, Settler } from '../../components/index.js';
 import { ONE } from '../../core/fixed.js';
 import type { Component, Entity, World } from '../../ecs/world.js';
+import { isFighterJob } from '../readviews/index.js';
 
 interface RosterCache {
   memberGeneration: number;
@@ -163,4 +165,14 @@ export const ownedSettlers = createOwnedRoster(Person, 'ownedSettlers');
 /** Whether the building's construction (or its latest upgrade) is complete. */
 export function isBuilt(world: World, e: Entity): boolean {
   return world.get(e, Building).built >= ONE;
+}
+
+/** The soldiers a player fields, as its statistics count them. */
+export function soldierCount(world: World, content: ContentSet, player: number): number {
+  let count = 0;
+  for (const e of ownedSettlers(world, player)) {
+    const jobType = world.tryGet(e, Settler)?.jobType ?? null;
+    if (jobType !== null && isFighterJob(content, jobType)) count++;
+  }
+  return count;
 }

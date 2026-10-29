@@ -1,4 +1,4 @@
-import type { ContentSet, EquipCategory } from '@open-northland/data';
+import type { ContentSet, EquipCategory, MapEscalation } from '@open-northland/data';
 import type { MapAiScript } from './components/ai/map-ai.js';
 import {
   ASSISTANT_COUNTER_KINDS,
@@ -100,6 +100,7 @@ import {
   placementBlockerVersion,
 } from './systems/footprint/index.js';
 import { type LandscapeEditView, landscapeEdits } from './systems/landscape/view.js';
+import { type MapEscalationView, mapEscalationView } from './systems/map-escalation/index.js';
 import { type MatchGoalProgress, matchGoalProgress } from './systems/match/index.js';
 import { peaceGroundFor } from './systems/match/peace.js';
 import {
@@ -181,6 +182,8 @@ export interface SimOptions {
   missions?: MissionScript;
   /** The map's `[AIData]` rows. Omitted for a world whose map authored none. */
   mapAiScript?: MapAiScript;
+  /** The map variant's escalating siege. Omitted for a world that runs none. */
+  mapEscalation?: MapEscalation;
 }
 
 /** Wraps one system invocation for timing; observational only. */
@@ -213,6 +216,8 @@ export class Simulation {
   /** The map's `[AIData]` rows, the AI program system's content input; an immutable input like
    *  `missions`. */
   readonly mapAiScript?: MapAiScript;
+  /** The map variant's escalating siege, the escalation system's input; immutable like `mapAiScript`. */
+  readonly mapEscalation?: MapEscalation;
   /** The map's identity inputs, over the terrain's own lanes where they match, so the map's arrays are
    *  not held for a digest only a save or a load reads. */
   private readonly mapIdentity?: MapFingerprintInput;
@@ -243,6 +248,7 @@ export class Simulation {
     bindWorldContent(this.world, opts.content);
     if (opts.missions !== undefined) this.missions = opts.missions;
     if (opts.mapAiScript !== undefined) this.mapAiScript = opts.mapAiScript;
+    if (opts.mapEscalation !== undefined) this.mapEscalation = opts.mapEscalation;
     if (opts.map !== undefined) {
       const typeIds = Int32Array.from(opts.map.typeIds);
       this.terrain = buildTerrainGraph(opts.content, opts.map, typeIds);
@@ -264,6 +270,11 @@ export class Simulation {
 
   matchRules(): MatchRulesView {
     return matchRulesView(this.world);
+  }
+
+  /** The escalation's progress for the HUD and render; null for a world that runs none. */
+  mapEscalationView(): MapEscalationView | null {
+    return this.mapEscalation === undefined ? null : mapEscalationView(this.world, this.mapEscalation);
   }
 
   missionPresentation(): MissionPresentationView {
@@ -336,6 +347,7 @@ export class Simulation {
       ...(this.fog !== undefined ? { fog: this.fog } : {}),
       ...(this.missions !== undefined ? { missions: this.missions } : {}),
       ...(this.mapAiScript !== undefined ? { mapAiScript: this.mapAiScript } : {}),
+      ...(this.mapEscalation !== undefined ? { mapEscalation: this.mapEscalation } : {}),
     };
   }
 
@@ -956,6 +968,7 @@ export interface SimInputs {
   readonly map?: TerrainMap | undefined;
   readonly missions?: MissionScript | undefined;
   readonly mapAiScript?: MapAiScript | undefined;
+  readonly mapEscalation?: MapEscalation | undefined;
 }
 
 /**
@@ -963,12 +976,13 @@ export interface SimInputs {
  * `exactOptionalPropertyTypes` the key must be omitted, since Simulation builds its terrain graph iff the
  * key is present.
  */
-export function simFor({ content, seed, map, missions, mapAiScript }: SimInputs): Simulation {
+export function simFor({ content, seed, map, missions, mapAiScript, mapEscalation }: SimInputs): Simulation {
   return new Simulation({
     seed,
     content,
     ...(map !== undefined ? { map } : {}),
     ...(missions !== undefined ? { missions } : {}),
     ...(mapAiScript !== undefined ? { mapAiScript } : {}),
+    ...(mapEscalation !== undefined ? { mapEscalation } : {}),
   });
 }

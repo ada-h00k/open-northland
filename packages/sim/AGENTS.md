@@ -123,6 +123,7 @@ The hygiene suite enforces the import and nondeterminism boundary. Normal change
 | `spawn`, `livestock`, `wildlife`, `chests` | entity creation; farm animals; wild animals; chests |
 | `missions`, `match` | map scripts and goals; match goals, standing and teardown |
 | `computer-player`, `map-ai`, `ai-shared` | see AI ownership below |
+| `map-escalation` | a map variant's siege schedule: attacks spawned at a keep, the growing guard |
 | `readviews` | content read views shared across systems |
 
 `test/` mirrors `src/`: system tests live in `test/systems/<system>/` and its subfolders (a
@@ -140,4 +141,6 @@ either controller may run. The computer master permission gates every autonomous
 new ones; module permissions cannot override it. Map task soldiers have one active assignment.
 Planner commands name their decision source so disabling a controller and diagnosing an order do
 not depend on guessing its origin from command kind. Map AI, computer player, and common unit rules
-must remain distinct in names, state, tests and debug output.
+must remain distinct in names, state, tests and debug output. `systems/map-escalation` only spawns:
+an attack's men belong to a raider seat whose map-AI tasks order them, and the guard it refills is
+posted by the fortress seat's own program.

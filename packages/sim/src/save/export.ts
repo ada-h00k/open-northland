@@ -115,6 +115,7 @@ function captureSave(
       contentFingerprint: simContentFingerprint(sim.content),
       missionScriptFingerprint: sim.missions === undefined ? null : jsonFingerprint(sim.missions),
       mapAiScriptFingerprint: sim.mapAiScript === undefined ? null : jsonFingerprint(sim.mapAiScript),
+      mapEscalationFingerprint: sim.mapEscalation === undefined ? null : jsonFingerprint(sim.mapEscalation),
       savedAt,
       mapId: opts.mapId ?? null,
       mapFingerprint: sim.mapFingerprint ?? null,

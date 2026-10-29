@@ -38,6 +38,7 @@ export function applyMapVariantScript(script: MapScript, variant: MapVariant): M
   const dropped = new Set(patch.droppedTradeHouses);
   return {
     ...script,
+    ai: patchedAi(script.ai, variant),
     ...(script.multiplayer === undefined && patch.slotOptions.length === 0
       ? {}
       : { multiplayer: patchedMultiplayer(script.multiplayer, patch.slotOptions) }),
@@ -74,6 +75,20 @@ function missionIndexes(missions: readonly MapMission[], variant: MapVariant): (
       throw new Error(`${label(variant)}: the script has no single mission named ${name}`);
     return index;
   };
+}
+
+/** Each seat's rows with the variant's tasks after its authored ones. */
+function patchedAi(rows: MapScript['ai'], variant: MapVariant): MapScript['ai'] {
+  const appended = variant.script.appendedAiTasks;
+  for (const row of appended) {
+    if (!rows.some((seat) => seat.player === row.player))
+      throw new Error(`${label(variant)}: the script has no [AIData] rows for seat ${row.player}`);
+  }
+  if (appended.length === 0) return rows;
+  return rows.map((seat) => {
+    const extra = appended.filter((row) => row.player === seat.player).flatMap((row) => row.tasks);
+    return extra.length === 0 ? seat : { ...seat, tasks: [...seat.tasks, ...extra] };
+  });
 }
 
 function neutralizedMission(mission: MapMission): MapMission {

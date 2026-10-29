@@ -28,6 +28,7 @@ import {
   livestockSummonSystem,
 } from './livestock/index.js';
 import { mapAiSystem } from './map-ai/index.js';
+import { mapEscalationSystem } from './map-escalation/index.js';
 import { matchSystem } from './match/index.js';
 import { peaceSystem } from './match/peace.js';
 import { missionSystem } from './missions/index.js';
@@ -176,6 +177,9 @@ export const SYSTEM_ORDER: readonly ScheduledSystem[] = [
   // After cleanup, so a man reaped this tick is already gone when the death check counts, and before
   // the AI, so a seat that just died issues nothing.
   { name: 'match', system: matchSystem },
+  // After the death check and before the handlers, so a band spawned this tick is on the raider's
+  // list at its next turn and a seat that just died draws none.
+  { name: 'mapEscalation', system: mapEscalationSystem },
   // Map assignments reserve soldiers before defence and autonomous planning on a shared decision tick.
   // All planners read the settled world and enqueue commands for the next tick.
   { name: 'mapAi', system: mapAiSystem },

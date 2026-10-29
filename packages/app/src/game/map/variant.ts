@@ -7,6 +7,7 @@ import {
   mapVariantsOf,
 } from '@open-northland/data';
 import type { SessionWorld } from '@open-northland/lockstep';
+import type { MapScriptWorld } from '../world/build.js';
 
 /** `?variant=<kind>`: which committed variant of the map a launch plays; absent plays it as authored. */
 export const MAP_VARIANT_PARAM = 'variant';
@@ -33,6 +34,12 @@ export function variantMapScript(script: MapScript | null, world: SessionWorld):
 export function variantMapScript(script: MapScript | null, world: SessionWorld): MapScript | null {
   const variant = sessionMapVariant(world);
   return script === null || variant === null ? script : applyMapVariantScript(script, variant);
+}
+
+/** The script world with the session variant's escalation, which the build and every restore pass on. */
+export function variantScriptWorld(script: MapScriptWorld, world: SessionWorld): MapScriptWorld {
+  const escalation = sessionMapVariant(world)?.escalation;
+  return escalation === undefined ? script : { ...script, escalation };
 }
 
 /** The map world a launch plays: `mapId` under `variant`, or as authored. */

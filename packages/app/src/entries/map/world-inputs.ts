@@ -5,7 +5,7 @@ import { DESCRIPTOR_WORLD } from '@open-northland/net-protocol';
 import { type Entity, parseSaveGame, type SaveGame } from '@open-northland/sim';
 import { buildingFootprints } from '../../content/ir/joins.js';
 import type { ContentIr } from '../../content/ir/rows.js';
-import { sessionMapVariant } from '../../game/map/variant.js';
+import { sessionMapVariant, variantScriptWorld } from '../../game/map/variant.js';
 import { resolveAiControlPolicy } from '../../game/match/ai-control-policy.js';
 import { sessionMapScript } from '../../game/match/seat-tribes.js';
 import { assertMapSessionSeats } from '../../game/match/session-roster.js';
@@ -52,7 +52,7 @@ export function buildMapWorldFromInputs(inputs: MapWorldInputs): BuiltWorld<MapW
   const { map, ir, script, session, save } = inputs;
   // The render layers read the raw map; the sim runs on the collision resolution of the same map.
   const seated = sessionMapScript(session, script, ir);
-  const missionWorld = seated.world;
+  const missionWorld = variantScriptWorld(seated.world, session.world);
   const worldOptions = {
     script: missionWorld,
     map,

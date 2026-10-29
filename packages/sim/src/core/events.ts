@@ -590,6 +590,19 @@ export type SimEvent =
   | {
       readonly kind: 'missionSubMission';
       readonly transition: SubMissionTransition;
+    }
+  // A map escalation's steps (`systems/map-escalation`); each later step adds a kind of its own here.
+  | {
+      /** An attack set out: its men stand at the keep, one band for each of `seats`. */
+      readonly kind: 'mapEscalationAttackLaunched';
+      readonly wave: number;
+      readonly seats: readonly number[];
+    }
+  | {
+      /** The running attack is over: every man it sent died (`defeated`), or its time ran out. */
+      readonly kind: 'mapEscalationAttackEnded';
+      readonly wave: number;
+      readonly cause: 'defeated' | 'expired';
     };
 
 /** A pass's pending map change: into a campaign's sub map, or back to the parent from mission `mission`. */
