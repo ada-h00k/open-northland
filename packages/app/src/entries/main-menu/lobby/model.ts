@@ -1,3 +1,4 @@
+import { applyMapVariantSlots, findMapVariant, type MapVariantKind } from '@open-northland/data';
 import {
   type ComputerDifficulty,
   DEFAULT_LOCAL_PLAYER,
@@ -14,6 +15,7 @@ import {
   LOBBY_FOG_MODES,
   type LobbyFogModeName,
 } from '../../../game/fog.js';
+import { mapSessionWorld } from '../../../game/map/variant.js';
 import { onOffParam, weatherModeParam } from '../../../game/match/session-rules.js';
 import {
   claimableLocalSeat,
@@ -126,6 +128,7 @@ export function lobbySession(
   players: readonly MapPlayerSlot[],
   options: LobbyOptions,
   seed: number,
+  variant: MapVariantKind | null = null,
 ): GameSession {
   const lists = {
     computer: new Set(state.seat === null ? [] : computerSeats(state, players)),
@@ -159,7 +162,7 @@ export function lobbySession(
     seats.push({ player: localSeat, mode: 'human', color: localSeat });
   }
   return {
-    world: { kind: 'map', mapId },
+    world: mapSessionWorld(mapId, variant),
     seed,
     seats: orderedSeats(seats),
     localSeat,
@@ -182,6 +185,17 @@ export function lobbyStartEntry(
   players: readonly MapPlayerSlot[],
   options: LobbyOptions,
   seed: number,
+  variant: MapVariantKind | null = null,
 ): string {
-  return formatSearch(sessionSearch(lobbySession(mapId, state, players, options, seed), players));
+  return formatSearch(sessionSearch(lobbySession(mapId, state, players, options, seed, variant), players));
+}
+
+/** The seat rows a map index entry lists, as `variant` of the map offers them. */
+export function lobbyPlayers(
+  mapId: string,
+  players: readonly MapPlayerSlot[],
+  variant: MapVariantKind | null,
+): readonly MapPlayerSlot[] {
+  const found = variant === null ? null : findMapVariant(mapId, variant);
+  return found === null ? players : applyMapVariantSlots(players, found);
 }

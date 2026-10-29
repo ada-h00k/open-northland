@@ -1,3 +1,4 @@
+import type { MapVariantKind } from '@open-northland/data';
 import { MAX_ROOM_NAME_LENGTH } from '@open-northland/net-protocol';
 import { errorText } from '../../../diag/error-text.js';
 import { type DropdownChoice, dropdownControl } from '../../../hud/dom/parts/dropdown.js';
@@ -9,12 +10,18 @@ import { browserSaveStore } from '../../../view/runtime/save-load/store-browser.
 import { SCENE_TOKEN_PREFIX } from '../../../view/runtime/save-load/world-names.js';
 import { segControl } from '../../../view/settings/controls.js';
 import { node } from '../dom.js';
+import { mapVariantControl } from '../lobby-controls/variant.js';
 import { metaLine, paintMapThumb } from '../map-select/card.js';
 import type { MapSelectItem } from '../map-select/model.js';
 import { button, field } from './parts.js';
 
 export type CreateChoice =
-  | { readonly kind: 'map'; readonly mapId: string; readonly name: string }
+  | {
+      readonly kind: 'map';
+      readonly mapId: string;
+      readonly variant: MapVariantKind | null;
+      readonly name: string;
+    }
   | { readonly kind: 'save'; readonly bytes: SaveBytes; readonly name: string };
 
 type Source = 'map' | 'save';
@@ -81,6 +88,9 @@ export function createRoomCard(options: CreateCardOptions) {
   // Not a `field()`: a label would hand a click on the thumb or the name to the button.
   const mapField = node('div', 'network-menu__field');
   mapField.append(node('span', '', copy.map), mapRow);
+  // The map mode picker of a map that ships variants; empty for any other.
+  const variantField = node('div');
+  let chosenVariant: MapVariantKind | null = null;
   const status = node('p', 'network-menu__notice');
   status.setAttribute('role', 'status');
   const store = browserSaveStore();
@@ -92,6 +102,7 @@ export function createRoomCard(options: CreateCardOptions) {
   const sync = (): void => {
     saveField.hidden = source !== 'save';
     mapField.hidden = source !== 'map';
+    variantField.hidden = source !== 'map';
     file.hidden = source !== 'save';
     for (const input of [name, file, change]) input.disabled = !enabled || busy;
     save.setDisabled(!enabled || busy);
@@ -126,7 +137,9 @@ export function createRoomCard(options: CreateCardOptions) {
     event.preventDefault();
     void run(async () => {
       if (source === 'map')
-        return chosen === null ? null : { kind: 'map', mapId: chosen.id, name: name.value.trim() };
+        return chosen === null
+          ? null
+          : { kind: 'map', mapId: chosen.id, variant: chosenVariant, name: name.value.trim() };
       const bytes = await store.read(chosenSave);
       if (bytes === null) throw new Error(copy.saveInvalid);
       return { kind: 'save', bytes, name: name.value.trim() };
@@ -137,6 +150,7 @@ export function createRoomCard(options: CreateCardOptions) {
     field(copy.roomName, name),
     sourceField,
     mapField,
+    variantField,
     saveField,
     file,
     submit,
@@ -169,6 +183,21 @@ export function createRoomCard(options: CreateCardOptions) {
     setMap(item: MapSelectItem | null) {
       chosen = item;
       mapsEmpty = item === null;
+      chosenVariant = null;
+      const lobby = messages().mainMenu.lobby;
+      const variant =
+        item === null
+          ? null
+          : mapVariantControl(
+              item.id,
+              { label: lobby.variantLabel, modes: lobby.variantModes },
+              chosenVariant,
+              (next) => {
+                chosenVariant = next;
+              },
+              'network-menu__field',
+            );
+      variantField.replaceChildren(...(variant === null ? [] : [variant]));
       mapName.textContent = item?.title ?? copy.noMaps;
       mapMeta.textContent = item === null ? '' : metaLine(item);
       if (item === null) thumb.replaceChildren();

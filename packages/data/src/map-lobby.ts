@@ -1,18 +1,36 @@
 import type { MapsIndexPlayerSlot } from './schema/maps/listing.js';
-import { ComputerModuleId, type MapAiSeat, type MapScript } from './schema/maps/script.js';
+import {
+  ComputerModuleId,
+  type MapAiSeat,
+  type MapMultiplayerSlot,
+  type MapPlayerSlot,
+  type MapScript,
+} from './schema/maps/script.js';
+
+/** What a seat's `playeroption` row, or its absence, lets the lobby do with it. */
+export function mapSlotEligibility(
+  type: MapPlayerSlot['type'],
+  allowed: MapMultiplayerSlot['allowed'] | undefined,
+): Pick<MapsIndexPlayerSlot, 'claimable' | 'aiAllowed' | 'noneAllowed'> {
+  return {
+    claimable: type !== 'none' && (allowed === undefined ? type === 'human' : allowed.includes('human')),
+    aiAllowed: allowed === undefined || allowed.includes('ai'),
+    noneAllowed: allowed === undefined || allowed.includes('none'),
+  };
+}
 
 /** The lobby seats a script authors: its roster rows read against the `[multiplayer]` table. */
 export function mapLobbySlots(script: MapScript): MapsIndexPlayerSlot[] {
   const table = script.multiplayer;
   return script.players.map((slot) => {
     const allowed = table?.slotOptions.find((row) => row.player === slot.player)?.allowed;
+    const eligibility = mapSlotEligibility(slot.type, allowed);
     return {
       ...slot,
-      claimable:
-        slot.type !== 'none' && (allowed === undefined ? slot.type === 'human' : allowed.includes('human')),
+      claimable: eligibility.claimable,
       hidden: table?.hiddenSlots.includes(slot.player) ?? false,
-      aiAllowed: allowed === undefined || allowed.includes('ai'),
-      noneAllowed: allowed === undefined || allowed.includes('none'),
+      aiAllowed: eligibility.aiAllowed,
+      noneAllowed: eligibility.noneAllowed,
       hasComputerControl: mapAllowsComputerControl(script.ai?.find((row) => row.player === slot.player)),
     };
   });

@@ -22,6 +22,9 @@
 - `src/cross-references/`: the load-time dangling-reference check and its helpers.
 - `src/missions/`: mission goal and result decoding. `src/names/`: personal-name tables.
   `src/catalog/`: committed tables no source file supplies.
+- `src/map-variants/`: committed per-map variants (one file each), their schema and the script patch
+  they apply. A variant is our own authored data, outside `IR_VERSION`; it names missions by
+  `debuginfo` label and never renumbers them.
 - `src/` root: lookups and pure helpers over parsed content.
 
 Tests mirror `src/`; `test/schema/` holds the schema tests flat.

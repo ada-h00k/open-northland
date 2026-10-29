@@ -1,0 +1,118 @@
+import { describe, expect, it } from 'vitest';
+import {
+  applyMapVariantScript,
+  applyMapVariantSlots,
+  MAP_VARIANTS,
+  MapScript,
+  MapVariant,
+  mapLobbySlots,
+} from '../../src/index.js';
+
+const OPEN_SEAT = 0;
+const VILLAGE_SEAT = 1;
+const TRADE_HOUSE = 1;
+const OTHER_HOUSE = 2;
+
+const line = (key: string, ...values: string[]) => ({ key, values });
+
+const SCRIPT = MapScript.parse({
+  players: [
+    { player: OPEN_SEAT, type: 'human', tribeId: 1, colorId: 0 },
+    { player: VILLAGE_SEAT, type: 'ai', tribeId: 1, colorId: 1 },
+  ],
+  multiplayer: {
+    slotOptions: [
+      { player: OPEN_SEAT, allowed: ['human', 'ai', 'none'] },
+      { player: VILLAGE_SEAT, allowed: ['ai'] },
+    ],
+  },
+  tradeAgreements: [
+    { missionId: TRADE_HOUSE, giveGood: 1, giveAmount: 1, takeGood: 2, takeAmount: 1 },
+    { missionId: OTHER_HOUSE, giveGood: 1, giveAmount: 1, takeGood: 2, takeAmount: 1 },
+  ],
+  missions: [
+    {
+      debugName: 'Won',
+      active: true,
+      goals: [line('goal', 'True')],
+      results: [line('result', 'MissionWon', '0')],
+    },
+    {
+      debugName: 'Take over',
+      active: true,
+      visible: true,
+      goals: [line('goal', 'True')],
+      results: [line('result', 'ActivateMission', '2')],
+    },
+    {
+      debugName: 'Wave',
+      goals: [line('goal', 'TimeGone', '60')],
+      results: [line('result', 'ActivateMission', '1')],
+    },
+    { debugName: 'Later', goals: [line('goal', 'True')], results: [line('result', 'ActivateMission', '0')] },
+  ],
+});
+
+const VARIANT = MapVariant.parse({
+  mapId: 'test',
+  kind: 'ragnarok',
+  script: {
+    slotOptions: [{ player: VILLAGE_SEAT, allowed: ['human', 'ai', 'none'] }],
+    neutralizedMissions: ['Take over', 'Wave'],
+    appendedResults: [{ mission: 'Won', results: [line('result', 'MissionWon', '1')] }],
+    droppedTradeHouses: [TRADE_HOUSE],
+  },
+});
+
+describe('applyMapVariantScript', () => {
+  it('neutralises missions in place, so every mission keeps its ActivateMission index', () => {
+    const patched = applyMapVariantScript(SCRIPT, VARIANT);
+
+    expect(patched.missions.map((m) => m.debugName)).toEqual(['Won', 'Take over', 'Wave', 'Later']);
+    expect(patched.missions[1]).toEqual({ debugName: 'Take over', goals: [], results: [], other: [] });
+    expect(patched.missions[2]).toEqual({ debugName: 'Wave', goals: [], results: [], other: [] });
+    expect(patched.missions[3]).toBe(SCRIPT.missions[3]);
+  });
+
+  it('appends results, drops the named house trades and opens the replaced seat', () => {
+    const patched = applyMapVariantScript(SCRIPT, VARIANT);
+
+    expect(patched.missions[0]?.results).toEqual([
+      line('result', 'MissionWon', '0'),
+      line('result', 'MissionWon', '1'),
+    ]);
+    expect(patched.tradeAgreements.map((row) => row.missionId)).toEqual([OTHER_HOUSE]);
+    expect(mapLobbySlots(patched).map((slot) => slot.claimable)).toEqual([true, true]);
+    expect(mapLobbySlots(SCRIPT).map((slot) => slot.claimable)).toEqual([true, false]);
+  });
+
+  it('refuses a variant naming a mission the script lacks', () => {
+    const stale = { ...VARIANT, script: { ...VARIANT.script, neutralizedMissions: ['Gone'] } };
+    expect(() => applyMapVariantScript(SCRIPT, stale)).toThrow(/no single mission named Gone/);
+  });
+
+  it('refuses a variant that leaves a kept mission activating a neutralised one', () => {
+    const dangling = {
+      ...VARIANT,
+      script: { ...VARIANT.script, neutralizedMissions: ['Won'], appendedResults: [] },
+    };
+    expect(() => applyMapVariantScript(SCRIPT, dangling)).toThrow(/Later still activates neutralised 0/);
+  });
+});
+
+describe('applyMapVariantSlots', () => {
+  it('re-reads only the replaced seats of a map index roster', () => {
+    const slots = mapLobbySlots(SCRIPT);
+    const patched = applyMapVariantSlots(slots, VARIANT);
+
+    expect(patched[0]).toBe(slots[0]);
+    expect(patched[1]).toMatchObject({ claimable: true, aiAllowed: true, noneAllowed: true });
+  });
+});
+
+describe('MAP_VARIANTS', () => {
+  it('holds at most one variant of each kind per map', () => {
+    const keys = MAP_VARIANTS.map((variant) => `${variant.mapId}/${variant.kind}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+});

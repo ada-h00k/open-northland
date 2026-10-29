@@ -164,6 +164,8 @@ export const enSurfaces = {
         on: 'Rise over time',
         off: 'Disabled',
       },
+      variantLabel: 'Map mode',
+      variantModes: { authored: 'Normal', ragnarok: 'Ragnarök' },
       weatherLabel: 'Weather',
       weatherModes: {
         map: { label: 'Map', detail: 'Only the weather the map itself sets.' },

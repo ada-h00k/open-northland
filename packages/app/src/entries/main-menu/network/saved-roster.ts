@@ -1,6 +1,12 @@
-import { parseSavedSessionMetadata, type SessionSeat, type WeatherMode } from '@open-northland/lockstep';
+import {
+  parseSavedSessionMetadata,
+  type SessionSeat,
+  type SessionWorld,
+  type WeatherMode,
+} from '@open-northland/lockstep';
 import type { RoomSeatSetup } from '@open-northland/net-protocol';
 import type { SaveGame } from '@open-northland/sim';
+import { mapSessionWorld, mapVariantParam } from '../../../game/map/variant.js';
 import { weatherModeParam } from '../../../game/match/session-rules.js';
 import { SAVED_COMPUTER_DIFFICULTY } from '../lobby/roster-state.js';
 
@@ -12,6 +18,15 @@ export function savedRoster(save: SaveGame) {
       throw new Error('Saved session does not match its world');
   }
   return saved;
+}
+
+/** The map world a save was played on, its variant included: a relayed save's descriptor, else a
+ *  single-player launch search. */
+export function savedMapWorld(save: SaveGame, mapId: string): SessionWorld {
+  const saved = savedRoster(save);
+  if (saved !== null) return saved.descriptor.world;
+  const entry = save.header.entry === null ? null : new URLSearchParams(save.header.entry);
+  return mapSessionWorld(mapId, entry === null ? null : mapVariantParam(entry, mapId));
 }
 
 /** The weather a save was played under: a relayed save's descriptor, else a single-player launch search. */

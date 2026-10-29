@@ -190,6 +190,8 @@ export const ruSurfaces = {
         on: 'Растут со временем',
         off: 'Отключены',
       },
+      variantLabel: 'Режим карты',
+      variantModes: { authored: 'Обычный', ragnarok: 'Рагнарёк' },
       weatherLabel: 'Погода',
       weatherModes: {
         map: {

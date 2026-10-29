@@ -261,6 +261,7 @@ export function renderNetworkGame(
           client.reportLoading(percent);
         },
         mapId: map.mapId,
+        variant: session.world.variant ?? null,
         stagedSave,
         verifiedMap: map,
         sessionFor: () => session,

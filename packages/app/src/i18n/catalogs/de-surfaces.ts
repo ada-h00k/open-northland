@@ -191,6 +191,8 @@ export const deSurfaces = {
         on: 'Nehmen mit der Zeit zu',
         off: 'Deaktiviert',
       },
+      variantLabel: 'Kartenmodus',
+      variantModes: { authored: 'Normal', ragnarok: 'Ragnarök' },
       weatherLabel: 'Wetter',
       weatherModes: {
         map: {

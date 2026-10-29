@@ -11,12 +11,13 @@ import {
   type VerifiedMapDocuments,
 } from '../../../content/transfer/index.js';
 import { assertMultiplayerMap } from '../../../game/map/multiplayer.js';
+import { variantMapScript } from '../../../game/map/variant.js';
 import { mapScriptWorld } from '../../../game/world/mission-script.js';
 import { decodeSaveText, type SaveBytes } from '../../../view/runtime/save-load/codec.js';
 import { evaluateSaveDocument } from '../../../view/runtime/save-load/evaluate.js';
 import { restoreMapWorld } from '../../map/world.js';
 import { authoredVacantMode, vacantOffers } from '../lobby/roster-state.js';
-import { restoreSavedSeats, savedWeatherMode } from './saved-roster.js';
+import { restoreSavedSeats, savedMapWorld, savedWeatherMode } from './saved-roster.js';
 
 export async function readNetworkSave(bytes: SaveBytes): Promise<SaveGame> {
   const result = evaluateSaveDocument(await decodeSaveText(bytes));
@@ -29,7 +30,9 @@ export async function validateNetworkSave(save: SaveGame, handle: VerifiedMapDoc
   if (save.header.mapId !== handle.mapId) throw new Error('Save belongs to another map');
   const [ir, runtime] = await Promise.all([loadIr(), loadRuntimeRealContent()]);
   if (ir === null || runtime === null) throw new Error('Missing game content');
-  const { map, script } = readVerifiedMapDocuments(handle);
+  const documents = readVerifiedMapDocuments(handle);
+  const { map } = documents;
+  const script = variantMapScript(documents.script, savedMapWorld(save, handle.mapId));
   assertMultiplayerMap(script);
   restoreSavedSeats(
     save,

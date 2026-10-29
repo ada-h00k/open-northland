@@ -162,6 +162,8 @@ export const chtSurfaces = {
         on: '隨時間增加',
         off: '停用',
       },
+      variantLabel: '地圖模式',
+      variantModes: { authored: '普通', ragnarok: '諸神黃昏' },
       weatherLabel: '天氣',
       weatherModes: {
         map: { label: '地圖', detail: '只有地圖本身設定的天氣。' },

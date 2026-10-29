@@ -6,6 +6,7 @@ import type { SaveGame, Simulation } from '@open-northland/sim';
 import type { ContentIr } from '../../src/content/ir/rows.js';
 import { buildMapWorld, restoreMapWorld } from '../../src/entries/map/world.js';
 import { buildMapWorldFromInputs, type MapWorldInputs } from '../../src/entries/map/world-inputs.js';
+import { mapSessionWorld, mapVariantParam, variantMapScript } from '../../src/game/map/variant.js';
 import { matchParticipants, neverDiesSeats } from '../../src/game/match/participants.js';
 import { onOffParam } from '../../src/game/match/session-rules.js';
 import { mapIdParam, mapSession } from '../../src/game/match/session-url.js';
@@ -133,7 +134,7 @@ export async function realMapWorldOfSession(
   const { sim } = buildMapWorldFromInputs({
     map,
     ir: rawIrUnderTest() as ContentIr,
-    script: realMapScript(mapId),
+    script: variantMapScript(realMapScript(mapId), session.world),
     content: merge.content,
     session,
     missions: options.missions ?? null,
@@ -148,7 +149,10 @@ export async function realMapSessionWorld(search: string): Promise<Simulation> {
   const params = new URLSearchParams(search);
   const mapId = mapIdParam(params);
   if (mapId === null) throw new Error(`the search names no map: ${search}`);
-  const script = realMapScript(mapId);
+  const script = variantMapScript(
+    realMapScript(mapId),
+    mapSessionWorld(mapId, mapVariantParam(params, mapId)),
+  );
   const session = mapSession(params, script === null ? [] : mapLobbySlots(script));
   return (await realMapWorldOfSession(mapId, session, { missions: onOffParam(params, 'missions') })).sim;
 }

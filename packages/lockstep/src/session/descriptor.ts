@@ -39,9 +39,11 @@ export const OVERSEER_SEAT = 'overseer';
 
 export type LocalSeat = number | typeof OBSERVER_SEAT | typeof OVERSEER_SEAT;
 
-/** The world a session plays on; an empty `mapId` is the fallback strip a boot without a map draws. */
+/** The world a session plays on; an empty `mapId` is the fallback strip a boot without a map draws. A
+ *  map `variant` names one of the map's committed variants, which the world is built under; absent
+ *  plays the map as authored. */
 export type SessionWorld =
-  | { readonly kind: 'map'; readonly mapId: string }
+  | { readonly kind: 'map'; readonly mapId: string; readonly variant?: string }
   | { readonly kind: 'scene'; readonly sceneId: string };
 
 /** How a match's weather is drawn: `map` shows only what the map authors, `variable` adds the game's
@@ -167,7 +169,10 @@ export function parseGameSession(value: unknown): GameSession {
 function parseWorld(value: unknown): SessionWorld {
   const raw = asRecord(value, 'world');
   if (raw.kind === 'map') {
-    return { kind: 'map', mapId: raw.mapId === '' ? '' : worldId(raw.mapId, 'world.mapId') };
+    const mapId = raw.mapId === '' ? '' : worldId(raw.mapId, 'world.mapId');
+    if (raw.variant === undefined) return { kind: 'map', mapId };
+    if (mapId === '') throw new Error('session.world.variant needs a map');
+    return { kind: 'map', mapId, variant: worldId(raw.variant, 'world.variant') };
   }
   if (raw.kind === 'scene') return { kind: 'scene', sceneId: worldId(raw.sceneId, 'world.sceneId') };
   throw new Error(`session.world.kind must be 'map' or 'scene', got ${JSON.stringify(raw.kind)}`);

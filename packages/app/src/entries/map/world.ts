@@ -91,6 +91,8 @@ export interface MapWorldOptions extends SimSessionRules {
   readonly demoOwner?: number;
   /** True as the entry runs it. The headless harness turns bushes off for scenarios that ignore food. */
   readonly berryBushes?: boolean;
+  /** The map variant's deposit yield factors by content good id; a good it leaves out keeps its yield. */
+  readonly depositYield?: Readonly<Record<string, number>>;
 }
 
 export interface MapWorld {
@@ -311,7 +313,7 @@ function spawnHarvestables(
 ): Pick<MapWorld, 'harvestablePlacements' | 'pooledPlacements'> {
   const { map, ir } = options;
   if (map?.objects === undefined || ir === null) return { harvestablePlacements: [], pooledPlacements: [] };
-  const resources = spawnMapResources(sim, map.objects, ir);
+  const resources = spawnMapResources(sim, map.objects, ir, options.depositYield);
   const fields = spawnMapFields(sim, map.objects, ir);
   const chests = spawnMapChests(sim, map.objects, ir);
   const goods = spawnMapGroundGoods(sim, map.objects, ir);

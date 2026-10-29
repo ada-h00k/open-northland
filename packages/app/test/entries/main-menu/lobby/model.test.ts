@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   initialLobbyOptions,
   initialLobbyState,
+  lobbyPlayers,
   lobbySession,
   lobbySlotRows,
   lobbyStartEntry,
@@ -48,6 +49,37 @@ describe('initialLobbyState', () => {
 
   it('leaves an all-AI roster seatless', () => {
     expect(initialLobbyState([slot(0), slot(1)]).seat).toBeNull();
+  });
+});
+
+describe('lobbyPlayers', () => {
+  /** Forteca's two villages: map AI seats the authored map reserves and Ragnarök opens. */
+  const VILLAGES = [4, 5];
+  const forteca = [
+    slot(0, { claimable: true }),
+    ...VILLAGES.map((player) => slot(player, { aiAllowed: true, noneAllowed: false })),
+  ];
+
+  it('opens the seats a picked variant offers, and launches the variant', () => {
+    const players = lobbyPlayers('specjalna_forteca', forteca, 'ragnarok');
+    const state = initialLobbyState(players);
+
+    expect(lobbySlotRows(players, state).map((row) => row.kind)).toEqual(['yours', 'open', 'open']);
+    expect(lobbySlotRows(forteca, initialLobbyState(forteca)).map((row) => row.kind)).toEqual([
+      'yours',
+      'scenario',
+      'scenario',
+    ]);
+    const session = lobbySession('specjalna_forteca', state, players, OPTIONS, SEED, 'ragnarok');
+    expect(session.world).toEqual({ kind: 'map', mapId: 'specjalna_forteca', variant: 'ragnarok' });
+    expect(session.seats.filter((seat) => VILLAGES.includes(seat.player)).map((seat) => seat.mode)).toEqual([
+      'computer',
+      'computer',
+    ]);
+  });
+
+  it('keeps the roster of a map without that variant', () => {
+    expect(lobbyPlayers('zatoka', forteca, 'ragnarok')).toBe(forteca);
   });
 });
 

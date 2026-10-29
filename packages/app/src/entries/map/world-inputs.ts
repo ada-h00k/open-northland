@@ -5,6 +5,7 @@ import { DESCRIPTOR_WORLD } from '@open-northland/net-protocol';
 import { type Entity, parseSaveGame, type SaveGame } from '@open-northland/sim';
 import { buildingFootprints } from '../../content/ir/joins.js';
 import type { ContentIr } from '../../content/ir/rows.js';
+import { sessionMapVariant } from '../../game/map/variant.js';
 import { resolveAiControlPolicy } from '../../game/match/ai-control-policy.js';
 import { sessionMapScript } from '../../game/match/seat-tribes.js';
 import { assertMapSessionSeats } from '../../game/match/session-roster.js';
@@ -25,6 +26,7 @@ import { buildMapWorld, restoreMapWorld } from './world.js';
 export interface MapWorldInputs {
   readonly map: TerrainMapFile | null;
   readonly ir: ContentIr | null;
+  /** The script as the session's map variant plays it. */
   readonly script: MapScript | null;
   /** Real decoded content; null runs the sandbox catalog. */
   readonly content: ContentSet | null;
@@ -69,6 +71,7 @@ export function buildMapWorldFromInputs(inputs: MapWorldInputs): BuiltWorld<MapW
   const world = buildMapWorld({
     ...worldOptions,
     ...sessionWorldOptions(session, script, missionWorld),
+    depositYield: sessionMapVariant(session.world)?.depositYield ?? {},
     seed: session.seed,
     missions: inputs.missions,
     seatTribes: seated.remap,

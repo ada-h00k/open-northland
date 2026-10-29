@@ -82,6 +82,27 @@ describe('a mined placement is sized by its own record', () => {
     );
   });
 
+  it('multiplies a variant-boosted good by its factor, shrink ladder included, and no other good', () => {
+    const factor = 3;
+    const gold = MINES[1];
+    if (gold === undefined) throw new Error('missing gold fixture');
+    const sim = new Simulation({ seed: 1, content: sandboxContent() });
+    const { objects, ir } = mineFixture(gold.id, gold.logicType, gold.states);
+
+    spawnMapResources(sim, objects, ir, { [gold.id]: factor, stone: factor * factor });
+
+    const spawned = [...sim.world.query(Resource)].map((e) => ({
+      remaining: sim.world.get(e, Resource).remaining,
+      initial: sim.world.get(e, MineDeposit).initial,
+    }));
+    expect(spawned).toEqual(
+      Array.from({ length: gold.states }, (_, i) => ({
+        remaining: (i + 1) * factor,
+        initial: gold.states * factor,
+      })),
+    );
+  });
+
   it('keeps the catalog size for a record with no authored valency', () => {
     const sim = new Simulation({ seed: 1, content: sandboxContent() });
     const { objects, ir } = mineFixture('stone', 15, 4);

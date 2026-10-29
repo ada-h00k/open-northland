@@ -3,8 +3,15 @@ import { messages } from '../../../i18n/index.js';
 import { gameRuleControls } from '../lobby-controls/rules.js';
 import type { LobbyOptions } from './model.js';
 
-/** `offersPeace` shows the peace choice, which only a multiplayer map has. */
-export function lobbyOptionsCard(options: LobbyOptions, offersPeace: boolean): HTMLElement {
+/**
+ * `offersPeace` shows the peace choice, which only a multiplayer map has. `variant` is the map
+ * mode picker, for a map that ships variants.
+ */
+export function lobbyOptionsCard(
+  options: LobbyOptions,
+  offersPeace: boolean,
+  variant: HTMLElement | null = null,
+): HTMLElement {
   const lobby = messages().mainMenu.lobby;
   const card = document.createElement('div');
   card.className = 'main-menu__lobby-card';
@@ -47,6 +54,6 @@ export function lobbyOptionsCard(options: LobbyOptions, offersPeace: boolean): H
     );
   }
   paint();
-  card.append(title, ...controls.elements);
+  card.append(title, ...(variant === null ? [] : [variant]), ...controls.elements);
   return card;
 }

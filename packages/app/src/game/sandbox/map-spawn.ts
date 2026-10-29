@@ -55,6 +55,20 @@ export function withRecordDeposit(spec: ResourceNodeSpec, spawn: MapResourceSpaw
   };
 }
 
+/** A node holding `factor` times its authored yield. A deposit's full size grows with it, so its decal
+ *  steps through the same fill states over the larger stock. */
+export function withDepositYield(spec: ResourceNodeSpec, factor: number): ResourceNodeSpec {
+  if (factor === 1) return spec;
+  const { deposit } = spec;
+  return {
+    ...spec,
+    remaining: spec.remaining * factor,
+    ...(deposit === undefined
+      ? {}
+      : { deposit: { ...deposit, initial: (deposit.initial ?? spec.remaining) * factor } }),
+  };
+}
+
 /** `placementByEntity` holds each spawned entity's ordinal in `objects.placements`, the join back to the
  *  static layer's drawn sprite for the same placement. */
 export interface MapResourceSpawnResult {
@@ -101,6 +115,7 @@ export function spawnMapResources(
   sim: Simulation,
   objects: TerrainObjects,
   ir: ContentIr,
+  depositYield: Readonly<Record<string, number>> = {},
 ): MapResourceSpawnResult {
   let spawned = 0;
   let unspawnable = 0;
@@ -111,7 +126,7 @@ export function spawnMapResources(
     if (g === undefined) continue;
     const blockLevel = objects.levels?.[placement];
     const spec = {
-      ...withRecordDeposit(resourceSpecFor(g, hx, hy), spawn),
+      ...withDepositYield(withRecordDeposit(resourceSpecFor(g, hx, hy), spawn), depositYield[goodId] ?? 1),
       gfxIndex,
       ...(blockLevel !== undefined ? { blockLevel } : {}),
       ...(sim.terrain?.landscapes !== undefined ? { landscapeId: placement } : {}),

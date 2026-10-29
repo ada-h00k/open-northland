@@ -10,6 +10,7 @@ import {
 } from '../../../content/transfer/index.js';
 import { FOG_MODE_BY_NAME } from '../../../game/fog.js';
 import { assertMultiplayerMap } from '../../../game/map/multiplayer.js';
+import { mapSessionWorld, variantMapScript } from '../../../game/map/variant.js';
 import { DEFAULT_SESSION_SPEED, drawSessionSeed, mapSession } from '../../../game/match/session-url.js';
 import { initialLobbyOptions } from '../lobby/model.js';
 import {
@@ -22,7 +23,7 @@ import {
 } from '../lobby/roster-state.js';
 import type { CreateChoice } from './create-card.js';
 import { type PreparedNetworkSave, readNetworkSave, validateNetworkSave } from './save.js';
-import { restoreSavedSeats, savedRoster } from './saved-roster.js';
+import { restoreSavedSeats, savedMapWorld, savedRoster } from './saved-roster.js';
 
 /** A network room starts with allies sharing the map, whatever the map's kind. */
 const ROOM_ALLIED_VISION = true;
@@ -37,7 +38,11 @@ export async function prepareRoomCreation(choice: CreateChoice, params: URLSearc
   const cached = local === null ? await loadPersistedMap(mapId) : null;
   const handle = local ?? cached?.handle ?? null;
   if (handle === null) throw new Error('Missing map');
-  const { script } = readVerifiedMapDocuments(handle);
+  const world =
+    save === null
+      ? mapSessionWorld(mapId, choice.kind === 'map' ? choice.variant : null)
+      : savedMapWorld(save, mapId);
+  const script = variantMapScript(readVerifiedMapDocuments(handle).script, world);
   assertMultiplayerMap(script);
   const metadata = playable?.entry;
   const players = script === null ? [] : mapLobbySlots(script);
@@ -93,7 +98,7 @@ export async function prepareRoomCreation(choice: CreateChoice, params: URLSearc
   const catalog = playable?.catalog;
   const settings: RoomSettings = {
     name: choice.name,
-    world: { kind: 'map', mapId },
+    world,
     seed: save?.header.seed ?? drawSessionSeed(),
     rules,
     speed: savedSession?.descriptor.speed ?? DEFAULT_SESSION_SPEED,

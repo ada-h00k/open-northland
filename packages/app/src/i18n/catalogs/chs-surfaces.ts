@@ -162,6 +162,8 @@ export const chsSurfaces = {
         on: '随时间增长',
         off: '关闭',
       },
+      variantLabel: '地图模式',
+      variantModes: { authored: '普通', ragnarok: '诸神黄昏' },
       weatherLabel: '天气',
       weatherModes: {
         map: { label: '地图', detail: '仅使用地图自身设定的天气。' },

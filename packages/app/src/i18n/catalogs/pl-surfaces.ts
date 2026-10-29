@@ -163,6 +163,8 @@ export const plSurfaces = {
         on: 'Rosną z czasem',
         off: 'Wyłączone',
       },
+      variantLabel: 'Tryb mapy',
+      variantModes: { authored: 'Zwykły', ragnarok: 'Ragnarök' },
       weatherLabel: 'Pogoda',
       weatherModes: {
         map: { label: 'Mapa', detail: 'Tylko pogoda ustalona przez mapę.' },

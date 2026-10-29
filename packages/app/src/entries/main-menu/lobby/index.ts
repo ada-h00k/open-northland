@@ -1,15 +1,23 @@
-import { isMultiplayerMapType } from '@open-northland/data';
+import { isMultiplayerMapType, type MapVariantKind } from '@open-northland/data';
+import { mapVariantParam } from '../../../game/map/variant.js';
 import { localAlliedVision } from '../../../game/match/session-rules.js';
 import { drawSessionSeed } from '../../../game/match/session-url.js';
 import { messages } from '../../../i18n/index.js';
 import type { LaunchEntry } from '../../../launch.js';
 import { targetSearch } from '../../../view/target-search.js';
+import { mapVariantControl } from '../lobby-controls/variant.js';
 import { createMapDetailsCard } from '../map-select/card.js';
 import type { MapSelectItem } from '../map-select/model.js';
 import type { MenuScreen, MountedScreen } from '../model.js';
 import { screenHead } from '../screen-head.js';
 import { localSeatElements } from './local-seats.js';
-import { initialLobbyOptions, initialLobbyState, lobbySlotRows, lobbyStartEntry } from './model.js';
+import {
+  initialLobbyOptions,
+  initialLobbyState,
+  lobbyPlayers,
+  lobbySlotRows,
+  lobbyStartEntry,
+} from './model.js';
 import { lobbyOptionsCard } from './options-card.js';
 import {
   claimSeat,
@@ -88,36 +96,49 @@ export function lobbyScreen(
   const launchPanel = document.createElement('div');
   launchPanel.className = 'main-menu__lobby-launch';
 
-  const options = initialLobbyOptions(
-    new URLSearchParams(window.location.search),
-    localAlliedVision(item.types),
-  );
+  const search = new URLSearchParams(window.location.search);
+  const options = initialLobbyOptions(search, localAlliedVision(item.types));
+  let variant: MapVariantKind | null = mapVariantParam(search, item.id);
+  let players = lobbyPlayers(item.id, item.players, variant);
+  // A variant can open seats the authored map reserves, so each map mode keeps its own roster.
+  const rosterKey = (): string => (variant === null ? item.id : `${item.id}:${variant}`);
 
   const start = document.createElement('button');
   start.type = 'button';
   start.className = 'main-menu__primary main-menu__lobby-start';
   start.textContent = lobby.start;
-  launchPanel.append(lobbyOptionsCard(options, isMultiplayerMapType(item.types)), start);
+  const variantControl = mapVariantControl(
+    item.id,
+    { label: lobby.variantLabel, modes: lobby.variantModes },
+    variant,
+    (next) => {
+      variant = next;
+      players = lobbyPlayers(item.id, item.players, variant);
+      pickerSlot = null;
+      update(rosters.get(rosterKey()) ?? initialLobbyState(players));
+    },
+  );
+  launchPanel.append(lobbyOptionsCard(options, isMultiplayerMapType(item.types), variantControl), start);
   side.append(card.root, launchPanel);
 
   body.append(main, side);
   section.append(head, body);
 
-  // Roster state is kept per map, so a map switch and back keeps the seats.
-  let state = rosters.get(item.id) ?? initialLobbyState(item.players);
-  rosters.set(item.id, state);
+  // Roster state is kept per map and mode, so a switch and back keeps the seats.
+  let state = rosters.get(rosterKey()) ?? initialLobbyState(players);
+  rosters.set(rosterKey(), state);
   let pickerSlot: number | null = null;
   /** Focus key restored after the next re-render when the focused control goes away. */
   let refocus: string | null = null;
 
   const gateStart = (): void => {
-    const gated = hasClaimableSeat(item.players) && state.seat === null;
+    const gated = hasClaimableSeat(players) && state.seat === null;
     start.disabled = gated;
     start.title = gated ? lobby.startNeedsSeat : '';
   };
   const update = (next: RosterState): void => {
     state = next;
-    rosters.set(item.id, next);
+    rosters.set(rosterKey(), next);
     renderSeats();
     gateStart();
   };
@@ -184,7 +205,7 @@ export function lobbyScreen(
       },
     });
     const rows: HTMLElement[] = [];
-    const slotRows = lobbySlotRows(item.players, state);
+    const slotRows = lobbySlotRows(players, state);
     for (const row of slotRows) {
       rows.push(seats.row(row));
       if (pickerSlot === row.slot.player) rows.push(seats.picker(row));
@@ -220,7 +241,7 @@ export function lobbyScreen(
 
   start.addEventListener('click', () => {
     if (!start.disabled)
-      launch(targetSearch(lobbyStartEntry(item.id, state, item.players, options, drawSessionSeed())));
+      launch(targetSearch(lobbyStartEntry(item.id, state, players, options, drawSessionSeed(), variant)));
   });
 
   return { element: section, dispose: () => window.removeEventListener('keydown', onKeydown, true) };

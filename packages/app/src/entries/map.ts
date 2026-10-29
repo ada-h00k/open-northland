@@ -2,6 +2,7 @@ import { isSpectator, localPlayerOf } from '@open-northland/lockstep';
 import { scheduleFaultDrills } from '../diag/capture/drills.js';
 import { hasDebugFlag } from '../diag/debug-flags.js';
 import { diag, HASH_TRACE_DEBUG_FLAG } from '../diag/index.js';
+import { mapVariantParam } from '../game/map/variant.js';
 import { drawSessionSeed, mapIdParam, mapSession, seedParam } from '../game/match/session-url.js';
 import { endpointPort } from '../session/worker/port.js';
 import { startWorkerSession, type WorkerSession } from '../session/worker/worker-session.js';
@@ -76,6 +77,7 @@ export async function renderMap(canvas: HTMLCanvasElement, params: URLSearchPara
   const world = await assembleMapWorld(canvas, params, {
     hostWorld,
     mapId,
+    variant: mapVariantParam(params, mapId),
     stagedSave,
     sessionFor: (roster) => mapSession(params, roster),
   }).catch((err: unknown) => {

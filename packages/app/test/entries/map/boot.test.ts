@@ -61,7 +61,13 @@ function deferred<T>() {
 }
 
 function plan(hostWorld: () => Promise<HostedMapWorld>, staged = true): MapBootPlan<HostedMapWorld> {
-  return { hostWorld, mapId: null, stagedSave: staged ? STAGED : null, sessionFor: () => SESSION };
+  return {
+    hostWorld,
+    mapId: null,
+    variant: null,
+    stagedSave: staged ? STAGED : null,
+    sessionFor: () => SESSION,
+  };
 }
 
 const HOSTED = { host: {}, placements: {}, matchRules: {}, seed: 1 } as unknown as HostedMapWorld;
