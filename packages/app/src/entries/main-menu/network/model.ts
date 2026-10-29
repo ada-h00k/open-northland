@@ -2,7 +2,7 @@ import type { MapText } from '@open-northland/data';
 import type { SessionWorld } from '@open-northland/lockstep';
 import { parseNick } from '@open-northland/net-protocol';
 import { localizedMapText } from '../../../game/map/strings.js';
-import { currentLocale, type Locale, sceneCopy } from '../../../i18n/index.js';
+import { currentLocale, type Locale, messages, sceneCopy } from '../../../i18n/index.js';
 
 export { relayAddress } from '../../../net/address.js';
 
@@ -25,12 +25,16 @@ export function escapeLeavesRoom(target: EventTarget | null): boolean {
   return !(editable && typeof field.value === 'string' && field.value !== '');
 }
 
-/** A room's world as the player reads it: the map's or scene's title in `lang`, else its id. */
+/** A room's world as the player reads it: the map's or scene's title in `lang`, else its id, followed
+ *  by the variant's lobby label when the room plays one. */
 export function worldTitle(
   world: SessionWorld,
   mapNames: ReadonlyMap<string, MapText | undefined>,
   lang: Locale = currentLocale(),
 ): string {
   if (world.kind === 'scene') return sceneCopy(world.sceneId, lang)?.title ?? world.sceneId;
-  return localizedMapText(mapNames.get(world.mapId), lang) ?? world.mapId;
+  const title = localizedMapText(mapNames.get(world.mapId), lang) ?? world.mapId;
+  if (world.variant === undefined) return title;
+  const modes: Readonly<Record<string, string>> = messages(lang).mainMenu.lobby.variantModes;
+  return `${title} · ${Object.hasOwn(modes, world.variant) ? modes[world.variant] : world.variant}`;
 }
