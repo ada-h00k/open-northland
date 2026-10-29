@@ -1,5 +1,12 @@
-import { DEFAULT_WEATHER_MODE, WEATHER_MODES, type WeatherMode } from '@open-northland/lockstep';
+import {
+  DEFAULT_WEATHER_MODE,
+  PEACE_MINUTES,
+  type PeaceMinutes,
+  WEATHER_MODES,
+  type WeatherMode,
+} from '@open-northland/lockstep';
 import { FOG_MODE, type FogSettings } from '@open-northland/sim';
+import { formatMessage } from '../../../i18n/index.js';
 import { segControl } from '../../../view/settings/controls.js';
 import { fogRuleComposer, isMapMode, MAP_MODES, type MapModeName, ruleChoiceState } from './rules-state.js';
 import { selectControl } from './select.js';
@@ -12,6 +19,8 @@ export interface GameRules {
   /** Null plays the default weather mode. */
   readonly weather: WeatherMode | null;
   readonly alliedVision: boolean | null;
+  /** Null plays without a peace. */
+  readonly peace: PeaceMinutes | null;
 }
 interface RuleText {
   readonly label: string;
@@ -40,9 +49,24 @@ export interface GameRuleControlOptions {
     readonly label: string;
     readonly modes: Readonly<Record<WeatherMode, RuleText>>;
   };
+  /** Offers the peace choice; absent for a map that plays without one. */
+  readonly peace?: PeaceRuleText;
   readonly onChange: (change: Partial<GameRules>) => void;
 }
+interface PeaceRuleText {
+  readonly label: string;
+  /** Every choice's hover detail. */
+  readonly detail: string;
+  readonly off: string;
+  /** A length's label, with `{minutes}`. */
+  readonly minutes: string;
+}
 let ruleIds = 0;
+
+/** The peace choice's id for no peace; a length's id is its minutes. */
+const NO_PEACE = 'off';
+
+const peaceChoiceId = (peace: PeaceMinutes | null): string => (peace === null ? NO_PEACE : String(peace));
 
 interface Choice<T> extends RuleText {
   readonly value: T;
@@ -220,11 +244,30 @@ export function gameRuleControls(options: GameRuleControlOptions) {
     options.presentation === 'select'
       ? select(options.weather.label, weatherChoices, changeWeather)
       : segmentedRule(options.weather.label, weatherChoices, changeWeather);
+  const peace = (() => {
+    const text = options.peace;
+    if (text === undefined) return null;
+    const choices: Choice<string>[] = [
+      { value: NO_PEACE, label: text.off, detail: text.detail },
+      ...PEACE_MINUTES.map((minutes) => ({
+        value: peaceChoiceId(minutes),
+        label: formatMessage(text.minutes, { minutes }),
+        detail: text.detail,
+      })),
+    ];
+    const change = (id: string) =>
+      options.onChange({ peace: PEACE_MINUTES.find((minutes) => peaceChoiceId(minutes) === id) ?? null });
+    return options.presentation === 'select'
+      ? select(text.label, choices, change)
+      : segmentedRule(text.label, choices, change);
+  })();
+  const peaceElements = peace?.elements ?? [];
   return {
     environmentElements: [...map.elements, ...weather.elements],
     gameplayElements: [
       ...fogOfWar.elements,
       ...alliedVision.elements,
+      ...peaceElements,
       ...progression.elements,
       ...needs.elements,
     ],
@@ -232,6 +275,7 @@ export function gameRuleControls(options: GameRuleControlOptions) {
       ...map.elements,
       ...fogOfWar.elements,
       ...alliedVision.elements,
+      ...peaceElements,
       ...progression.elements,
       ...needs.elements,
       ...weather.elements,
@@ -244,6 +288,7 @@ export function gameRuleControls(options: GameRuleControlOptions) {
       needs.update(rules.needs, disabled);
       alliedVision.update(rules.alliedVision, disabled);
       weather.update(rules.weather ?? DEFAULT_WEATHER_MODE, disabled);
+      peace?.update(peaceChoiceId(rules.peace), disabled);
     },
     /** The room refused the last settings change; drop what the fog pair composed on top of it. */
     rejected: fog.reject,

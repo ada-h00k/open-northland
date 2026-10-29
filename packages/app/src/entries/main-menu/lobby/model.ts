@@ -4,6 +4,7 @@ import {
   DEFAULT_WEATHER_MODE,
   type GameSession,
   orderedSeats,
+  type PeaceMinutes,
   type SessionSeat,
   type WeatherMode,
 } from '@open-northland/lockstep';
@@ -43,11 +44,17 @@ export interface LobbyOptions {
   settlerNeeds: boolean;
   weather: WeatherMode;
   alliedVision: boolean;
+  /** Null plays without a peace. */
+  peace: PeaceMinutes | null;
 }
 
 /** Progression and needs default on, so only an explicit `off` in the URL clears the box. Allied vision
- *  is not carried between menu visits: the caller picks it for the kind of game. */
-export function initialLobbyOptions(params: URLSearchParams, alliedVision: boolean): LobbyOptions {
+ *  and the peace are not carried between menu visits: the caller picks them for the kind of game. */
+export function initialLobbyOptions(
+  params: URLSearchParams,
+  alliedVision: boolean,
+  peace: PeaceMinutes | null,
+): LobbyOptions {
   const fog = params.get('fog');
   return {
     fog: LOBBY_FOG_MODES.find((mode) => mode === fog) ?? DEFAULT_FOG_MODE,
@@ -55,6 +62,7 @@ export function initialLobbyOptions(params: URLSearchParams, alliedVision: boole
     settlerNeeds: onOffParam(params, 'needs') !== false,
     weather: weatherModeParam(params) ?? DEFAULT_WEATHER_MODE,
     alliedVision,
+    peace,
   };
 }
 
@@ -164,6 +172,7 @@ export function lobbySession(
       needs: options.settlerNeeds,
       weather: options.weather,
       alliedVision: options.alliedVision,
+      peace: options.peace,
     },
     speed: DEFAULT_SESSION_SPEED,
   };

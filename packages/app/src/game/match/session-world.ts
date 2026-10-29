@@ -6,8 +6,8 @@ import { sessionRoles } from './session-roles.js';
 import { isReservedMapAiSeat } from './session-url.js';
 
 /**
- * The session's share of a map world's options: who plays, who is left off the map, which computer seats
- * the lobby chose rather than the map and how hard each plays, who assists, whom the match counts, the stances between them
+ * The session's share of a map world's options: who plays, who is left off the map, who keeps the lobby
+ * peace, how hard each computer seat plays, who assists, whom the match counts, the stances between them
  * and the rule overrides. One derivation serves a fresh
  * boot and the child world a sub-mission opens, so a seat reads the same on both sides of the
  * transition.
@@ -29,8 +29,14 @@ export function sessionWorldOptions(session: GameSession, script: MapScript | nu
   return {
     machineSeats: roles.machineSeats,
     absentSeats: absentSeatsOf(session),
-    lobbyComputerSeats: session.seats
-      .filter((seat) => seat.mode === 'computer' && !reservedMapAi.has(seat.player))
+    // A reserved map AI seat plays its map script, which the peace must not hold back.
+    peaceSeats: session.seats
+      .filter(
+        (seat) =>
+          seat.mode === 'human' ||
+          seat.mode === 'idle' ||
+          (seat.mode === 'computer' && !reservedMapAi.has(seat.player)),
+      )
       .map((seat) => seat.player),
     computerSeats: session.seats.filter((seat) => seat.mode === 'computer').map((seat) => seat.player),
     computerDifficulties: new Map(

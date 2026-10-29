@@ -38,6 +38,8 @@ export function roomSettings(deps: NetworkRoomDeps) {
       off: copy.disabled,
     },
     weather: { label: lobby.weatherLabel, modes: lobby.weatherModes },
+    // A room plays a map with a multiplayer lobby, so it always offers the peace.
+    peace: lobby.peace,
     onChange(change) {
       queue.change({ rules: change });
     },

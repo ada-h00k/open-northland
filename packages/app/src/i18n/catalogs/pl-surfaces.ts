@@ -151,6 +151,13 @@ export const plSurfaces = {
         off: 'Każdy widzi swoje',
       },
       alliedVisionDetail: 'Gracze wzajemnie przyjaźni dzielą odkryty teren.',
+      peace: {
+        label: 'Czas pokoju',
+        detail:
+          'Do jego końca gracze nie mogą się atakować ani wysyłać żołnierzy w pobliże cudzych budynków. Nie obowiązuje komputerowych graczy samej mapy.',
+        off: 'Wyłączony',
+        minutes: '{minutes} min',
+      },
       needsLabel: 'Potrzeby osadników',
       needsModes: {
         on: 'Rosną z czasem',

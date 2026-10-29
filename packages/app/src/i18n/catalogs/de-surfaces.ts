@@ -179,6 +179,13 @@ export const deSurfaces = {
         off: 'Jeder sieht nur selbst',
       },
       alliedVisionDetail: 'Gegenseitig befreundete Spieler teilen erkundetes Gelände.',
+      peace: {
+        label: 'Friedenszeit',
+        detail:
+          'Bis zu ihrem Ende können sich die Spieler nicht angreifen und keine Soldaten in die Nähe fremder Gebäude schicken. Die eigenen Computerspieler der Karte sind nicht gebunden.',
+        off: 'Aus',
+        minutes: '{minutes} Min.',
+      },
       needsLabel: 'Bedürfnisse der Siedler',
       needsModes: {
         on: 'Nehmen mit der Zeit zu',

@@ -5,7 +5,7 @@ const BASE: LobbySettings = {
   name: 'Zatoka',
   seed: 7,
   speed: 1,
-  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
 };
 
 describe('lobby settings comparison', () => {

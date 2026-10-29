@@ -56,6 +56,8 @@ export interface MessageTextParts {
   readonly detail?: string;
   /** The settings a `settingsNeedRestart` note names, by their labels. */
   readonly settings?: readonly string[];
+  /** The whole match minutes a `peaceEnding` note says the peace still holds for. */
+  readonly minutesLeft?: number;
   /** The course a `canDoNewJob` note reports, and the trade it taught. */
   readonly training?: { readonly course: 'barracks' | 'school'; readonly profession: string };
   /** Why a `productionStalled` note's workshop stands still; `goodName` names the good it is about. */
@@ -193,6 +195,13 @@ export function composeMessageText(
     item: parts.detail ?? '',
     profession: parts.training?.profession ?? '',
     settings: parts.settings?.join(', ') ?? '',
+    count: parts.minutesLeft ?? '',
+    minutes:
+      parts.minutesLeft === undefined
+        ? ''
+        : formatMessage(pluralForm(parts.minutesLeft, copy.peaceMinutes, localeTag), {
+            count: parts.minutesLeft,
+          }),
     ...(parts.fight === undefined ? {} : fightValues(parts.fight, copy, localeTag)),
   };
   if (name === 'familyBlocked') {

@@ -16,6 +16,7 @@ const BASE_OPTIONS = {
   progression: null,
   needs: null,
   alliedVision: null,
+  peace: null,
 } as const;
 
 function contentWithOtherTribe() {

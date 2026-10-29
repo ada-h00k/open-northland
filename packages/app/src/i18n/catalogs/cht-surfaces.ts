@@ -150,6 +150,12 @@ export const chtSurfaces = {
         off: '各自擁有視野',
       },
       alliedVisionDetail: '互為友好的玩家共用已探索的地面。',
+      peace: {
+        label: '和平時間',
+        detail: '結束前，玩家之間不能互相攻擊，也不能派士兵靠近對方的建築。地圖自帶的電腦玩家不受約束。',
+        off: '關閉',
+        minutes: '{minutes} 分鐘',
+      },
       needsLabel: '居民需求',
       needsModes: {
         on: '隨時間增加',

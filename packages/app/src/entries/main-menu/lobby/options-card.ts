@@ -3,7 +3,8 @@ import { messages } from '../../../i18n/index.js';
 import { gameRuleControls } from '../lobby-controls/rules.js';
 import type { LobbyOptions } from './model.js';
 
-export function lobbyOptionsCard(options: LobbyOptions): HTMLElement {
+/** `offersPeace` shows the peace choice, which only a multiplayer map has. */
+export function lobbyOptionsCard(options: LobbyOptions, offersPeace: boolean): HTMLElement {
   const lobby = messages().mainMenu.lobby;
   const card = document.createElement('div');
   card.className = 'main-menu__lobby-card';
@@ -18,6 +19,7 @@ export function lobbyOptionsCard(options: LobbyOptions): HTMLElement {
     needs: { label: lobby.needsLabel, ...lobby.needsModes },
     alliedVision: { label: lobby.alliedVisionLabel, ...lobby.alliedVisionModes },
     weather: { label: lobby.weatherLabel, modes: lobby.weatherModes },
+    ...(offersPeace ? { peace: lobby.peace } : {}),
     onChange(change) {
       if (change.fog != null) {
         const name = fogModeName(change.fog);
@@ -27,6 +29,7 @@ export function lobbyOptionsCard(options: LobbyOptions): HTMLElement {
       if (change.needs != null) options.settlerNeeds = change.needs;
       if (change.alliedVision != null) options.alliedVision = change.alliedVision;
       if (change.weather != null) options.weather = change.weather;
+      if (change.peace !== undefined) options.peace = change.peace;
       paint();
     },
   });
@@ -38,6 +41,7 @@ export function lobbyOptionsCard(options: LobbyOptions): HTMLElement {
         needs: options.settlerNeeds,
         weather: options.weather,
         alliedVision: options.alliedVision,
+        peace: options.peace,
       },
       false,
     );

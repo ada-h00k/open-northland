@@ -17,7 +17,7 @@ const SETTINGS: RoomSettings = {
   name: 'far',
   world: { kind: 'scene', sceneId: 'fixture' },
   seed: 9,
-  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
   speed: 1,
 };
 const SEATS = [0, 1].map((player) => ({

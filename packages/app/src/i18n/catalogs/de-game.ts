@@ -1350,6 +1350,8 @@ export const deGame = {
         other: 'Verschiedenes',
       },
       clock: 'Spielzeit',
+      peace: 'Frieden {time}',
+      peaceTitle: 'Verbleibende Friedenszeit. Bis zu ihrem Ende können sich die Spieler nicht angreifen.',
     },
     notices: {
       label: 'Meldungen',
@@ -1905,6 +1907,8 @@ export const deGame = {
       explorationFinished: 'Land erkundet',
       tradeRefused: 'Kein Handel',
       settingsNeedRestart: 'Neustart nötig',
+      peaceEnding: 'Frieden: {count} Min.',
+      peaceEnded: 'Frieden vorbei',
       houseUpgraded: 'Ausgebaut',
       vehicleNoPath: 'Kein Weg',
       vehicleNoCommander: 'Kein Kommandant',
@@ -1995,6 +1999,8 @@ export const deGame = {
       tradeRefused:
         '{player}: Dein Händler handelt hier nicht. Handel setzt voraus, dass beide Seiten freundlich sind; siehe Diplomatie.',
       settingsNeedRestart: 'Eine geänderte Einstellung wirkt erst nach einem Neustart der Karte: {settings}.',
+      peaceEnding: 'Der Frieden endet in {minutes}. Bis dahin können sich die Spieler nicht angreifen.',
+      peaceEnded: 'Der Frieden ist vorbei. Die Spieler können sich wieder angreifen.',
       houseUpgraded: 'Ausbau abgeschlossen: {building}.',
       vehicleNoPath: '{vehicle}: Kein Weg zum Ziel gefunden. Wähle ein anderes Ziel.',
       vehicleNoCommander: '{vehicle}: Niemand übernimmt das Kommando. Schicke einen Siedler an Bord.',
@@ -2027,6 +2033,7 @@ export const deGame = {
       wall: 'Palisade',
       road: 'Straße',
     },
+    peaceMinutes: { one: '{count} Minute', few: '{count} Minuten', many: '{count} Minuten' },
     attack: {
       buildings: {
         one: '{count} Gebäude',

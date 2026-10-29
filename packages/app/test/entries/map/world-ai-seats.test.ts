@@ -34,6 +34,7 @@ it('seats the computer player as the map’s [AIData] toggles say', () => {
     progression: null,
     needs: null,
     alliedVision: null,
+    peace: null,
     script: {
       ai: [
         {
@@ -98,6 +99,7 @@ it('gives a monster tribe’s machine seat the map AI controller alone', () => {
     progression: null,
     needs: null,
     alliedVision: null,
+    peace: null,
     playerRoster: [
       { player: 1, type: 'ai', tribeId: WERESNAKE_TRIBE, colorId: 1 },
       { player: 2, type: 'ai', tribeId: WEREWOLF_TRIBE, colorId: 2 },
@@ -142,6 +144,7 @@ it('starts the assistant grants for the seats a person or the computer player pl
     progression: null,
     needs: null,
     alliedVision: null,
+    peace: null,
     script: {
       ai: [
         {

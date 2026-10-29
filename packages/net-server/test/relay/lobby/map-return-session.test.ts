@@ -23,7 +23,7 @@ const SETTINGS: RoomSettings = {
   world: { kind: 'map', mapId: 'zatoka' },
   mapOrigin: 'user',
   seed: 13,
-  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
   speed: 1,
 };
 const SEATS = [0, 1].map((player) => ({

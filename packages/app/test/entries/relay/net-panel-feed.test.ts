@@ -56,7 +56,7 @@ const ROOM: RoomView = {
     name: 'las',
     world: { kind: 'map', mapId: 'las' },
     seed: 7,
-    rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+    rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
     speed: REQUESTED_SPEED,
   },
   seats: [],

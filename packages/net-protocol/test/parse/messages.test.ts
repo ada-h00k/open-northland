@@ -38,7 +38,7 @@ const settings: RoomSettings = {
   name: 'Zatoka o świcie',
   world: { kind: 'map', mapId: 'zatoka' },
   seed: 7,
-  rules: { fog: 1, progression: null, needs: false, weather: 'winter', alliedVision: null },
+  rules: { fog: 1, progression: null, needs: false, weather: 'winter', alliedVision: null, peace: null },
   speed: 1,
 };
 
@@ -237,6 +237,15 @@ describe('client messages', () => {
         seats: [],
       },
       /rules\.weather/,
+    ],
+    [
+      'a peace length the lobby does not offer',
+      {
+        kind: 'createRoom',
+        settings: { ...settings, rules: { ...settings.rules, peace: 50 } },
+        seats: [],
+      },
+      /rules\.peace/,
     ],
     [
       'rules without a weather mode',

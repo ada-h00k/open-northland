@@ -14,6 +14,7 @@ import {
   type SaveGame,
   type Simulation,
   type TerrainMap,
+  TICKS_PER_SECOND,
   warmWorldIndexes,
 } from '@open-northland/sim';
 import type { ContentIr } from '../../content/ir/rows.js';
@@ -67,9 +68,8 @@ export interface MapWorldOptions extends SimSessionRules {
   readonly machineSeats: readonly number[];
   /** Seats whose authored placements and walls the world leaves out. */
   readonly absentSeats?: readonly number[];
-  /** The AI seats a person set to computer in the lobby, as against the map's own computer players, which
-   *  its scripts drive. */
-  readonly lobbyComputerSeats?: readonly number[];
+  /** The seats the session's {@link SimSessionRules.peace} binds; an absent seat among them is dropped. */
+  readonly peaceSeats?: readonly number[];
   /** Computer seats that enable all modules their tribe supports instead of the map’s toggles. */
   readonly computerSeats?: readonly number[];
   /** How hard each computer seat the session names plays; an unnamed one plays hard. */
@@ -106,6 +106,8 @@ export interface MapWorld {
 /** Placements are queued commands: one tick drains them, so the start-camera focus sees entities a
  *  0-tick snapshot would not, while leaving the spawned settlers at their start. */
 const PLACEMENT_DRAIN_TICKS = 1;
+
+const SECONDS_PER_MINUTE = 60;
 
 /** Session rules and visibility are applied before the briefing can pause the world. */
 export function buildMapWorld(options: MapWorldOptions): MapWorld {
@@ -222,6 +224,7 @@ function applySessionRules(sim: Simulation, options: MapWorldOptions): void {
     options.assistantSeats.filter((seat) => !computerDisabled.has(seat)),
   );
   grantStartingPapers(sim, options.specialItems ?? []);
+  openPeace(sim, options);
   const participants = (
     options.matchParticipants ?? (scripted ? options.script?.participants : undefined)
   )?.filter((seat) => !options.absentSeats?.includes(seat));
@@ -237,6 +240,15 @@ function applySessionRules(sim: Simulation, options: MapWorldOptions): void {
       ...(victory === 'goals' && goals !== undefined ? { goals, goalSeats: immortalSeats(options) } : {}),
     });
   }
+}
+
+/** The lobby peace from the match start; no rule, or no seat left to bind, enqueues nothing. */
+function openPeace(sim: Simulation, options: MapWorldOptions): void {
+  if (options.peace === null) return;
+  const players = (options.peaceSeats ?? []).filter((seat) => !options.absentSeats?.includes(seat));
+  if (players.length === 0) return;
+  const untilTick = options.peace * SECONDS_PER_MINUTE * TICKS_PER_SECOND;
+  sim.enqueueSetup({ kind: 'setPeaceTime', untilTick, players });
 }
 
 /** The map's seats that cannot die and are on the map: no participants, yet a goal row can decide them. */

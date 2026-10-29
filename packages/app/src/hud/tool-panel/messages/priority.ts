@@ -10,7 +10,7 @@ import {
  *  three groups. `productionStalled` takes the group of the two per-worker notes it replaces and
  *  `explorationFinished` that of a finished house; `constructionStarved` is important, since nothing else
  *  tells of a site that will never finish (owner ruling), and so is `settingsNeedRestart`, so no filter
- *  hides the answer to the player's own change. The original ranks `cannotFindGood` notable for
+ *  hides the answer to the player's own change, and so are the lobby peace's notes. The original ranks `cannotFindGood` notable for
  *  a collector alone; here every trade's note is. */
 const IMPORTANT: readonly UserMessageTypeName[] = [
   'lostWithoutSignposts',
@@ -28,6 +28,8 @@ const IMPORTANT: readonly UserMessageTypeName[] = [
   'specialItemFound',
   'constructionStarved',
   'settingsNeedRestart',
+  'peaceEnding',
+  'peaceEnded',
 ];
 
 const NOTABLE: readonly UserMessageTypeName[] = [

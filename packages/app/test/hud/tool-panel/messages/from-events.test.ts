@@ -77,6 +77,22 @@ const run = (events: SimEvent[], snap: WorldSnapshot, departed: WorldSnapshot['e
   }));
 
 describe('user messages from sim events', () => {
+  it('tells every seat of each peace warning and of its end, one note apiece', () => {
+    const notes = run(
+      [
+        { kind: 'peaceEnding', minutesLeft: 5 },
+        { kind: 'peaceEnding', minutesLeft: 1 },
+        { kind: 'peaceEnded' },
+      ],
+      snapshot(1, []),
+    );
+    expect(notes.map((note) => [note.type, note.about])).toEqual([
+      [USER_MESSAGE_TYPE.peaceEnding, 5],
+      [USER_MESSAGE_TYPE.peaceEnding, 1],
+      [USER_MESSAGE_TYPE.peaceEnded, null],
+    ]);
+  });
+
   it("raises finished and upgraded buildings the seat owns, and no one else's", () => {
     const snap = snapshot(50, [
       { id: 1, player: LOCAL, kind: 'building' },

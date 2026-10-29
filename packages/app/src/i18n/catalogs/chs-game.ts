@@ -1232,6 +1232,8 @@ export const chsGame = {
         other: '其他',
       },
       clock: '游戏时间',
+      peace: '和平 {time}',
+      peaceTitle: '剩余和平时间。结束前，玩家之间不能互相攻击。',
     },
     notices: {
       label: '通知',
@@ -1743,6 +1745,8 @@ export const chsGame = {
       explorationFinished: '探索完毕',
       tradeRefused: '无法交易',
       settingsNeedRestart: '需要重启',
+      peaceEnding: '和平：{count} 分钟',
+      peaceEnded: '和平结束',
       houseUpgraded: '已升级',
       vehicleNoPath: '无路线',
       vehicleNoCommander: '无指挥官',
@@ -1824,6 +1828,8 @@ export const chsGame = {
       explorationFinished: '{name}已探索完可到达的全部土地，正在等待命令。',
       tradeRefused: '{player}：商人不会在这里交易。交易需要双方都持友好立场，请查看外交。',
       settingsNeedRestart: '设置更改将在重新开始地图后生效：{settings}。',
+      peaceEnding: '和平将在{minutes}后结束。在此之前，玩家之间不能互相攻击。',
+      peaceEnded: '和平已结束。玩家之间可以再次互相攻击。',
       houseUpgraded: '升级完成：{building}。',
       vehicleNoPath: '{vehicle}找不到前往该处的路。请选择其他目的地。',
       vehicleNoCommander: '{vehicle}没有人指挥。请派一名居民上去。',
@@ -1855,6 +1861,7 @@ export const chsGame = {
       road: '道路',
     },
     /** An attack notice's hit bodies, counted per kind, and the name it gives unowned strikers. */
+    peaceMinutes: { one: '{count} 分钟', few: '{count} 分钟', many: '{count} 分钟' },
     attack: {
       buildings: { one: '{count} 座建筑', few: '{count} 座建筑', many: '{count} 座建筑' },
       walls: {

@@ -49,6 +49,7 @@ describe('mapSession', () => {
       needs: false,
       weather: null,
       alliedVision: null,
+      peace: null,
     });
     expect(parsed.speed).toBe(2);
   });
@@ -66,6 +67,7 @@ describe('mapSession', () => {
       needs: null,
       weather: null,
       alliedVision: null,
+      peace: null,
     });
   });
 
@@ -166,6 +168,7 @@ describe('sceneSession', () => {
       needs: null,
       weather: null,
       alliedVision: null,
+      peace: null,
     });
   });
 });

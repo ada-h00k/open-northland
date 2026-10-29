@@ -48,6 +48,7 @@ it('fresh and restored map worlds share editable landscape input and saved terra
     progression: null,
     needs: null,
     alliedVision: null,
+    peace: null,
     missions: true,
     script: { missions },
   };
@@ -123,6 +124,7 @@ it('razes an authored wall a script removes from the landscape', () => {
     progression: null,
     needs: null,
     alliedVision: null,
+    peace: null,
     missions: true,
     script: { missions: removal },
   });

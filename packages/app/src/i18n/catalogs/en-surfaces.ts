@@ -152,6 +152,13 @@ export const enSurfaces = {
         off: 'Each player sees alone',
       },
       alliedVisionDetail: 'Mutually friendly players share explored ground.',
+      peace: {
+        label: 'Peace time',
+        detail:
+          "Until it ends, the players cannot attack each other or send soldiers near each other's buildings. The map's own computer players are not bound.",
+        off: 'Off',
+        minutes: '{minutes} min',
+      },
       needsLabel: 'Settler needs',
       needsModes: {
         on: 'Rise over time',

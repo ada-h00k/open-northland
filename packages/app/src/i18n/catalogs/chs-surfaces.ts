@@ -150,6 +150,12 @@ export const chsSurfaces = {
         off: '各自独立视野',
       },
       alliedVisionDetail: '互为友好的玩家共享已探明的地面。',
+      peace: {
+        label: '和平时间',
+        detail: '结束前，玩家之间不能互相攻击，也不能派士兵靠近对方的建筑。地图自带的电脑玩家不受约束。',
+        off: '关闭',
+        minutes: '{minutes} 分钟',
+      },
       needsLabel: '居民需求',
       needsModes: {
         on: '随时间增长',

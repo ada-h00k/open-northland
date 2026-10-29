@@ -58,7 +58,7 @@ describe('sessionRoles', () => {
         { player: 2, mode: 'computer', color: 2 },
       ],
       localSeat: 1,
-      rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+      rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
       speed: 1,
     };
     const roles = sessionRoles(relayed, []);

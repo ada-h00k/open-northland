@@ -1255,6 +1255,8 @@ export const enGame = {
         other: 'Other',
       },
       clock: 'Game time',
+      peace: 'Peace {time}',
+      peaceTitle: 'Peace time left. Until it ends, the players cannot attack each other.',
     },
     notices: {
       label: 'Notifications',
@@ -1772,6 +1774,8 @@ export const enGame = {
       explorationFinished: 'Land explored',
       tradeRefused: 'No trade',
       settingsNeedRestart: 'Needs a restart',
+      peaceEnding: 'Peace: {count} min',
+      peaceEnded: 'Peace over',
       houseUpgraded: 'Upgraded',
       vehicleNoPath: 'No route',
       vehicleNoCommander: 'No commander',
@@ -1859,6 +1863,8 @@ export const enGame = {
       tradeRefused:
         '{player}: your trader will not trade here. Trade needs both sides friendly; see Diplomacy.',
       settingsNeedRestart: 'A settings change takes effect after the map is restarted: {settings}.',
+      peaceEnding: 'The peace ends in {minutes}. Until then, the players cannot attack each other.',
+      peaceEnded: 'The peace has ended. The players can attack each other again.',
       houseUpgraded: 'Upgrade finished: {building}.',
       vehicleNoPath: '{vehicle} cannot find a way there. Pick another destination.',
       vehicleNoCommander: '{vehicle} has nobody to command it. Send a settler aboard.',
@@ -1893,6 +1899,8 @@ export const enGame = {
       road: 'Road',
     },
     /** An attack notice's hit bodies, counted per kind, and the name it gives unowned strikers. */
+    /** A peace note's minutes, as its full line counts them. */
+    peaceMinutes: { one: '{count} minute', few: '{count} minutes', many: '{count} minutes' },
     attack: {
       buildings: { one: '{count} building', few: '{count} buildings', many: '{count} buildings' },
       walls: {

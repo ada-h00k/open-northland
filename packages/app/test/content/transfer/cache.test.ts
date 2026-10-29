@@ -81,7 +81,7 @@ function runningRoom(fingerprint: string): RoomView {
       name: 'r',
       world: { kind: 'map', mapId: 'island' },
       seed: 7,
-      rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+      rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
       speed: 1,
       mapOrigin: 'user',
     },

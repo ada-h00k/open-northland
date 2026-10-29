@@ -1,5 +1,6 @@
 import type {
   ComputerDifficulty,
+  PeaceMinutes,
   SeatMode,
   SessionRules,
   SessionWorld,
@@ -17,6 +18,7 @@ import {
   MAX_SPEED,
   MAX_TRIBE_ID,
   MAX_WORLD_ID_LENGTH,
+  PEACE_MINUTES,
 } from '../limits.js';
 import type {
   CatalogMapAnnouncement,
@@ -163,7 +165,14 @@ function parseSessionRules(value: unknown, at: string): SessionRules {
     needs: raw.needs === null ? null : asBoolean(raw.needs, `${at}.needs`),
     weather: raw.weather === null ? null : asOneOf(raw.weather, WEATHER_MODES, `${at}.weather`),
     alliedVision: raw.alliedVision === null ? null : asBoolean(raw.alliedVision, `${at}.alliedVision`),
+    peace: raw.peace === null ? null : parsePeace(raw.peace, `${at}.peace`),
   };
+}
+
+function parsePeace(value: unknown, at: string): PeaceMinutes {
+  const minutes = PEACE_MINUTES.find((known) => known === value);
+  if (minutes === undefined) throw new Error(`${at}: ${String(value)} is not a peace length`);
+  return minutes;
 }
 
 /** Seats arrive in ascending order, the order the descriptor holds them to. */

@@ -1,6 +1,6 @@
 import { type MapDiplomacy, MapScript } from '@open-northland/data';
 import type { GameSession } from '@open-northland/lockstep';
-import { components, FOG_MODE } from '@open-northland/sim';
+import { components, FOG_MODE, TICKS_PER_SECOND } from '@open-northland/sim';
 import { describe, expect, it } from 'vitest';
 import { buildMapWorld } from '../../../src/entries/map/world.js';
 import { sessionWorldOptions } from '../../../src/game/match/session-world.js';
@@ -11,7 +11,14 @@ const SESSION: GameSession = {
   seed: 7,
   localSeat: 0,
   speed: 1,
-  rules: { fog: FOG_MODE.CLASSIC, progression: null, needs: null, weather: null, alliedVision: true },
+  rules: {
+    fog: FOG_MODE.CLASSIC,
+    progression: null,
+    needs: null,
+    weather: null,
+    alliedVision: true,
+    peace: null,
+  },
   seats: [
     { player: 0, mode: 'human', color: 0 },
     { player: 1, mode: 'human', color: 1 },
@@ -51,6 +58,49 @@ describe('session world options', () => {
       participants: roster,
     });
     expect(survivors.matchParticipants).toEqual([0, 1, 2, 3, 5]);
+  });
+
+  it('binds the humans, idle and lobby computer seats in the peace, never a map AI or an absent seat', () => {
+    const slot = (player: number, type: 'human' | 'ai') => ({ player, type, tribeId: 1, colorId: player });
+    // Seat 5 is the map's own computer player: an AI slot no person may claim.
+    const script = MapScript.parse({
+      players: [...SESSION.seats.map((seat) => slot(seat.player, 'human')), slot(5, 'ai')],
+    });
+    const session: GameSession = {
+      ...SESSION,
+      seats: [
+        ...SESSION.seats,
+        { player: 4, mode: 'absent', color: 4 },
+        { player: 5, mode: 'computer', color: 5 },
+        { player: 6, mode: 'map-ai', color: 6 },
+      ],
+    };
+    expect(sessionWorldOptions(session, script, {}).peaceSeats).toEqual([0, 1, 2, 3]);
+  });
+
+  it('opens the session peace among the seats it binds that are on the map, and none without the rule', () => {
+    const PEACE_MINUTES = 30;
+    const build = (peace: typeof PEACE_MINUTES | null) =>
+      buildMapWorld({
+        map: { width: 2, height: 2, typeIds: [0, 0, 0, 0] },
+        ir: null,
+        seed: SESSION.seed,
+        content: {},
+        machineSeats: [],
+        assistantSeats: [],
+        ...SESSION.rules,
+        peace,
+        peaceSeats: [0, 1, 3],
+        absentSeats: [3],
+      }).sim;
+    const sim = build(PEACE_MINUTES);
+    expect(sim.peaceEndsAtTick()).toBe(PEACE_MINUTES * 60 * TICKS_PER_SECOND);
+    expect(sim.atPeace(0, 1)).toBe(true);
+    expect(sim.atPeace(0, 3)).toBe(false);
+    expect(sim.atPeace(0, 2)).toBe(false);
+    const none = build(null);
+    expect(none.peaceEndsAtTick()).toBeNull();
+    expect(none.commands.log.some((entry) => entry.command.kind === 'setPeaceTime')).toBe(false);
   });
 
   it('joins the map allies into one fog mask under the rule', () => {

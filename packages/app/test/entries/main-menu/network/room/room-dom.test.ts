@@ -25,7 +25,7 @@ function lobby(): RoomView {
       name: 'Expedition',
       world: { kind: 'map', mapId: 'test' },
       seed: 1,
-      rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+      rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
       speed: 1,
       kickedSeatMode: 'idle',
     },

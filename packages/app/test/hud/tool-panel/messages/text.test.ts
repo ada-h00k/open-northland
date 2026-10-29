@@ -42,6 +42,7 @@ function partsFor(name: UserMessageTypeName, female: boolean): MessageTextParts 
     stanceName: 'wrogi',
     detail: 'Prolongata',
     settings: ['Skala renderowania', 'Język'],
+    minutesLeft: 5,
     technologySections: { jobs: ['Młynarz'], goods: [], houses: [], vehicles: [] },
     training: { course: 'school', profession: 'Młynarz' },
     stall: 'noInputSource',
@@ -112,6 +113,15 @@ describe('notice text', () => {
     expect(he.short).not.toBe(she.short);
     expect(he.full.startsWith('Bjorn (Rolnik) dorósł')).toBe(true);
     expect(she.full.startsWith('Astrid dorosła')).toBe(true);
+  });
+
+  it('counts the minutes a peace note says are left in the language’s plural', () => {
+    const left = (copy: NoticeCopy, tag: string, minutesLeft: number) =>
+      composeIn(copy, tag, 'peaceEnding', { ...BARE, subjectName: null, minutesLeft }).full;
+    expect(left(pl.userMessages, 'pl', 1)).toContain('za 1 minutę.');
+    expect(left(pl.userMessages, 'pl', 5)).toContain('za 5 minut.');
+    expect(left(en.userMessages, 'en', 1)).toContain('in 1 minute.');
+    expect(left(en.userMessages, 'en', 5)).toContain('in 5 minutes.');
   });
 
   it('reports a death it cannot name with its own lines', () => {

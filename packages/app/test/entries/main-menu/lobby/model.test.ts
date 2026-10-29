@@ -18,7 +18,7 @@ import {
   setSlotTribe,
   setVacantMode,
 } from '../../../../src/entries/main-menu/lobby/roster-state.js';
-import { localAlliedVision } from '../../../../src/game/match/session-rules.js';
+import { localAlliedVision, localPeace } from '../../../../src/game/match/session-rules.js';
 import { mapSession } from '../../../../src/game/match/session-url.js';
 
 /** `TRIBE_TYPE_HUMAN_*` codes the rosters below name. */
@@ -85,17 +85,19 @@ describe('lobbySlotRows', () => {
 
 describe('initialLobbyOptions', () => {
   it('defaults to classic fog, progression on, needs on and variable weather, honouring explicit URL params', () => {
-    expect(initialLobbyOptions(new URLSearchParams(''), true)).toEqual({
+    expect(initialLobbyOptions(new URLSearchParams(''), true, null)).toEqual({
       fog: 'classic',
       professionProgression: true,
       settlerNeeds: true,
       weather: 'map',
       alliedVision: true,
+      peace: null,
     });
     expect(
       initialLobbyOptions(
         new URLSearchParams('fog=recon-fow&progression=off&needs=off&weathermode=winter'),
         true,
+        null,
       ),
     ).toEqual({
       fog: 'recon-fow',
@@ -103,12 +105,13 @@ describe('initialLobbyOptions', () => {
       settlerNeeds: false,
       weather: 'winter',
       alliedVision: true,
+      peace: null,
     });
-    expect(initialLobbyOptions(new URLSearchParams('weathermode=bogus'), true).weather).toBe('map');
+    expect(initialLobbyOptions(new URLSearchParams('weathermode=bogus'), true, null).weather).toBe('map');
     // The revealed map is a debug-menu pick, never a lobby one.
-    expect(initialLobbyOptions(new URLSearchParams('fog=off'), true).fog).toBe('classic');
-    expect(initialLobbyOptions(new URLSearchParams('fog=bogus'), true).fog).toBe('classic');
-    expect(initialLobbyOptions(new URLSearchParams('needs=bogus'), true).settlerNeeds).toBe(true);
+    expect(initialLobbyOptions(new URLSearchParams('fog=off'), true, null).fog).toBe('classic');
+    expect(initialLobbyOptions(new URLSearchParams('fog=bogus'), true, null).fog).toBe('classic');
+    expect(initialLobbyOptions(new URLSearchParams('needs=bogus'), true, null).settlerNeeds).toBe(true);
   });
 
   it('starts a local game with allied vision on for a multiplayer map and off for a single-player one', () => {
@@ -117,7 +120,16 @@ describe('initialLobbyOptions', () => {
     expect(localAlliedVision([MAP_TYPE.MULTI_PLAYER_FREE])).toBe(true);
     expect(localAlliedVision([MAP_TYPE.USER_MULTI_PLAYER_FREE])).toBe(true);
     // Not carried: a stray launch flag cannot override the caller's pick.
-    expect(initialLobbyOptions(new URLSearchParams('alliedvision=off'), true).alliedVision).toBe(true);
+    expect(initialLobbyOptions(new URLSearchParams('alliedvision=off'), true, null).alliedVision).toBe(true);
+  });
+
+  it('offers a local game the default peace on a multiplayer map and none on a single-player one', () => {
+    expect(localPeace([MAP_TYPE.SINGLE_PLAYER_FREE])).toBeNull();
+    expect(localPeace([])).toBeNull();
+    expect(localPeace([MAP_TYPE.MULTI_PLAYER_FREE])).toBe(60);
+    expect(localPeace([MAP_TYPE.USER_MULTI_PLAYER_FREE])).toBe(60);
+    // Not carried: a stray launch flag cannot override the caller's pick.
+    expect(initialLobbyOptions(new URLSearchParams('peace=90'), true, 60).peace).toBe(60);
   });
 });
 
@@ -128,6 +140,7 @@ const OPTIONS = {
   settlerNeeds: true,
   weather: 'winter',
   alliedVision: true,
+  peace: null,
 } as const;
 
 /** The offered seats the launched session declares as AI, which is what `?computer=` carries. */
@@ -324,6 +337,7 @@ describe('lobbyStartEntry', () => {
           settlerNeeds: false,
           weather: 'map',
           alliedVision: false,
+          peace: 45,
         },
         SEED,
       ),
@@ -348,6 +362,7 @@ describe('lobbyStartEntry', () => {
     expect(params.get('needs')).toBe('off');
     expect(params.get('alliedvision')).toBe('off');
     expect(params.get('weathermode')).toBe('map');
+    expect(params.get('peace')).toBe('45');
   });
 
   it('writes the needs and weather defaults explicitly, so a carried choice cannot leak into the next map', () => {

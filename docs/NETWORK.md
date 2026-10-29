@@ -1,6 +1,6 @@
 # Network protocol
 
-The wire contract between a game client and the relay server, version `PROTOCOL_VERSION = 48` in
+The wire contract between a game client and the relay server, version `PROTOCOL_VERSION = 49` in
 `packages/net-protocol`. A change one side of the current version could not honour (a message shape, or
 the value set of a validated field such as the fog mode ids) bumps the version; the relay refuses a
 `hello` that names another.
@@ -81,7 +81,8 @@ one more free observer row. Multiplayer never offers the sandbox overseer role.
 `world` and `rules` are the session descriptor's, and the world is fixed for the room's life. Alliances
 come from the map's diplomacy and in-game diplomacy; while the rules' `alliedVision` is on, the sim joins
 mutual friends into one fog mask and follows later stance changes, so allies explore, see and meet as one
-in every fog mode. `seats` lists the world's seats in ascending order:
+in every fog mode. The rules' `peace` (30, 45, 60, 75 or 90 minutes, or null) opens a peace from the
+match start among every human, idle and lobby computer seat. `seats` lists the world's seats in ascending order:
 
 | Field | Meaning |
 | --- | --- |

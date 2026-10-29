@@ -13,6 +13,7 @@ import {
 import { messages } from '../../../i18n/index.js';
 import type { MetSeat } from './from-diplomacy.js';
 import { type BuildingTrades, isPerson, raiseFight, raiseUnlocks } from './from-events.js';
+import { peaceNote } from './peace.js';
 import { type MessageNaming, MessageRaiser, nodeOf, type RaisedMessage } from './raise.js';
 import { settingsRestartNote } from './settings-restart.js';
 import { raiseShortage } from './site-shortages.js';
@@ -63,6 +64,8 @@ const GOOD_ROWS: ReadonlySet<UserMessageTypeName> = new Set<UserMessageTypeName>
 /** The rows a woman raises; a man's name on them reads wrong in a gendered language. */
 const WOMEN_ROWS: ReadonlySet<UserMessageTypeName> = new Set<UserMessageTypeName>(['familyBlocked']);
 
+/** The minutes the peace row says are left: the first warning's. */
+const GALLERY_PEACE_MINUTES = 5;
 /** How many of the seat's menu buildings the unlock row opens: a few, as one discovery does. */
 const GALLERY_OPENED_BUILDINGS = 3;
 
@@ -176,6 +179,11 @@ export function galleryMessages(
     }
     if (name === 'specialItemFound') {
       raisePaper();
+      continue;
+    }
+    if (name === 'peaceEnding' || name === 'peaceEnded') {
+      const note = peaceNote(name === 'peaceEnding' ? GALLERY_PEACE_MINUTES : null, naming);
+      raiser.raise(`${type}|peace`, note.pending, note.compose);
       continue;
     }
     if (name === 'settingsNeedRestart') {

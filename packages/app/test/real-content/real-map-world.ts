@@ -110,6 +110,7 @@ export async function realMapWorld(options: RealMapWorldOptions): Promise<RealMa
     progression: options.rules?.progression ?? null,
     needs: options.rules?.needs ?? null,
     alliedVision: options.rules?.alliedVision ?? null,
+    peace: options.rules?.peace ?? null,
     berryBushes: options.berryBushes === true,
   });
   if (world.kind !== 'authored') throw new Error(`${options.mapId} resolved no authored placements`);

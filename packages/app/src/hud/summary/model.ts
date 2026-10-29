@@ -205,3 +205,12 @@ export function formatSimClock(tick: number): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
   return `${String(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
+
+/** The time a peace ending at `endsAt` still holds at `tick` as `m:ss`, minutes unbounded, a started
+ *  second counted, so it never reads `0:00` while the peace holds. */
+export function formatPeaceLeft(endsAt: number, tick: number): string {
+  const totalSeconds = Math.ceil(Math.max(0, endsAt - tick) / TICKS_PER_SECOND);
+  const seconds = totalSeconds % SECONDS_PER_MINUTE;
+  const minutes = Math.floor(totalSeconds / SECONDS_PER_MINUTE);
+  return `${String(minutes)}:${String(seconds).padStart(2, '0')}`;
+}

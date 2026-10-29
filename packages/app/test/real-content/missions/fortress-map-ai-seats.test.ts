@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { MapScript, mapLobbySlots, TerrainMapFile } from '@open-northland/data';
+import type { PeaceMinutes } from '@open-northland/lockstep';
 import {
   components,
   type Entity,
@@ -26,6 +27,8 @@ const FORTRESS_SEATS = [FORTRESS, ...RAIDERS];
 const ALLY_SEATS = [1, 2, 3, 4, 5];
 /** The allies the lobby offers a person, set to computer by the search below; the rest are the map's own. */
 const LOBBY_SEATS = [1, 2, 3];
+/** The lobby peace the program test opens. */
+const PEACE_MINUTES = 60;
 /** Ticks covering every seat's first strategic decision. */
 const FIRST_DECISIONS_TICKS = 48;
 /** Rounds of the scripted handlers: one turn per seat per round, the assignment on even turns. */
@@ -51,7 +54,9 @@ const RAIDER_DISTANCE = 16;
 /** Ticks for the catapult to find the raider and loose its first stone at him. */
 const SHOT_TICKS = 120;
 
-async function fortressWorld(): Promise<{ sim: Simulation; script: MapScript }> {
+async function fortressWorld(
+  peace: PeaceMinutes | null = null,
+): Promise<{ sim: Simulation; script: MapScript }> {
   const ir = rawIrUnderTest() as ContentIr;
   const { merge } = await loadContentUnderTest();
   const root = resolve(contentDir(), 'maps');
@@ -63,13 +68,14 @@ async function fortressWorld(): Promise<{ sim: Simulation; script: MapScript }> 
     ir,
     content: { content: merge.content },
     machineSeats: [...ALLY_SEATS, ...FORTRESS_SEATS],
-    lobbyComputerSeats: LOBBY_SEATS,
+    peaceSeats: [PERSON, ...LOBBY_SEATS],
     assistantSeats: [0],
     script: mapScriptWorld(script, ir),
     fog: null,
     progression: null,
     needs: null,
     alliedVision: null,
+    peace,
     missions: false,
     berryBushes: true,
   };
@@ -120,18 +126,14 @@ describe.runIf(hasRealIr())('the fortress map’s authored AI seats', () => {
     const script = MapScript.parse(JSON.parse(readFileSync(resolve(root, `${MAP_ID}.script.json`), 'utf8')));
     const search = new URLSearchParams(`map=${MAP_ID}&player=0&computer=${LOBBY_SEATS.join(',')}`);
     const session = mapSession(search, mapLobbySlots(script));
-    const { machineSeats, lobbyComputerSeats } = sessionWorldOptions(
-      session,
-      script,
-      mapScriptWorld(script, ir),
-    );
+    const { machineSeats, peaceSeats } = sessionWorldOptions(session, script, mapScriptWorld(script, ir));
     expect(machineSeats).toEqual([...ALLY_SEATS, ...FORTRESS_SEATS]);
-    // Only the seats a person set to computer keep the match's peace; the map's own run its scripts as authored.
-    expect(lobbyComputerSeats).toEqual(LOBBY_SEATS);
+    // The person and the seats it set to computer keep the match's peace; the map's own run their scripts.
+    expect(peaceSeats).toEqual([PERSON, ...LOBBY_SEATS]);
   });
 
   it('leaves the fortress without a strategic brain and its allies with one, and carries the program', async () => {
-    const { sim, script } = await fortressWorld();
+    const { sim, script } = await fortressWorld(PEACE_MINUTES);
     expect(script.ai.map((row) => row.player)).toEqual(FORTRESS_SEATS);
     const fortress = script.ai.find((row) => row.player === FORTRESS);
     expect(fortress?.defaultPosition).toEqual({ ...KEEP, range: 70 });
@@ -145,6 +147,9 @@ describe.runIf(hasRealIr())('the fortress map’s authored AI seats', () => {
       expect(row?.tasks.filter((t) => t.kind === 'createCreatures')).toHaveLength(12);
     }
     sim.step();
+    for (const seat of [...ALLY_SEATS, ...FORTRESS_SEATS]) {
+      expect(sim.atPeace(PERSON, seat), `seat ${seat}`).toBe(LOBBY_SEATS.includes(seat));
+    }
     for (const seat of FORTRESS_SEATS) {
       expect(components.isMachinePlayer(sim.world, seat)).toBe(true);
       expect(

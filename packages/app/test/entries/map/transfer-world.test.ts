@@ -38,6 +38,7 @@ it('boots transferred authored map and roster with the same world hash', async (
       needs: null,
       progression: null,
       alliedVision: null,
+      peace: null,
     });
   });
   const [creator, guest] = worlds;

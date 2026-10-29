@@ -19,6 +19,7 @@ const NO_SESSION_FLAGS = {
   progression: null,
   needs: null,
   alliedVision: null,
+  peace: null,
   missions: null,
 } as const;
 

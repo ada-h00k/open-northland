@@ -245,7 +245,7 @@ describe('a session with a changed seat', () => {
     seed: 7,
     seats,
     localSeat: 0,
-    rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+    rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
     speed: 1,
   });
 

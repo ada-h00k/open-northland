@@ -14,7 +14,7 @@ const settings: RoomSettings = {
   name: 'saved orders',
   world: { kind: 'scene', sceneId: 'fixture' },
   seed: 7,
-  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
   speed: 1,
 };
 const ORDERS_PER_PLAYER = 10;

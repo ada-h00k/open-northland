@@ -56,6 +56,8 @@ const LIFECYCLE: Readonly<Record<UserMessageTypeName, NoticeLifecycle>> = {
   settingsNeedRestart: 'event',
   workerRefused: 'event',
   tradeRefused: 'event',
+  peaceEnding: 'event',
+  peaceEnded: 'event',
 };
 
 const LIFECYCLE_BY_TYPE: ReadonlyMap<UserMessageType, NoticeLifecycle> = new Map(

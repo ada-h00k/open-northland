@@ -10,7 +10,14 @@ import {
   type WorldSnapshot,
 } from '@open-northland/sim';
 import { professionDefForJob } from '../../../catalog/professions.js';
-import { isFemale, isPalisade, isRoadSite, num, type SnapshotEntity } from '../../../game/snapshot/index.js';
+import {
+  isFemale,
+  isPalisade,
+  isRoadSite,
+  num,
+  peaceEndsAtTickOf,
+  type SnapshotEntity,
+} from '../../../game/snapshot/index.js';
 import type { ViewerSeat } from '../../../game/viewer-seat.js';
 import { bcp47Tag, formatMessage, messages, professionLabel } from '../../../i18n/index.js';
 import type { BuildingThumbs } from '../../dom/building-thumb.js';
@@ -39,6 +46,7 @@ import {
   MIN_STACK_MEMBERS,
   type NoticeGroup,
 } from './groups.js';
+import { peaceMinutesLeft, peaceNote } from './peace.js';
 import type { MessageNaming, RaisedMessage } from './raise.js';
 import { isSubjectGone, NoteRetirement } from './retire.js';
 import { createSeatFeeds } from './seat-feeds.js';
@@ -378,6 +386,8 @@ export function createMessageCenter(deps: MessageCenterDeps): MessageCenter {
   // settings are usually closed over a paused game.
   let restartLabels: readonly string[] | null = null;
   let tradeRefusals: { readonly player: number; readonly at: HalfCellNode | null }[] = [];
+  // The peace the match holds is told once, on the first frame a seat watches.
+  let peaceAnnounced = false;
   const raiseSettingsRestart = (labels: readonly string[], tick: number): void => {
     clearSettingsRestart(feeds.current, tick);
     if (labels.length > 0) take(settingsRestartNote(labels, naming), tick);
@@ -440,6 +450,11 @@ export function createMessageCenter(deps: MessageCenterDeps): MessageCenter {
           retirement.endPass();
         } else feeds.current.expire(snapshot.tick, (m) => isSubjectGone(m, snapshot), true);
         previous = snapshot;
+      }
+      if (!peaceAnnounced && seat !== null) {
+        peaceAnnounced = true;
+        const endsAt = peaceEndsAtTickOf(snapshot);
+        if (endsAt !== null) take(peaceNote(peaceMinutesLeft(endsAt, snapshot.tick), naming), snapshot.tick);
       }
       if (restartLabels !== null) {
         raiseSettingsRestart(restartLabels, snapshot.tick);

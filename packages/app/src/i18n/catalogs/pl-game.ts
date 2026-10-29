@@ -1238,6 +1238,8 @@ export const plGame = {
         other: 'Inne',
       },
       clock: 'Czas gry',
+      peace: 'Pokój {time}',
+      peaceTitle: 'Pozostały czas pokoju. Do jego końca gracze nie mogą się atakować.',
     },
     notices: {
       label: 'Powiadomienia',
@@ -1748,6 +1750,8 @@ export const plGame = {
       explorationFinished: 'Ląd zbadany',
       tradeRefused: 'Brak handlu',
       settingsNeedRestart: 'Wymaga restartu',
+      peaceEnding: 'Pokój: {count} min',
+      peaceEnded: 'Koniec pokoju',
       houseUpgraded: 'Rozbudowano',
       vehicleNoPath: 'Brak trasy',
       vehicleNoCommander: 'Brak dowódcy',
@@ -1837,6 +1841,8 @@ export const plGame = {
       tradeRefused:
         '{player}: kupiec nie będzie tu handlował. Handel wymaga przyjaznego stosunku obu stron, sprawdź Dyplomację.',
       settingsNeedRestart: 'Zmiana ustawień zadziała po ponownym uruchomieniu mapy: {settings}.',
+      peaceEnding: 'Pokój kończy się za {minutes}. Do tego czasu gracze nie mogą się atakować.',
+      peaceEnded: 'Pokój dobiegł końca. Gracze znów mogą się atakować.',
       houseUpgraded: 'Rozbudowa ukończona: {building}.',
       vehicleNoPath: '{vehicle}: brak drogi do celu. Wskaż inny cel.',
       vehicleNoCommander: '{vehicle}: nikt nie kieruje tym wehikułem. Wyślij do wehikułu osadnika.',
@@ -1870,6 +1876,7 @@ export const plGame = {
       wall: 'Palisada',
       road: 'Droga',
     },
+    peaceMinutes: { one: '{count} minutę', few: '{count} minuty', many: '{count} minut' },
     attack: {
       buildings: { one: '{count} budynek', few: '{count} budynki', many: '{count} budynków' },
       walls: {

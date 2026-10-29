@@ -42,6 +42,12 @@ describe('the on/off session rules', () => {
     expect(launch('').world.lowestEntityWith(components.AlliedVisionRules)).toBeNull();
   });
 
+  it('reads ?peace= as one of the offered lengths, anything else as no peace', () => {
+    expect(sessionRuleOverrides(new URLSearchParams('peace=45')).peace).toBe(45);
+    expect(sessionRuleOverrides(new URLSearchParams('peace=50')).peace).toBeNull();
+    expect(sessionRuleOverrides(new URLSearchParams('')).peace).toBeNull();
+  });
+
   it('applies every flag on one launch without them interfering', () => {
     const sim = launch('fog=off&progression=off&needs=off');
     expect(sim.needsEnabled()).toBe(false);

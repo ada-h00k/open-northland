@@ -17,7 +17,7 @@ import type { MessageText } from './text.js';
  * (`explorationFinished`). `workerRefused` says why a worker order seated nobody, and `tradeRefused` why
  * a trader's route took no house of another tribe.
  * `settingsNeedRestart` reports the player's own settings change that waits for the map's next start, not
- * anything in the world.
+ * anything in the world. `peaceEnding` and `peaceEnded` tell of the lobby peace, which the original lacks.
  */
 export const USER_MESSAGE_TYPE = {
   lostWithoutSignposts: 0x03,
@@ -62,6 +62,8 @@ export const USER_MESSAGE_TYPE = {
   settingsNeedRestart: 0x86,
   workerRefused: 0x87,
   tradeRefused: 0x88,
+  peaceEnding: 0x89,
+  peaceEnded: 0x8a,
 } as const;
 
 export type UserMessageTypeName = keyof typeof USER_MESSAGE_TYPE;
@@ -152,7 +154,8 @@ export interface PendingMessage {
    *  latest hit. */
   readonly at: HalfCellNode | null;
   /** Who a message with no live subject is about: the reaped settler's id, the seat number for a
-   *  player-scoped note, a fight area's id, or the good a storage-full note is about. Part of the
+   *  player-scoped note, a fight area's id, the good a storage-full note is about, or the minutes a
+   *  peace note counts. Part of the
    *  identity, so two deaths inside one lifetime stay two notes. */
   readonly about: number | null;
   readonly goodType: number | null;

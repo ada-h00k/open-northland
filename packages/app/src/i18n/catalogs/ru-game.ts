@@ -1344,6 +1344,8 @@ export const ruGame = {
         other: 'Прочее',
       },
       clock: 'Игровое время',
+      peace: 'Мир {time}',
+      peaceTitle: 'Оставшееся мирное время. До его окончания игроки не могут нападать друг на друга.',
     },
     notices: {
       label: 'Уведомления',
@@ -1897,6 +1899,8 @@ export const ruGame = {
       explorationFinished: 'Земля разведана',
       tradeRefused: 'Нет торговли',
       settingsNeedRestart: 'Нужен перезапуск',
+      peaceEnding: 'Мир: {count} мин',
+      peaceEnded: 'Мир окончен',
       houseUpgraded: 'Улучшено',
       vehicleNoPath: 'Нет пути',
       vehicleNoCommander: 'Нет начальника',
@@ -1986,6 +1990,8 @@ export const ruGame = {
       tradeRefused:
         '{player}: торговец здесь торговать не будет. Для торговли обе стороны должны быть дружелюбны, см. «Дипломатию».',
       settingsNeedRestart: 'Изменение настроек вступит в силу после перезапуска карты: {settings}.',
+      peaceEnding: 'Мир закончится через {minutes}. До тех пор игроки не могут нападать друг на друга.',
+      peaceEnded: 'Мир окончен. Игроки снова могут нападать друг на друга.',
       houseUpgraded: 'Улучшение завершено: {building}.',
       vehicleNoPath: '{vehicle}: путь к цели не найден. Выберите другое место назначения.',
       vehicleNoCommander: '{vehicle}: некому командовать. Отправьте поселенца на борт.',
@@ -2018,6 +2024,7 @@ export const ruGame = {
       wall: 'Частокол',
       road: 'Дорога',
     },
+    peaceMinutes: { one: '{count} минуту', few: '{count} минуты', many: '{count} минут' },
     attack: {
       buildings: {
         one: '{count} здание',

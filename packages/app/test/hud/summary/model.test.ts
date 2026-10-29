@@ -14,6 +14,7 @@ import {
   JOB_WOMAN,
 } from '../../../src/catalog/jobs.js';
 import {
+  formatPeaceLeft,
   formatSimClock,
   SUMMARY_CATEGORIES,
   summaryPopulation,
@@ -227,5 +228,18 @@ describe('formatSimClock', () => {
 
   it('floors a partial second, so the reading never runs ahead of the sim', () => {
     expect(formatSimClock(TICKS_PER_SECOND * 5 - 1)).toBe('0:00:04');
+  });
+});
+
+describe('formatPeaceLeft', () => {
+  const END = TICKS_PER_SECOND * 3600;
+  it('prints the peace left as m:ss with the minutes unbounded', () => {
+    expect(formatPeaceLeft(TICKS_PER_SECOND * 90 * 60, 0)).toBe('90:00');
+    expect(formatPeaceLeft(END, END - TICKS_PER_SECOND * (42 * 60 + 17))).toBe('42:17');
+  });
+
+  it('counts a started second, so it never reads 0:00 while the peace holds', () => {
+    expect(formatPeaceLeft(END, END - 1)).toBe('0:01');
+    expect(formatPeaceLeft(END, END - TICKS_PER_SECOND - 1)).toBe('0:02');
   });
 });

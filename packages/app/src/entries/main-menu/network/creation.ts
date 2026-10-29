@@ -1,5 +1,5 @@
 import { mapLobbySlots } from '@open-northland/data';
-import type { ComputerDifficulty, SessionSeat } from '@open-northland/lockstep';
+import { type ComputerDifficulty, DEFAULT_PEACE_MINUTES, type SessionSeat } from '@open-northland/lockstep';
 import { prepareInitialSave } from '@open-northland/net-client';
 import type { RoomSeatSetup, RoomSettings } from '@open-northland/net-protocol';
 import { findMapSource } from '../../../content/map-source/index.js';
@@ -26,6 +26,8 @@ import { restoreSavedSeats, savedRoster } from './saved-roster.js';
 
 /** A network room starts with allies sharing the map, whatever the map's kind. */
 const ROOM_ALLIED_VISION = true;
+/** A network room plays a map with a multiplayer lobby, so it starts with the default peace. */
+const ROOM_PEACE = DEFAULT_PEACE_MINUTES;
 
 export async function prepareRoomCreation(choice: CreateChoice, params: URLSearchParams) {
   const save = choice.kind === 'save' ? await readNetworkSave(choice.bytes) : null;
@@ -74,7 +76,7 @@ export async function prepareRoomCreation(choice: CreateChoice, params: URLSearc
           save.header.entry === null ? undefined : [...savedSeats.values()],
         );
   const savedSession = save === null ? null : savedRoster(save);
-  const options = initialLobbyOptions(params, ROOM_ALLIED_VISION);
+  const options = initialLobbyOptions(params, ROOM_ALLIED_VISION, ROOM_PEACE);
   const rules =
     save === null
       ? {
@@ -83,6 +85,7 @@ export async function prepareRoomCreation(choice: CreateChoice, params: URLSearc
           needs: options.settlerNeeds,
           weather: options.weather,
           alliedVision: options.alliedVision,
+          peace: options.peace,
         }
       : await validateNetworkSave(save, handle);
   // The saving client's fog memory is its own seat's alone: every member would download it for nothing.

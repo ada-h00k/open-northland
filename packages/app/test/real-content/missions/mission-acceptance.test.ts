@@ -50,6 +50,7 @@ describe.runIf(hasRealIr())('scripted story-map acceptance', () => {
       progression: null,
       needs: null,
       alliedVision: null,
+      peace: null,
       missions: null,
       berryBushes: true,
     };

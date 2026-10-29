@@ -6,6 +6,7 @@ import {
   isSpectator,
   machineSeatsOf,
   orderedSeats,
+  PEACE_MINUTES,
   parseGameSession,
   seatColourOf,
   WEATHER_MODES,
@@ -26,7 +27,7 @@ function session(over: Partial<GameSession> = {}): GameSession {
       { player: 2, mode: 'idle', color: 9 },
     ],
     localSeat: 0,
-    rules: { fog: 1, progression: true, needs: null, weather: 'map', alliedVision: null },
+    rules: { fog: 1, progression: true, needs: null, weather: 'map', alliedVision: null, peace: null },
     speed: 1,
     ...over,
   };
@@ -125,14 +126,16 @@ describe('game session descriptor', () => {
     expect(() => parseGameSession(session({ seed: 1e30 }))).toThrow(/seed/);
     expect(() =>
       parseGameSession(
-        session({ rules: { fog: 9, progression: null, needs: null, weather: null, alliedVision: null } }),
+        session({
+          rules: { fog: 9, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
+        }),
       ),
     ).toThrow(/rules.fog/);
   });
 
   it('reads every weather mode and null, and refuses an unknown or missing one', () => {
     for (const weather of [...WEATHER_MODES, null]) {
-      const rules = { fog: null, progression: null, needs: null, weather, alliedVision: null };
+      const rules = { fog: null, progression: null, needs: null, weather, alliedVision: null, peace: null };
       expect(roundTrip(session({ rules })).rules.weather).toBe(weather);
     }
     const rules = { fog: null, progression: null, needs: null };
@@ -140,6 +143,16 @@ describe('game session descriptor', () => {
       /rules.weather/,
     );
     expect(() => parseGameSession({ ...session(), rules })).toThrow(/rules.weather/);
+  });
+
+  it('reads every peace length and null, and refuses a length the lobby does not offer', () => {
+    for (const peace of [...PEACE_MINUTES, null]) {
+      const rules = { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace };
+      expect(roundTrip(session({ rules })).rules.peace).toBe(peace);
+    }
+    const rules = { fog: null, progression: null, needs: null, weather: null, alliedVision: null };
+    expect(() => parseGameSession({ ...session(), rules: { ...rules, peace: 50 } })).toThrow(/rules.peace/);
+    expect(() => parseGameSession({ ...session(), rules })).toThrow(/rules.peace/);
   });
 
   it('reads the roster the way the entry consumes it', () => {

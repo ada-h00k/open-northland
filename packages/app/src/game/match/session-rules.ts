@@ -1,5 +1,12 @@
 import { isMultiplayerMapType } from '@open-northland/data';
-import { type SessionRules, WEATHER_MODES, type WeatherMode } from '@open-northland/lockstep';
+import {
+  DEFAULT_PEACE_MINUTES,
+  PEACE_MINUTES,
+  type PeaceMinutes,
+  type SessionRules,
+  WEATHER_MODES,
+  type WeatherMode,
+} from '@open-northland/lockstep';
 import { fogModeParam } from '../fog.js';
 import type { WorldSetup } from '../world/index.js';
 
@@ -17,8 +24,14 @@ export function weatherModeParam(params: URLSearchParams): WeatherMode | null {
   return WEATHER_MODES.find((mode) => mode === value) ?? null;
 }
 
-/** The `?fog=`, `?progression=`, `?needs=`, `?weathermode=` and `?alliedvision=` flags as the session's
- *  rule overrides. */
+/** `?peace=<minutes>`, one of `PEACE_MINUTES`; null for absent or unrecognized, which opens no peace. */
+export function peaceParam(params: URLSearchParams): PeaceMinutes | null {
+  const value = params.get('peace');
+  return PEACE_MINUTES.find((minutes) => String(minutes) === value) ?? null;
+}
+
+/** The `?fog=`, `?progression=`, `?needs=`, `?weathermode=`, `?alliedvision=` and `?peace=` flags as the
+ *  session's rule overrides. */
 export function sessionRuleOverrides(params: URLSearchParams): SessionRules {
   return {
     fog: fogModeParam(params),
@@ -26,6 +39,7 @@ export function sessionRuleOverrides(params: URLSearchParams): SessionRules {
     needs: onOffParam(params, 'needs'),
     weather: weatherModeParam(params),
     alliedVision: onOffParam(params, 'alliedvision'),
+    peace: peaceParam(params),
   };
 }
 
@@ -35,9 +49,9 @@ export type SimSessionRules = Omit<SessionRules, 'weather'>;
 /**
  * Apply the overrides to a freshly built sim. The queue is FIFO and these land after the world's own
  * rules, so a flag wins in either direction; an absent flag enqueues nothing, keeping the command
- * stream byte-identical.
+ * stream byte-identical. The peace needs the seats it binds, so the map world opens it.
  */
-export function applySessionRuleOverrides(sim: WorldSetup, overrides: SimSessionRules): void {
+export function applySessionRuleOverrides(sim: WorldSetup, overrides: Omit<SimSessionRules, 'peace'>): void {
   if (overrides.fog !== null) sim.enqueueSetup({ kind: 'setFogMode', mode: overrides.fog });
   if (overrides.progression !== null) {
     sim.enqueueSetup({ kind: 'setProfessionProgression', enabled: overrides.progression });
@@ -52,4 +66,10 @@ export function applySessionRuleOverrides(sim: WorldSetup, overrides: SimSession
  *  single-player one. A network room always starts with it on. */
 export function localAlliedVision(mapTypes: readonly number[]): boolean {
   return isMultiplayerMapType(mapTypes);
+}
+
+/** The peace a local game starts a map with: the default length on a multiplayer map, none on a
+ *  single-player one, which offers no peace at all. */
+export function localPeace(mapTypes: readonly number[]): PeaceMinutes | null {
+  return isMultiplayerMapType(mapTypes) ? DEFAULT_PEACE_MINUTES : null;
 }

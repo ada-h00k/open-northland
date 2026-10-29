@@ -2122,6 +2122,11 @@ body.on-drag-scroll.on-drag-scroll-free * {
   padding: 6px 8px 6px 6px;
   text-shadow: 0 1px 2px #000;
 }
+/* The lobby peace's countdown, beside the match clock and set apart from it. */
+.on-hud .on-clock--peace {
+  color: var(--bronze-hi);
+  padding-right: 2px;
+}
 .on-hud .on-speed {
   display: inline-flex;
   margin: 0 3px;

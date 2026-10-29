@@ -92,6 +92,15 @@ export function needsRuleEnabled(snapshot: WorldSnapshot): boolean {
   return rules?.needsEnabled !== false;
 }
 
+/** The match tick the lobby peace ends at while it holds, off the sim's `PeaceRules` singleton; null
+ *  with no peace or once it ended. */
+export function peaceEndsAtTickOf(snapshot: WorldSnapshot): number | null {
+  const rules = entitiesWith(snapshot, 'PeaceRules')[0]?.components.PeaceRules as
+    | { holds?: unknown; untilTick?: unknown }
+    | undefined;
+  return rules?.holds === true && typeof rules.untilTick === 'number' ? rules.untilTick : null;
+}
+
 /** Whether wells and hives may stand off grass: the sim's `BioGroundRules` waiver, off while absent. */
 export function bioGroundRuleWaived(snapshot: WorldSnapshot): boolean {
   const rules = entitiesWith(snapshot, 'BioGroundRules')[0]?.components.BioGroundRules as

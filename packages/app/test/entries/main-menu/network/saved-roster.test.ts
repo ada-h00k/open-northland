@@ -14,7 +14,7 @@ const descriptor: GameSession = {
   seed: 7,
   localSeat: 0,
   speed: 2,
-  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null },
+  rules: { fog: null, progression: null, needs: null, weather: null, alliedVision: null, peace: null },
   seats: [
     { player: 0, mode: 'human', color: 3, tribe: 7 },
     { player: 1, mode: 'computer', color: 4 },

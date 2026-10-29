@@ -53,6 +53,14 @@ export const WEATHER_MODES = ['map', 'variable', 'winter'] as const satisfies re
 /** The weather mode a session with no choice of its own plays. */
 export const DEFAULT_WEATHER_MODE: WeatherMode = 'map';
 
+/** The lengths of a lobby peace a session may choose, in minutes of match time. */
+export const PEACE_MINUTES = [30, 45, 60, 75, 90] as const;
+
+export type PeaceMinutes = (typeof PEACE_MINUTES)[number];
+
+/** The peace a lobby offers a multiplayer map with until a person picks another. */
+export const DEFAULT_PEACE_MINUTES: PeaceMinutes = 60;
+
 /** The world rules the session overrides; null keeps whatever the world set for itself. */
 export interface SessionRules {
   /** A `FOG_MODE` id. */
@@ -65,6 +73,8 @@ export interface SessionRules {
   readonly weather: WeatherMode | null;
   /** Sets `AlliedVisionRules.enabled`, which defines who shares a fog mask. */
   readonly alliedVision: boolean | null;
+  /** How long the lobby seats keep a peace from the match start (`setPeaceTime`); null opens none. */
+  readonly peace: PeaceMinutes | null;
 }
 
 /**
@@ -243,7 +253,15 @@ function parseRules(value: unknown): SessionRules {
     needs: nullableBoolean(raw.needs, 'rules.needs'),
     weather: parseWeather(raw.weather),
     alliedVision: nullableBoolean(raw.alliedVision, 'rules.alliedVision'),
+    peace: parsePeace(raw.peace),
   };
+}
+
+function parsePeace(value: unknown): PeaceMinutes | null {
+  if (value === null) return null;
+  const minutes = PEACE_MINUTES.find((known) => known === value);
+  if (minutes === undefined) throw new Error('rules.peace must name a peace length or be null');
+  return minutes;
 }
 
 function parseWeather(value: unknown): WeatherMode | null {

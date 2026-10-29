@@ -317,8 +317,9 @@ export interface ToolPanelController {
   lineStarts(): LitNodes | null;
   /** The gate tool's lit spans; null outside the gate tool. */
   gateSites(): GateSites | null;
-  /** Per-frame hook: the tick's model feeds the summary bar and the windows that show its figures. */
-  update(model: HudModel): void;
+  /** Per-frame hook: the tick's model feeds the summary bar and the windows that show its figures, and
+   *  the lobby peace's deadline (null for none) the bar's countdown. */
+  update(model: HudModel, peaceEndsAt: number | null): void;
   /** The world views the open mission book shows this frame; read after {@link update}. */
   mapViews(): readonly MapViewFrame[];
   /** Per-frame hook for the notification column: this frame's unfiltered sim events, the snapshot
@@ -936,8 +937,8 @@ export async function mountToolPanel(opts: ToolPanelOptions): Promise<ToolPanelC
       activeLine: () => placement.activeLine(),
       lineStarts: () => placement.lineStarts(),
       gateSites: () => placement.gateSites(),
-      update(model): void {
-        systemBar.update(model);
+      update(model, peaceEndsAt): void {
+        systemBar.update(model, peaceEndsAt);
         speed.refresh();
         windows.presentModel(model);
         windows.refresh();

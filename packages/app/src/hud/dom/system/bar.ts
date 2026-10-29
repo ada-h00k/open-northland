@@ -1,6 +1,6 @@
 import type { HudModel } from '@open-northland/render';
 import { formatMessage, messages } from '../../../i18n/index.js';
-import { formatSimClock } from '../../summary/model.js';
+import { formatPeaceLeft, formatSimClock } from '../../summary/model.js';
 import {
   GAME_SPEED_STATES,
   type GameSpeedControl,
@@ -40,15 +40,16 @@ export interface HudSystemBarDeps {
   readonly lead?: HTMLElement;
 }
 
-/** The top-right bar, one panel: the summary counters, the sim clock, the pause and running-speed
- *  segments and the game-menu medallion. */
+/** The top-right bar, one panel: the summary counters, the lobby peace's countdown while it holds, the
+ *  sim clock, the pause and running-speed segments and the game-menu medallion. */
 export interface HudSystemBar {
   /** Show the control as it stands; never pushes to the loop. */
   setSpeed(control: GameSpeedControl): void;
   /** Null restores the plain look. While `held`, a click on the bar does nothing. */
   setLook(look: SpeedBarLook | null): void;
-  /** Show the tick's figures and clock; the same model twice costs nothing. */
-  update(model: HudModel): void;
+  /** Show the tick's figures and clock, and the countdown to `peaceEndsAt` (null hides it); the same
+   *  model twice costs nothing. */
+  update(model: HudModel, peaceEndsAt: number | null): void;
   /** Hang `node` just left of the bar, right-aligned to it on its vertical centre; null takes the hung
    *  node down. The bar owns the place, the caller the node. */
   setAside(node: HTMLElement | null): void;
@@ -65,6 +66,12 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
 
   const picker = deps.observer === undefined ? null : createObserverPicker(deps.observer);
   const summary = createHudSummary(deps.summary);
+
+  const peace = document.createElement('span');
+  peace.className = 'on-clock on-clock--peace';
+  peace.setAttribute('role', 'timer');
+  peace.hidden = true;
+  let shownPeace = '';
 
   const clock = document.createElement('time');
   clock.className = 'on-clock';
@@ -121,7 +128,7 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
     bar.append(deps.lead);
   }
   if (picker !== null) bar.append(picker.element);
-  bar.append(summary.element, clock, speed, menu, aside);
+  bar.append(summary.element, peace, clock, speed, menu, aside);
   plane.append(bar);
   const showSpeed = (): void => {
     if (control === null) return;
@@ -149,9 +156,16 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
       look = next;
       showSpeed();
     },
-    update: (model) => {
+    update: (model, peaceEndsAt) => {
       picker?.refresh();
       summary.update(model);
+      const left = peaceEndsAt === null ? '' : formatPeaceLeft(peaceEndsAt, model.tick);
+      if (left !== shownPeace) {
+        shownPeace = left;
+        peace.hidden = left === '';
+        peace.textContent = formatMessage(clockCopy.peace, { time: left });
+        setTitle(peace, clockCopy.peaceTitle);
+      }
       const text = formatSimClock(model.tick);
       if (text !== shownClock) {
         shownClock = text;
