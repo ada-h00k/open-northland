@@ -25,8 +25,10 @@ const NEWCOMER_CHECK_TICKS = TICKS_PER_SECOND;
 
 /**
  * The fortress side's gear: when a step falls due every soldier of the gear seats gets it, and every
- * soldier those seats gain later, by any path, gets each step already passed, within a second. Newcomers
- * are found by entity id above a watermark, so the look costs the entities created since the last one.
+ * soldier created for those seats later (a refill, a band, a script spawn) gets each step already passed,
+ * within a second. Newcomers are found by entity id above a watermark, so the look costs the entities
+ * created since the last one. A settler that becomes a gear seat's soldier by a trade or owner change is
+ * not seen: a gear seat is a scripted camp that neither trains nor is handed people.
  */
 export function gearTurn(world: World, ctx: SystemContext, gear: GearConfig): void {
   const passed = mapEscalationProgress(world).gearSteps;
