@@ -34,6 +34,7 @@ export interface GameRuleControlOptions {
   readonly presentation: 'compact' | 'select';
   /** Offers progression and needs a "keep the world's own" choice; the fog pair is always explicit. */
   readonly inheritedLabel?: string;
+  /** A dropdown rule's field; absent stands it in the lobby's label-and-control row. */
   readonly fieldClassName?: string;
   readonly map: {
     readonly label: string;
@@ -99,7 +100,7 @@ export function gameRuleControls(options: GameRuleControlOptions) {
         const choice = choices.find((choice) => String(choice.value ?? '') === id);
         if (choice !== undefined) state.request(choice.value);
       },
-      options.fieldClassName,
+      options.fieldClassName ?? 'main-menu__lobby-option-row',
     );
     return {
       elements: [control.root],

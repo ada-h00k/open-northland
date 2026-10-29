@@ -1,13 +1,15 @@
 import type { HudModel } from '@open-northland/render';
 import { formatMessage, messages } from '../../../i18n/index.js';
+import { createTooltip } from '../../../view/tooltip.js';
 import { formatPeaceLeft, formatSimClock } from '../../summary/model.js';
 import {
   GAME_SPEED_STATES,
   type GameSpeedControl,
   type RunningGameSpeed,
 } from '../../tool-panel/game-speed.js';
-import { menuArt } from '../icons.js';
-import { setAttribute, setClass, setTitle } from '../parts/dom.js';
+import { GLYPH, menuArt } from '../icons.js';
+import { setAttribute, setClass, setTip, setTitle } from '../parts/dom.js';
+import { attachTipLayer } from '../parts/tip-layer.js';
 import { createObserverPicker, type ObserverPickerDeps } from './observer-picker.js';
 import { createHudSummary, type HudSummaryDeps } from './summary.js';
 
@@ -67,10 +69,16 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
   const picker = deps.observer === undefined ? null : createObserverPicker(deps.observer);
   const summary = createHudSummary(deps.summary);
 
+  // The peace's own framed cell: a glyph and the time left, its name and meaning in the label and tip.
   const peace = document.createElement('span');
-  peace.className = 'on-clock on-clock--peace';
+  peace.className = 'on-peace';
   peace.setAttribute('role', 'timer');
   peace.hidden = true;
+  peace.innerHTML = GLYPH.peace;
+  const peaceTime = document.createElement('b');
+  peace.append(peaceTime);
+  const peaceChip = createTooltip();
+  const peaceTips = attachTipLayer(peace, peaceChip);
   let shownPeace = '';
 
   const clock = document.createElement('time');
@@ -163,8 +171,10 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
       if (left !== shownPeace) {
         shownPeace = left;
         peace.hidden = left === '';
-        peace.textContent = formatMessage(clockCopy.peace, { time: left });
-        setTitle(peace, clockCopy.peaceTitle);
+        peaceTime.textContent = left;
+        peace.setAttribute('aria-label', formatMessage(clockCopy.peace, { time: left }));
+        setTip(peace, formatMessage(clockCopy.peaceTitle, { time: left }));
+        peaceTips.refresh();
       }
       const text = formatSimClock(model.tick);
       if (text !== shownClock) {
@@ -183,6 +193,8 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
     dispose: () => {
       picker?.dispose();
       summary.dispose();
+      peaceTips.dispose();
+      peaceChip.destroy();
       bar.remove();
     },
   };

@@ -1238,8 +1238,8 @@ export const plGame = {
         other: 'Inne',
       },
       clock: 'Czas gry',
-      peace: 'Pokój {time}',
-      peaceTitle: 'Pozostały czas pokoju. Do jego końca gracze nie mogą się atakować.',
+      peace: 'Czas pokoju: {time}',
+      peaceTitle: 'Czas pokoju: walka między graczami zablokowana. Koniec za {time}.',
     },
     notices: {
       label: 'Powiadomienia',

@@ -1232,8 +1232,8 @@ export const chsGame = {
         other: '其他',
       },
       clock: '游戏时间',
-      peace: '和平 {time}',
-      peaceTitle: '剩余和平时间。结束前，玩家之间不能互相攻击。',
+      peace: '和平时间：{time}',
+      peaceTitle: '和平时间：玩家之间禁止交战。{time} 后结束。',
     },
     notices: {
       label: '通知',

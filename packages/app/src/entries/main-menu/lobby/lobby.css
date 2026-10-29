@@ -528,6 +528,11 @@
   color: var(--text-body);
 }
 
+/* A row's dropdown stays as narrow as the segment strips beside it. */
+.main-menu__lobby-option-row .main-menu__dropdown-btn {
+  min-width: calc(var(--u) * 170);
+}
+
 .main-menu__lobby-start {
   width: 100%;
   box-sizing: border-box;
