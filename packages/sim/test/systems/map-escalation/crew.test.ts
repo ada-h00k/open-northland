@@ -8,12 +8,15 @@ import {
   JobAssignment,
   Owner,
   Settler,
+  Vehicle,
   VehicleStock,
 } from '../../../src/components/index.js';
 import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import type { Simulation } from '../../../src/index.js';
 import { createGroundGoods } from '../../../src/systems/economy/ground-goods.js';
+import { reap } from '../../../src/systems/lifecycle/death.js';
+import { vehicleIndex } from '../../../src/systems/vehicles/registry.js';
 import { removeVehicle } from '../../../src/systems/vehicles/remove.js';
 import { aiContent } from '../../fixtures/ai-content.js';
 import { ctxOf } from '../../fixtures/context.js';
@@ -139,5 +142,24 @@ describe('map escalation - fortress crew', () => {
     expect(lifted.size).toBeGreaterThan(0);
     runToSecond(sim, Math.ceil(sim.tick / TICKS_PER_SECOND) + 60);
     for (const e of porters) expect(heldFood(sim, e)).toBe(0);
+  });
+
+  it("hands a dead porter's cart to the porter made in his place instead of a new cart", () => {
+    const sim = crewWorld();
+    runToSecond(sim, REFILL_EVERY_SECONDS);
+    const [dead] = fortressOf(sim, CARRIER);
+    if (dead === undefined) throw new Error('no porter');
+    const cart = sim.world.get(dead, HaulingCart).vehicle;
+    const carts = vehicleIndex(sim.world).ownedBy(FORTRESS).length;
+    reap(sim.world, ctxOf(sim), dead);
+    expect(sim.world.get(cart, Vehicle).hauler).toBeNull();
+
+    runToSecond(sim, 2 * REFILL_EVERY_SECONDS);
+    const porters = fortressOf(sim, CARRIER);
+    expect(porters).toHaveLength(PORTERS);
+    expect(vehicleIndex(sim.world).ownedBy(FORTRESS)).toHaveLength(carts);
+    const heir = porters.find((e) => sim.world.tryGet(e, HaulingCart)?.vehicle === cart);
+    expect(heir).toBeDefined();
+    expect(sim.world.get(cart, Vehicle).hauler).toBe(heir);
   });
 });

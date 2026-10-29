@@ -22,6 +22,7 @@ import { assignedWorkers } from '../stores/assigned-workers.js';
 import { isCarrierJob } from '../stores/index.js';
 import { createVehicle } from '../vehicles/create.js';
 import { canTakeHaulingCart, orderHaulingCart } from '../vehicles/hauling-cart.js';
+import { vehicleIndex } from '../vehicles/registry.js';
 import { removeVehicle } from '../vehicles/remove.js';
 
 // The fortress's working crew, kept up on the guard refill beats the way the guard is: builders for the
@@ -57,7 +58,7 @@ export function keepBuilders(
 /**
  * Keep `count` porters at the fortress store: its posted carriers, the lowest ids first, made at the keep
  * into the free carrier posts when short. Each holds a flag at the porters' point with their radius and
- * pulls a hauling cart, a new one set beside him when he has none.
+ * pulls a hauling cart: a free one of the seat's when he has none, else a new one set beside him.
  */
 export function keepPorters(world: World, ctx: SystemContext, config: MapEscalation, porters: Porters): void {
   const store = fortressStore(world, ctx, config);
@@ -131,7 +132,11 @@ function holdPorterFlag(world: World, ctx: SystemContext, e: Entity, porters: Po
   if (world.tryGet(e, HaulFlag)?.radius !== porters.radius) world.mut(e, HaulFlag).radius = porters.radius;
 }
 
-/** A new cart beside a porter standing on the map without a cart; one he could not take is taken back. */
+/**
+ * Give a porter standing on the map without a cart the seat's free cart of the porters' type, the lowest id
+ * first, so a dead porter's cart and its load go back to work; with none free, a new cart beside him. A
+ * new one he could not take is taken back.
+ */
 function handCart(
   world: World,
   ctx: SystemContext,
@@ -142,6 +147,13 @@ function handCart(
   const held = world.tryGet(e, HaulingCart);
   // A cart destroyed since leaves its binding until the puller next plans; the new one replaces it.
   if ((held !== undefined && world.has(held.vehicle, Vehicle)) || world.has(e, Rider)) return;
+  const free = vehicleIndex(world)
+    .ownedBy(config.keep.seat)
+    .find((v) => world.get(v, Vehicle).vehicleType === vehicleType && canTakeHaulingCart(world, ctx, e, v));
+  if (free !== undefined) {
+    orderHaulingCart(world, ctx, e, free);
+    return;
+  }
   const at = world.tryGet(e, Position);
   if (at === undefined) return;
   const node = nodeOfPosition(at.x, at.y);
