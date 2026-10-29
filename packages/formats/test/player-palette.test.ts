@@ -38,6 +38,17 @@ describe('synthesizePlayerSource', () => {
     }
   });
 
+  it('tones the emblem range by its own tone when one is named', () => {
+    const ref = solid(255, 0, 0);
+    const out = synthesizePlayerSource(ref, { hue: 240, emblem: { hue: 120 } });
+    const at = (i: number): number[] => [out[i * 3] ?? 0, out[i * 3 + 1] ?? 0, out[i * 3 + 2] ?? 0];
+    for (let i = 0; i < 256; i++) {
+      if (TEAM_INDICES(i)) expect(at(i)).toEqual([0, 0, 255]);
+      else if (i >= 64 && i < 80) expect(at(i)).toEqual([0, 255, 0]);
+      else expect(at(i)).toEqual([255, 0, 0]);
+    }
+  });
+
   it('does not alias a Node Buffer reference (Buffer.slice shares memory)', () => {
     const ref = Buffer.from(solid(255, 0, 0));
     synthesizePlayerSource(ref, { hue: 240 });

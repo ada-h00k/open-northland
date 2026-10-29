@@ -11,9 +11,12 @@ import { assertPaletteBytes, PALETTE_RGB_BYTES } from './image.js';
 const RAMP_LENGTH = 16;
 /**
  * The colour ranges that carry the team colour in a `playerNN.pcx`: the ten shipped files differ in
- * ranges 1, 2, 14 and 15 (range 4 and index 112 vary too, but stay gold and black in every file).
+ * ranges 1, 2, 14 and 15, index 112 (black in all) and range 4 ({@link EMBLEM_COLOR_RANGE}).
  */
 const TEAM_COLOR_RANGES: readonly number[] = [1, 2, 14, 15];
+/** The gold colour range a building sign draws its emblem and trim with. The original swaps it to green
+ *  for orange (`player08.pcx`), where gold would not stand out. */
+const EMBLEM_COLOR_RANGE = 4;
 /** RGB bytes per palette entry. */
 const RGB_BYTES = 3;
 
@@ -27,6 +30,12 @@ export interface PlayerTone {
   readonly shade?: number;
 }
 
+/** A synthetic colour: its team tone, and the tone of its sign emblem where the reference gold would
+ *  not stand out against it. */
+export interface SyntheticPlayerTone extends PlayerTone {
+  readonly emblem?: PlayerTone;
+}
+
 export interface PlayerColorDef {
   readonly id: number;
   readonly name: string;
@@ -36,8 +45,12 @@ export interface PlayerColorDef {
    */
   readonly source:
     | { readonly kind: 'pcx'; readonly file: string }
-    | ({ readonly kind: 'synthetic' } & PlayerTone);
+    | ({ readonly kind: 'synthetic' } & SyntheticPlayerTone);
 }
+
+/** Emblem tones, picked by eye against each colour's flag. */
+const PALE_YELLOW: PlayerTone = { hue: 55, shade: 0.45 };
+const LIGHT_GOLD: PlayerTone = { hue: 48, shade: 0.45 };
 
 /**
  * The 24 player colours, slot order = player id. Ids 0–9 follow the original's `TPlayerColorId` order
@@ -59,17 +72,59 @@ export const PLAYER_COLORS: readonly PlayerColorDef[] = [
   { id: 11, name: 'teal', source: { kind: 'synthetic', hue: 168 } },
   { id: 12, name: 'azure', source: { kind: 'synthetic', hue: 205 } },
   { id: 13, name: 'indigo', source: { kind: 'synthetic', hue: 250 } },
-  { id: 14, name: 'magenta', source: { kind: 'synthetic', hue: 312 } },
-  { id: 15, name: 'pink', source: { kind: 'synthetic', hue: 336 } },
+  { id: 14, name: 'magenta', source: { kind: 'synthetic', hue: 312, emblem: PALE_YELLOW } },
+  { id: 15, name: 'pink', source: { kind: 'synthetic', hue: 336, emblem: PALE_YELLOW } },
   // Darker and lighter tones, apart from the hues above by brightness as well.
-  { id: 16, name: 'maroon', source: { kind: 'synthetic', hue: 350, shade: -0.5 } },
-  { id: 17, name: 'navy', source: { kind: 'synthetic', hue: 225, shade: -0.5 } },
-  { id: 18, name: 'olive', source: { kind: 'synthetic', hue: 58, saturation: 0.85, shade: -0.45 } },
-  { id: 19, name: 'brown', source: { kind: 'synthetic', hue: 25, saturation: 0.8, shade: -0.5 } },
-  { id: 20, name: 'forest', source: { kind: 'synthetic', hue: 125, saturation: 0.9, shade: -0.5 } },
-  { id: 21, name: 'plum', source: { kind: 'synthetic', hue: 295, saturation: 0.75, shade: -0.45 } },
+  {
+    id: 16,
+    name: 'maroon',
+    source: { kind: 'synthetic', hue: 350, shade: -0.5, emblem: { hue: 48, saturation: 0.7, shade: 0.55 } },
+  },
+  { id: 17, name: 'navy', source: { kind: 'synthetic', hue: 225, shade: -0.5, emblem: LIGHT_GOLD } },
+  {
+    id: 18,
+    name: 'olive',
+    source: {
+      kind: 'synthetic',
+      hue: 58,
+      saturation: 0.85,
+      shade: -0.45,
+      emblem: { hue: 45, saturation: 0.15, shade: 0.65 },
+    },
+  },
+  {
+    id: 19,
+    name: 'brown',
+    source: {
+      kind: 'synthetic',
+      hue: 25,
+      saturation: 0.8,
+      shade: -0.5,
+      emblem: { hue: 45, saturation: 0.3, shade: 0.6 },
+    },
+  },
+  {
+    id: 20,
+    name: 'forest',
+    source: { kind: 'synthetic', hue: 125, saturation: 0.9, shade: -0.5, emblem: PALE_YELLOW },
+  },
+  {
+    id: 21,
+    name: 'plum',
+    source: { kind: 'synthetic', hue: 295, saturation: 0.75, shade: -0.45, emblem: LIGHT_GOLD },
+  },
   { id: 22, name: 'white', source: { kind: 'synthetic', hue: 0, saturation: 0, shade: 0.6 } },
-  { id: 23, name: 'lavender', source: { kind: 'synthetic', hue: 265, saturation: 0.45, shade: 0.35 } },
+  {
+    id: 23,
+    name: 'lavender',
+    source: {
+      kind: 'synthetic',
+      hue: 265,
+      saturation: 0.45,
+      shade: 0.35,
+      emblem: { hue: 275, shade: -0.45 },
+    },
+  },
 ];
 
 /**
@@ -137,13 +192,16 @@ export function toneRamp(ramp: Uint8Array, tone: PlayerTone): Uint8Array {
   return out;
 }
 
-/** Builds a synthetic player source palette: `reference` with its team-colour ranges toned by {@link toneRamp}. */
-export function synthesizePlayerSource(reference: Uint8Array, tone: PlayerTone): Uint8Array {
+/** Builds a synthetic player source palette: `reference` with its team-colour ranges, and its emblem range
+ *  when the tone names one, toned by {@link toneRamp}. */
+export function synthesizePlayerSource(reference: Uint8Array, tone: SyntheticPlayerTone): Uint8Array {
   assertPaletteBytes(reference, 'player-palette', 'reference palette');
   const out = copyPalette(reference);
-  for (const range of TEAM_COLOR_RANGES) {
+  const toneRange = (range: number, rangeTone: PlayerTone): void => {
     const start = range * RAMP_LENGTH * RGB_BYTES;
-    out.set(toneRamp(reference.subarray(start, start + RAMP_LENGTH * RGB_BYTES), tone), start);
-  }
+    out.set(toneRamp(reference.subarray(start, start + RAMP_LENGTH * RGB_BYTES), rangeTone), start);
+  };
+  for (const range of TEAM_COLOR_RANGES) toneRange(range, tone);
+  if (tone.emblem !== undefined) toneRange(EMBLEM_COLOR_RANGE, tone.emblem);
   return out;
 }
