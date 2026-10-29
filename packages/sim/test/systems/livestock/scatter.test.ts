@@ -5,6 +5,7 @@ import {
   Position,
   Stockpile,
   setDiplomacyStance,
+  setPeaceTime,
 } from '../../../src/components/index.js';
 import type { Entity, Simulation } from '../../../src/index.js';
 import { positionOfNode } from '../../../src/index.js';
@@ -81,6 +82,18 @@ describe('livestock scatter - owned stock runs from an enemy scout', () => {
 
     expect(sim.world.has(own, Frightened)).toBe(false);
     expect(sim.world.has(wild, Frightened)).toBe(false);
+  });
+
+  it("a peace partner's scout sets no one running while the lobby peace holds", () => {
+    const sim = livestockSim();
+    setDiplomacyStance(sim.world, P0, P1, 'enemy');
+    setPeaceTime(sim.world, sim.tick, sim.tick + 1, [P0, P1]);
+    const cow = cowAt(sim, 30, 30, { owner: P1 });
+    scoutAt(sim, 30 - SCATTER_RANGE, 30, P0);
+
+    livestockCaptureSystem(sim.world, ctxOf(sim));
+
+    expect(sim.world.has(cow, Frightened)).toBe(false);
   });
 
   it('only a scout step scatters: stock that wanders up to a standing scout stays calm', () => {

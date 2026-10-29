@@ -8,6 +8,7 @@ import {
   Position,
   Stockpile,
   setDiplomacyStance,
+  setPeaceTime,
   setSettlerJob,
 } from '../../../src/components/index.js';
 import type { Entity, Simulation } from '../../../src/index.js';
@@ -133,6 +134,17 @@ describe('livestock capture - a scout claims the catchable animals it passes', (
         at: { hx: 10, hy: 11 },
       },
     ]);
+  });
+
+  it('steals nothing from a seat a lobby peace binds it to, though their stance is enemy', () => {
+    const sim = livestockSim();
+    scoutAt(sim, 10, 10, P0);
+    const partnerCow = cowAt(sim, 10, 11, { owner: P1 });
+    setDiplomacyStance(sim.world, P0, P1, 'enemy');
+    setPeaceTime(sim.world, sim.tick, sim.tick + 1, [P0, P1]);
+
+    expect(capturePass(sim)).toEqual([]);
+    expect(sim.world.get(partnerCow, Owner).player).toBe(P1);
   });
 
   it('leaves its thief in the memory of a robbed computer seat', () => {
