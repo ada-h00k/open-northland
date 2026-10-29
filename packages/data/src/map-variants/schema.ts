@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { LANGUAGES } from '../languages.js';
+import { HypertextBlock } from '../schema/gui/hypertext.js';
 import { AuthoredHuman } from '../schema/maps/entities.js';
 import { MapAiTask, MapMultiplayerSlot, MapScriptLine } from '../schema/maps/script.js';
 import { MapEscalation } from './escalation.js';
@@ -39,6 +41,14 @@ export const MapVariantScriptPatch = z.strictObject({
 });
 export type MapVariantScriptPatch = z.infer<typeof MapVariantScriptPatch>;
 
+/** A section added at the end of the named briefing pages (`PlayCutscene` ids), per map text language;
+ *  a page in a language the section lacks takes the language a reader of it falls back to. */
+export const MapVariantBriefingAppend = z.strictObject({
+  pages: z.array(z.number().int().nonnegative()).min(1),
+  texts: z.partialRecord(z.enum(LANGUAGES), z.array(HypertextBlock).min(1)),
+});
+export type MapVariantBriefingAppend = z.infer<typeof MapVariantBriefingAppend>;
+
 /**
  * One committed variant of one map: our own authored rules over the map's decoded data, never a copy
  * of it. Every map-specific number lives here, so the systems that read it stay generic.
@@ -52,6 +62,8 @@ export const MapVariant = z.strictObject({
   /** Each spawned deposit node of the named good (a content good id) starts with its authored amount
    *  times this factor. */
   depositYield: z.record(z.string().min(1), z.number().int().min(1)).default({}),
+  /** What the variant changes, told at the end of the map's briefing. */
+  briefingAppend: MapVariantBriefingAppend.optional(),
   /** The siege the simulation runs over the map; absent for a variant that only patches the map. */
   escalation: MapEscalation.optional(),
 });

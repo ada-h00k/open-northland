@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyMapVariantBriefing,
   applyMapVariantScript,
   applyMapVariantSlots,
   MAP_VARIANTS,
+  MapBriefing,
   MapEscalation,
   MapScript,
   MapVariant,
@@ -138,6 +140,33 @@ describe('applyMapVariantSlots', () => {
 
     expect(patched[0]).toBe(slots[0]);
     expect(patched[1]).toMatchObject({ claimable: true, aiAllowed: true, noneAllowed: true });
+  });
+});
+
+describe('applyMapVariantBriefing', () => {
+  const OPENING = 0;
+  const WON = 1;
+  const text = (value: string) => ({ kind: 'text' as const, style: 'body' as const, text: value });
+  const BRIEFING = MapBriefing.parse({
+    texts: {
+      pol: { [OPENING]: [text('start')], [WON]: [text('won')] },
+      eng: { [OPENING]: [text('start')] },
+      chs: { [OPENING]: [text('start')] },
+    },
+  });
+  const told = MapVariant.parse({
+    ...VARIANT,
+    briefingAppend: { pages: [OPENING], texts: { pol: [text('tryb')], eng: [text('mode')] } },
+  });
+
+  it('appends the section to the named pages in each language, a missing one read in its fallback', () => {
+    const patched = applyMapVariantBriefing(BRIEFING, told);
+
+    expect(patched.texts.pol?.[OPENING]).toEqual([text('start'), text('tryb')]);
+    expect(patched.texts.pol?.[WON]).toEqual([text('won')]);
+    expect(patched.texts.eng?.[OPENING]).toEqual([text('start'), text('mode')]);
+    expect(patched.texts.chs?.[OPENING]).toEqual([text('start'), text('mode')]);
+    expect(applyMapVariantBriefing(BRIEFING, VARIANT)).toBe(BRIEFING);
   });
 });
 

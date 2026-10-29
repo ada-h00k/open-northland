@@ -1,4 +1,6 @@
+import { isLanguage, textReadingOrder } from '../languages.js';
 import { mapSlotEligibility } from '../map-lobby.js';
+import type { MapBriefing } from '../schema/maps/briefing.js';
 import type { TerrainEntities } from '../schema/maps/entities.js';
 import type { MapsIndexPlayerSlot } from '../schema/maps/listing.js';
 import type { MapMission, MapScript } from '../schema/maps/script.js';
@@ -53,6 +55,28 @@ export function applyMapVariantScript(script: MapScript, variant: MapVariant): M
 export function applyMapVariantEntities(entities: TerrainEntities, variant: MapVariant): TerrainEntities {
   if (variant.startHumans.length === 0) return entities;
   return { ...entities, humans: [...entities.humans, ...variant.startHumans] };
+}
+
+/** The map's briefing as the variant tells it: its section after the named pages in every language the
+ *  briefing carries. A map without a briefing stays without one. */
+export function applyMapVariantBriefing(briefing: MapBriefing, variant: MapVariant): MapBriefing {
+  const append = variant.briefingAppend;
+  if (append === undefined) return briefing;
+  const texts: MapBriefing['texts'] = {};
+  for (const [lang, pages] of Object.entries(briefing.texts)) {
+    const section = isLanguage(lang)
+      ? textReadingOrder(lang)
+          .map((candidate) => append.texts[candidate])
+          .find((blocks) => blocks !== undefined)
+      : undefined;
+    const patched = { ...pages };
+    for (const id of append.pages) {
+      const page = pages[String(id)];
+      if (page !== undefined && section !== undefined) patched[String(id)] = [...page, ...section];
+    }
+    texts[lang] = patched;
+  }
+  return { ...briefing, texts };
 }
 
 /** The lobby rows of a map index entry as the variant offers them: only the eligibility a replaced

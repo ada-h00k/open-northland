@@ -1,7 +1,9 @@
 import {
+  applyMapVariantBriefing,
   applyMapVariantEntities,
   applyMapVariantScript,
   findMapVariant,
+  type MapBriefing,
   type MapScript,
   type MapVariant,
   type MapVariantKind,
@@ -35,6 +37,12 @@ export function variantMapScript(script: MapScript | null, world: SessionWorld):
 export function variantMapScript(script: MapScript | null, world: SessionWorld): MapScript | null {
   const variant = sessionMapVariant(world);
   return script === null || variant === null ? script : applyMapVariantScript(script, variant);
+}
+
+/** The map's briefing as the session's world tells it. */
+export function variantBriefing(briefing: MapBriefing | null, world: SessionWorld): MapBriefing | null {
+  const variant = sessionMapVariant(world);
+  return briefing === null || variant === null ? briefing : applyMapVariantBriefing(briefing, variant);
 }
 
 /** The map's placements as the session's world starts them. */

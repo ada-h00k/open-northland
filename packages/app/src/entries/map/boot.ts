@@ -34,7 +34,7 @@ import { readVerifiedMapDocuments, type VerifiedMapDocuments } from '../../conte
 import { contentFetch } from '../../content/url.js';
 import { type DiagEntry, diag, hashTraceFor, setDiagGameSession } from '../../diag/index.js';
 import { assertMultiplayerMap } from '../../game/map/multiplayer.js';
-import { mapSessionWorld, variantMapScript } from '../../game/map/variant.js';
+import { mapSessionWorld, variantBriefing, variantMapScript } from '../../game/map/variant.js';
 import { sessionSeating } from '../../game/match/seat-tribes.js';
 import { onOffParam } from '../../game/match/session-rules.js';
 import type { SessionRosterSlot } from '../../game/match/session-url.js';
@@ -245,16 +245,16 @@ export async function assembleMapWorld<H extends HostedMapWorld>(
     const files = mapId !== null ? await mapFetch(mapId) : contentFetch;
     const loaded = verified?.map ?? (mapId !== null ? await loadTerrainMap(mapId, files) : null);
     // A roster-less map keeps the defaults: seat 0, and colour = slot id.
-    const [authoredScript, meta, briefing, strings] = await Promise.all([
+    const [authoredScript, meta, authoredBriefing, strings] = await Promise.all([
       verified !== undefined ? verified.script : mapId !== null ? loadMapScript(mapId, files) : null,
       mapId !== null ? loadMapMeta(mapId, files) : null,
       mapId !== null ? loadMapBriefing(mapId, files) : null,
       mapId !== null ? loadMapStrings(mapId, files) : null,
     ]);
-    const script =
-      mapId === null
-        ? authoredScript
-        : variantMapScript(authoredScript, mapSessionWorld(mapId, plan.variant));
+    const sessionWorld = mapId === null ? null : mapSessionWorld(mapId, plan.variant);
+    const script = sessionWorld === null ? authoredScript : variantMapScript(authoredScript, sessionWorld);
+    const briefing =
+      sessionWorld === null ? authoredBriefing : variantBriefing(authoredBriefing, sessionWorld);
     if (plan.multiplayer) assertMultiplayerMap(script);
     const session = plan.sessionFor(script === null ? [] : mapLobbySlots(script));
     if (session.world.kind === 'map' && (session.world.variant ?? null) !== plan.variant)

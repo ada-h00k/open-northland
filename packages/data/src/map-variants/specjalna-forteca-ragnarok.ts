@@ -1,4 +1,5 @@
 import type { MapVariantInput } from './schema.js';
+import { SPECJALNA_FORTECA_RAGNAROK_BRIEFING } from './specjalna-forteca-ragnarok-briefing.js';
 
 /** Mieszkańcy równiny and Górale, the two villages the authored map hands to whoever reaches them. */
 const PLAIN_SEAT = 4;
@@ -219,6 +220,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
     iron: RAGNAROK_DEPOSIT_YIELD,
     mushroom: RAGNAROK_DEPOSIT_YIELD,
   },
+  briefingAppend: SPECJALNA_FORTECA_RAGNAROK_BRIEFING,
   // Starter numbers proposed for the owner.
   escalation: {
     keep: { seat: FORTRESS_SEAT, ...KEEP },
