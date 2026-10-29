@@ -6,7 +6,7 @@ import type { MapVariantBriefingPages } from './schema.js';
 const OPENING_PAGE = 0;
 const VICTORY_PAGE = 1;
 
-/** Two or more empty lines open a new section of the book, which marks it with a rule. */
+/** Two or more empty lines open a new section of the book, with a wider gap above it. */
 const SECTION_GAP_LINES = 2;
 const blank: HypertextBlock = { kind: 'blank', lines: 1 };
 const sectionGap: HypertextBlock = { kind: 'blank', lines: SECTION_GAP_LINES };
