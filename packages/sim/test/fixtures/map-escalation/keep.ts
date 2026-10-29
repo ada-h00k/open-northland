@@ -32,6 +32,8 @@ export const POST = { x: 40, y: 96, range: 10 };
 
 export const FIRST_LAUNCH_SECONDS = 10;
 const FIRST_WAVE_MEN = 3;
+/** Two of the first wave's three men dead end it, one does not. */
+const END_DEAD_PCT = 60;
 export const END_AFTER_SECONDS = 120;
 export const GUARD_BASE = 3;
 export const REFILL_EVERY_SECONDS = 5;
@@ -45,10 +47,11 @@ export const ESCALATION: MapEscalationInput = {
   ],
   attacks: {
     launches: [
-      { atSeconds: FIRST_LAUNCH_SECONDS, landMen: FIRST_WAVE_MEN, seaMen: 0 },
-      { atSeconds: 400, landMen: 5, seaMen: 0 },
+      { atSeconds: FIRST_LAUNCH_SECONDS, landMen: FIRST_WAVE_MEN, ships: 0 },
+      { atSeconds: 400, landMen: 5, ships: 0 },
     ],
-    repeat: { everySeconds: 400, waves: [{ landMen: 1, seaMen: 0 }] },
+    repeat: { everySeconds: 400, waves: [{ landMen: 1, ships: 0 }] },
+    endDeadPct: END_DEAD_PCT,
     endAfterSeconds: END_AFTER_SECONDS,
     targets: [
       { seat: PLAYER, raider: RAIDER, ...TARGET },
@@ -60,7 +63,7 @@ export const ESCALATION: MapEscalationInput = {
     perSeatStep: 1,
     stepSeconds: 30,
     perSeatMax: 2,
-    refill: [{ fromSeconds: 0, everySeconds: REFILL_EVERY_SECONDS, men: 2 }],
+    refill: { everySeconds: REFILL_EVERY_SECONDS, baseMen: 2, stepMen: 0, stepSeconds: 60, maxMen: 2 },
   },
 };
 

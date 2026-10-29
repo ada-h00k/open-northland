@@ -20,7 +20,12 @@ export function waveSize(config: MapEscalation, index: number): MapEscalationWav
   const scheduled = launches[index];
   if (scheduled !== undefined) return scheduled;
   const cycle = repeat.waves;
-  return cycle[(index - launches.length) % cycle.length] ?? { landMen: 0, seaMen: 0 };
+  return cycle[(index - launches.length) % cycle.length] ?? { landMen: 0, ships: 0 };
+}
+
+/** Whether an attack that sent `sent` men, `living` of them alive, lost enough of them to end. */
+export function attackBeaten(config: MapEscalation, sent: number, living: number): boolean {
+  return (sent - living) * 100 >= sent * config.attacks.endDeadPct;
 }
 
 export function attackEndsTick(config: MapEscalation, launchedTick: number): number {
@@ -34,14 +39,13 @@ export function guardCap(config: MapEscalation, tick: number, occupied: number):
   return base + occupied * Math.min(perSeatStep * steps, perSeatMax);
 }
 
-/** The men the guard's refill beat brings on `tick`, 0 off the beat. A later row beats on its first
- *  tick; the opening row first beats one interval in, like the map's own pulse. */
+/** The men the guard's refill pulse brings on `tick`, 0 off the beat; the first beat falls one
+ *  interval in, like the map's own pulse. The pulse grows by a step for each completed step of time. */
 export function refillMen(config: MapEscalation, tick: number): number {
-  let row = config.guard.refill[0];
-  for (const next of config.guard.refill) if (next.fromSeconds * TICKS_PER_SECOND <= tick) row = next;
-  if (row === undefined || tick <= 0) return 0;
-  const since = tick - row.fromSeconds * TICKS_PER_SECOND;
-  return since % (row.everySeconds * TICKS_PER_SECOND) === 0 ? row.men : 0;
+  const { everySeconds, baseMen, stepMen, stepSeconds, maxMen } = config.guard.refill;
+  if (tick <= 0 || tick % (everySeconds * TICKS_PER_SECOND) !== 0) return 0;
+  const steps = Math.floor(tick / (stepSeconds * TICKS_PER_SECOND));
+  return Math.min(baseMen + stepMen * steps, maxMen);
 }
 
 /** `count` men split over the mix by weight: each trade its whole share, the rest one each to the

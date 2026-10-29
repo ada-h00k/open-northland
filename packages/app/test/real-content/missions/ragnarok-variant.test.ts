@@ -142,6 +142,8 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
   const MARCH_TICKS = 2 * systems.AI_HANDLER_ROUND_TICKS + 60 * TICKS_PER_SECOND;
   /** How far march ground the band covers at the least, in map points. */
   const MARCHED = 20;
+  /** The most ships a wave sends against one seat, each from its own landing point. */
+  const MAX_SHIPS = 3;
   /** The mean distance of the garrison from the keep: its Defend posts lie within 40 of it. */
   const GARRISON_REACH = 40;
 
@@ -303,19 +305,19 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     expect(fortressCatapults()).toHaveLength(catapults.length - 1);
 
     // Seen lost within a second; the first refill beat a full wait after that raises it.
-    const firstBeat = (escalation.guard.refill[0]?.everySeconds ?? 0) * TICKS_PER_SECOND;
+    const firstBeat = escalation.guard.refill.everySeconds * TICKS_PER_SECOND;
     sim.run(firstBeat + TICKS_PER_SECOND - sim.tick);
     const back = fortressCatapults().filter((e) => !catapults.includes(e));
     expect(back).toHaveLength(1);
     expect(sim.world.get(back[0] as Entity, components.Vehicle).guard).toEqual(spot);
   }, 300_000);
 
-  it('lands each occupied seat’s ship at its landing point, on the land its men walk to the target', async () => {
+  it('lands every ship of a full wave at its own landing point, on the land its men walk to the target', async () => {
     const real = ragnarok();
-    const landingWave = real.attacks.launches.find((row) => row.seaMen > 0);
+    const landingWave = real.attacks.launches.find((row) => row.ships === MAX_SHIPS);
     if (landingWave === undefined || real.landings === undefined)
-      throw new Error('Ragnarök ships no landing');
-    // The first landing wave moved to the first launch, every seat occupied.
+      throw new Error('Ragnarök ships no full landing wave');
+    // The first full landing wave moved to the first launch, every seat occupied.
     const escalation: MapEscalation = {
       ...real,
       attacks: {
@@ -328,53 +330,53 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     if (terrain === undefined) throw new Error('no terrain');
     /** Time for the farthest ship to sail in, set its men down, and sail back off the map. */
     const VOYAGE_SECONDS = 240;
-    /** How near the landing point the men step ashore, in map points. */
+    /** How near its landing point a ship's men step ashore, in map points. */
     const ASHORE = 8;
+    const { targets } = escalation.attacks;
     let landed: readonly number[] = [];
     sim.run(EARLY_LAUNCH_SECONDS * TICKS_PER_SECOND - sim.tick - 1);
     sim.step();
     for (const ev of sim.events.current()) if (ev.kind === 'mapEscalationLanding') landed = ev.seats;
-    expect(landed).toEqual(escalation.attacks.targets.map((target) => target.seat));
-    const aboard = new Map(
-      escalation.attacks.targets.map((target) => [
-        target,
-        owned(sim, target.raider).filter((e) => sim.world.has(e, components.Rider)),
-      ]),
-    );
+    expect(landed).toEqual(targets.map((target) => target.seat));
     const ships = () =>
       [...sim.world.query(components.Vehicle, components.Owner)].filter((e) =>
-        escalation.attacks.targets.some(
-          (target) => target.raider === sim.world.get(e, components.Owner).player,
-        ),
+        targets.some((target) => target.raider === sim.world.get(e, components.Owner).player),
       );
-    expect(ships()).toHaveLength(aboard.size);
-    for (const [target, men] of aboard)
-      expect(men, `raider ${target.raider}`).toHaveLength(landingWave.seaMen);
+    const riders = [...sim.world.query(components.Rider)];
+    // Each landing point's ship and the men riding it, commander's seat included, by the ship's record.
+    const voyages = components.mapEscalationProgress(sim.world).landings.map((record) => {
+      const target = targets.find((t) => t.seat === record.seat);
+      const point = target?.landings[record.point];
+      if (target === undefined || point === undefined) throw new Error(`no landing ${record.point}`);
+      const men = riders.filter((e) => sim.world.get(e, components.Rider).vehicle === record.ship);
+      return { target, point, men, label: `seat ${target.seat} landing ${record.point}` };
+    });
+    expect(voyages.map((v) => v.label)).toEqual(
+      targets.flatMap((t) => t.landings.map((_, i) => `seat ${t.seat} landing ${i}`)),
+    );
+    expect(ships()).toHaveLength(voyages.length);
+    for (const v of voyages) expect(v.men, v.label).toHaveLength(real.landings.menPerShip);
 
     // Each band's distance from its landing point on the tick its last man steps ashore.
-    const landedAt = new Map<(typeof escalation.attacks.targets)[number], number>();
+    const landedAt = new Map<(typeof voyages)[number], number>();
     while (
       sim.tick < (EARLY_LAUNCH_SECONDS + VOYAGE_SECONDS) * TICKS_PER_SECOND &&
-      landedAt.size < aboard.size
+      landedAt.size < voyages.length
     ) {
       sim.step();
-      for (const [target, men] of aboard) {
-        if (landedAt.has(target) || target.landing === undefined) continue;
-        if (men.every((e) => sim.world.has(e, components.Position)))
-          landedAt.set(target, meanDistance(sim, men, target.landing));
-      }
+      for (const v of voyages)
+        if (!landedAt.has(v) && v.men.every((e) => sim.world.has(e, components.Position)))
+          landedAt.set(v, meanDistance(sim, v.men, v.point));
     }
-    for (const target of aboard.keys()) {
-      const landing = target.landing;
-      if (landing === undefined) throw new Error(`seat ${target.seat} has no landing points`);
-      expect(landedAt.get(target), `raider ${target.raider}`).toBeLessThan(ASHORE);
-      const shore = terrain.componentOf(terrain.nodeAt(landing.x, landing.y));
-      expect(shore).toBe(terrain.componentOf(terrain.nodeAt(target.x, target.y)));
+    for (const v of voyages) {
+      expect(landedAt.get(v), v.label).toBeLessThan(ASHORE);
+      const shore = terrain.componentOf(terrain.nodeAt(v.point.x, v.point.y));
+      expect(shore, v.label).toBe(terrain.componentOf(terrain.nodeAt(v.target.x, v.target.y)));
     }
     while (sim.tick < (EARLY_LAUNCH_SECONDS + 2 * VOYAGE_SECONDS) * TICKS_PER_SECOND && ships().length > 0)
       sim.step();
     expect(ships()).toEqual([]);
-  }, 600_000);
+  }, 900_000);
 
   it('turns the computer seats’ soldiers into civilians at the start, the human seat keeping its own', async () => {
     const SETTLE_TICKS = 5 * TICKS_PER_SECOND;
@@ -399,19 +401,13 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     }
   }, 300_000);
 
-  it('schedules the owner’s waves: the first at 0:40, landings on the odd ones from the third', () => {
-    const { launches, repeat } = ragnarok().attacks;
+  it('schedules the owner’s waves: the first at 0:30, ships from the fourth, three a wave from the seventh', () => {
+    const { launches, repeat, endDeadPct, endAfterSeconds } = ragnarok().attacks;
     const MINUTE = 60;
-    expect(launches.map((row) => row.atSeconds / MINUTE)).toEqual([40, 65, 90, 120, 150]);
-    expect(launches.map((row) => row.landMen)).toEqual([10, 20, 30, 60, 60]);
-    expect([...launches, ...repeat.waves].map((row) => row.seaMen > 0)).toEqual([
-      false,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-    ]);
+    expect(launches.map((row) => row.atSeconds / MINUTE)).toEqual([30, 45, 65, 90, 110, 130, 150]);
+    expect(launches.map((row) => row.landMen)).toEqual([6, 12, 25, 25, 35, 90, 60]);
+    expect(launches.map((row) => row.ships)).toEqual([0, 0, 0, 1, 2, 0, 3]);
+    expect(repeat).toEqual({ everySeconds: 20 * MINUTE, waves: [{ landMen: 60, ships: 3 }] });
+    expect({ endDeadPct, endAfterSeconds }).toEqual({ endDeadPct: 80, endAfterSeconds: 10 * MINUTE });
   });
 });

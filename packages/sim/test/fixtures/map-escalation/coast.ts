@@ -20,7 +20,8 @@ const BOWMAN = 40;
 const SHIP = 3;
 /** The ship's seats besides the commander's: the landing carries one more man than this. */
 export const SHIP_SEATS = 3;
-const SEA_MEN = 6;
+/** More than a ship seats, so each ship sails full. */
+const MEN_PER_SHIP = 6;
 
 const FORTRESS = 6;
 export const PLAYER = 0;
@@ -34,6 +35,8 @@ export const TARGET = { x: 60, y: 30 };
 export const SECOND_HOUSE = { x: 60, y: 46 };
 const VILLAGER = { x: 66, y: 36 };
 export const LANDING = { spawnX: 4, spawnY: 30, x: 21, y: 30 };
+/** A second stretch of the same coast, for a wave's second ship. */
+export const SECOND_LANDING = { spawnX: 4, spawnY: 50, x: 21, y: 50 };
 
 export const LAUNCH_SECONDS = 10;
 export const NOTICE = 'landing';
@@ -70,6 +73,8 @@ export function coast(): TerrainMap {
   return halfCellMapFromCells({ width, height, typeIds });
 }
 
+export const LANDINGS = { vehicle: 'ship_small', menPerShip: MEN_PER_SHIP, noticeKey: NOTICE };
+
 export const ESCALATION: MapEscalationInput = {
   keep: { seat: FORTRESS, houseType: HQ_TYPE, ...KEEP, range: 4 },
   tribe: VIKING,
@@ -78,19 +83,20 @@ export const ESCALATION: MapEscalationInput = {
     { job: BOWMAN, weight: 1 },
   ],
   attacks: {
-    launches: [{ atSeconds: LAUNCH_SECONDS, landMen: 1, seaMen: SEA_MEN }],
-    repeat: { everySeconds: 600, waves: [{ landMen: 0, seaMen: 0 }] },
+    launches: [{ atSeconds: LAUNCH_SECONDS, landMen: 1, ships: 1 }],
+    repeat: { everySeconds: 600, waves: [{ landMen: 0, ships: 0 }] },
+    endDeadPct: 100,
     endAfterSeconds: 300,
-    targets: [{ seat: PLAYER, raider: RAIDER, ...TARGET, landing: LANDING }],
+    targets: [{ seat: PLAYER, raider: RAIDER, ...TARGET, landings: [LANDING, SECOND_LANDING] }],
   },
   guard: {
     base: 0,
     perSeatStep: 0,
     stepSeconds: 60,
     perSeatMax: 0,
-    refill: [{ fromSeconds: 0, everySeconds: 60, men: 0 }],
+    refill: { everySeconds: 60, baseMen: 0, stepMen: 0, stepSeconds: 60, maxMen: 0 },
   },
-  landings: { vehicle: 'ship_small', noticeKey: NOTICE },
+  landings: LANDINGS,
 };
 
 export const SCRIPT: MapAiSeat[] = [
@@ -118,13 +124,13 @@ export const SCRIPT: MapAiSeat[] = [
 ];
 
 /** The coast world after its setup tick. */
-export function coastWorld(): Simulation {
+export function coastWorld(config: MapEscalationInput = ESCALATION): Simulation {
   const sim = new Simulation({
     seed: 5,
     content: landingContent(),
     map: coast(),
     mapAiScript: SCRIPT,
-    mapEscalation: MapEscalation.parse(ESCALATION),
+    mapEscalation: MapEscalation.parse(config),
   });
   for (const player of [FORTRESS, RAIDER]) {
     sim.enqueueSetup({ kind: 'setAiControl', player, enabled: true, modules: { military: false } });

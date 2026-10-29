@@ -1,15 +1,18 @@
 import { MapEscalation } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
-import { mapEscalationProgress, Position, Rider } from '../../../src/components/index.js';
+import { FOG_MODE, mapEscalationProgress, Position, Rider } from '../../../src/components/index.js';
 import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import { exportSaveGame, parseSaveGame, restoreSimulation, serializeSaveGame } from '../../../src/index.js';
+import { nodeOfPosition } from '../../../src/nav/halfcell.js';
+import { FOG_STATE } from '../../../src/systems/vision/state.js';
 import {
   coast,
   coastWorld,
   distance,
   ESCALATION,
   LANDING,
+  LANDINGS,
   LAUNCH_SECONDS,
   NOTICE,
   PLAYER,
@@ -17,6 +20,7 @@ import {
   raiderShips,
   runUntil,
   SCRIPT,
+  SECOND_LANDING,
   SHIP_SEATS,
   TARGET,
 } from '../../fixtures/map-escalation/coast.js';
@@ -55,6 +59,63 @@ describe('map escalation - a sea landing', () => {
     sim.run(20 * TICKS_PER_SECOND);
     expect(distance(sim, aboard[0] as Entity, TARGET)).toBeLessThan(ashore);
     expect(sim.checkInvariants()).toEqual([]);
+  });
+
+  it('sends a two-ship wave from two spawn points to two landing points, each ship full', () => {
+    const [launch] = ESCALATION.attacks.launches;
+    if (launch === undefined) throw new Error('no launch');
+    const sim = coastWorld({
+      ...ESCALATION,
+      attacks: { ...ESCALATION.attacks, launches: [{ ...launch, ships: 2 }] },
+    });
+    runUntil(sim, LAUNCH_SECONDS + 1, () => raiderShips(sim).length > 0);
+    const ships = raiderShips(sim);
+    expect(ships).toHaveLength(2);
+    const points = [LANDING, SECOND_LANDING];
+    const spawns = points.map((p) => ({ x: p.spawnX, y: p.spawnY }));
+    ships.forEach((ship, i) => {
+      expect(distance(sim, ship, spawns[i] as (typeof spawns)[number])).toBeLessThan(4);
+    });
+    const aboard = raiderMen(sim).filter((e) => sim.world.has(e, Rider));
+    expect(aboard).toHaveLength(2 * (SHIP_SEATS + 1));
+    expect(mapEscalationProgress(sim.world).attack?.sent).toBe(aboard.length + 1);
+
+    expect(runUntil(sim, 60, () => aboard.every((e) => sim.world.has(e, Position)))).toBe(true);
+    for (const point of points)
+      expect(
+        aboard.filter((e) => distance(sim, e, point) < 6),
+        `${point.x},${point.y}`,
+      ).toHaveLength(SHIP_SEATS + 1);
+    expect(runUntil(sim, 60, () => raiderShips(sim).length === 0)).toBe(true);
+  });
+
+  it('shows each ship under way to the targeted seats the whole voyage, out and back', () => {
+    const REVEAL_NODES = 6;
+    const sim = coastWorld({
+      ...ESCALATION,
+      landings: { ...LANDINGS, revealNodes: REVEAL_NODES },
+    });
+    sim.enqueueSetup({ kind: 'setFogMode', mode: FOG_MODE.CLASSIC });
+    const fog = sim.fog;
+    if (fog === undefined) throw new Error('no fog');
+    const seenUnder = (ship: Entity) => {
+      const at = sim.world.get(ship, Position);
+      const node = nodeOfPosition(at.x, at.y);
+      return fog.stateAt(PLAYER, node.hx >> 1, node.hy >> 1);
+    };
+    // Beyond the player's own sight, the open sea is unexplored until a ship sails there.
+    expect(fog.stateAt(PLAYER, LANDING.spawnX >> 1, LANDING.spawnY >> 1)).toBe(FOG_STATE.UNEXPLORED);
+    runUntil(sim, LAUNCH_SECONDS + 1, () => raiderShips(sim).length > 0);
+    const [ship] = raiderShips(sim);
+    if (ship === undefined) throw new Error('no ship');
+    let watched = 0;
+    runUntil(sim, 120, () => {
+      if (!sim.world.isAlive(ship)) return true;
+      expect(seenUnder(ship)).toBe(FOG_STATE.VISIBLE);
+      watched++;
+      return false;
+    });
+    expect(watched).toBeGreaterThan(LAUNCH_SECONDS * TICKS_PER_SECOND);
   });
 
   it('keeps a ship under way through a save', () => {

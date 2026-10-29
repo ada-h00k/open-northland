@@ -16,10 +16,18 @@ import { noteLostCatapults, rememberCatapults, respawnCatapult } from './catapul
 import { demobilizeTurn } from './demobilize.js';
 import { focusTurn } from './focus.js';
 import { gearTurn } from './gear.js';
-import { landingsTurn, launchLanding } from './landings.js';
-import { apportion, attackEndsTick, guardCap, launchTick, refillMen, waveSize } from './schedule.js';
+import { landingsTurn, launchLandings, revealShips } from './landings.js';
+import {
+  apportion,
+  attackBeaten,
+  attackEndsTick,
+  guardCap,
+  launchTick,
+  refillMen,
+  waveSize,
+} from './schedule.js';
 
-/** Ticks between two checks of whether the running attack's men are all dead, of its aims, of the
+/** Ticks between two checks of whether the running attack lost enough men, of its aims, of the
  *  landing ships and of lost catapults. */
 const END_CHECK_TICKS = TICKS_PER_SECOND;
 
@@ -30,7 +38,7 @@ const END_CHECK_TICKS = TICKS_PER_SECOND;
  * it tops its own soldiers up toward a cap that grows with game time and the occupied seats, and raises
  * one lost catapult whose wait ran out. Nothing spawns while no finished keep stands, and the guard and
  * catapults stop for good once the match counts the fortress seat out. The fortress side's
- * soldiers get the gear steps as they fall due. A wave with sea men also sends one ship per seat
+ * soldiers get the gear steps as they fall due. A wave with ships also sends them against each seat
  * (`landings.ts`), and a seat whose headquarters fell is attacked where its aim moved (`focus.ts`).
  * A variant may turn the computer seats' soldiers into civilians at the start (`demobilize.ts`).
  */
@@ -47,6 +55,7 @@ export const mapEscalationSystem: System = (world, ctx) => {
   const attack = mapEscalationProgress(world).attack;
   if (attack !== null && checkBeat) focusTurn(world, ctx, config, attack.men);
   if (checkBeat) landingsTurn(world, ctx, config);
+  revealShips(world, ctx, config);
   if (catapults !== undefined && checkBeat) noteLostCatapults(world, ctx, config);
   if (ctx.tick >= launchTick(config, progress.launches)) launch(world, ctx, config, progress.launches);
   const refill = refillMen(config, ctx.tick);
@@ -76,14 +85,14 @@ function launch(world: World, ctx: SystemContext, config: MapEscalation, index: 
   if (!keepStands(world, config)) return;
   const size = waveSize(config, index);
   const jobs = apportion(config.jobMix, size.landMen);
-  const seaJobs = apportion(config.jobMix, size.seaMen);
+  const seaJobs = apportion(config.jobMix, size.ships > 0 ? (config.landings?.menPerShip ?? 0) : 0);
   const seats: number[] = [];
   const landed: number[] = [];
   const men: Entity[] = [];
   for (const target of occupiedTargets(world, config)) {
     seats.push(target.seat);
     men.push(...spawnAtKeep(world, ctx, config, jobs, target.raider));
-    const aboard = launchLanding(world, ctx, config, target, seaJobs);
+    const aboard = launchLandings(world, ctx, config, target, size.ships, seaJobs);
     if (aboard.length > 0) landed.push(target.seat);
     men.push(...aboard);
   }
@@ -91,7 +100,7 @@ function launch(world: World, ctx: SystemContext, config: MapEscalation, index: 
   // A schedule that launches before the last attack ran out ends that one first.
   if (mapEscalationProgress(world).attack !== null) endAttack(world, ctx, 'expired');
   writeMapEscalation(world, (progress) => {
-    progress.attack = { wave, launchedTick: ctx.tick, men: men.sort((a, b) => a - b) };
+    progress.attack = { wave, launchedTick: ctx.tick, sent: men.length, men: men.sort((a, b) => a - b) };
   });
   ctx.events.emit({ kind: 'mapEscalationAttackLaunched', wave, seats });
   const noticeKey = config.landings?.noticeKey;
@@ -103,7 +112,7 @@ function checkAttackEnd(world: World, ctx: SystemContext, config: MapEscalation)
   const attack = mapEscalationProgress(world).attack;
   if (attack === null) return;
   const living = attack.men.filter((e) => world.isAlive(e));
-  if (living.length === 0) {
+  if (attackBeaten(config, attack.sent, living.length)) {
     endAttack(world, ctx, 'defeated');
     return;
   }
@@ -117,7 +126,7 @@ function checkAttackEnd(world: World, ctx: SystemContext, config: MapEscalation)
   });
 }
 
-/** `defeated`: every man it sent died; `expired`: its time ran out, and any survivors fight on. */
+/** `defeated`: enough of the men it sent died; `expired`: its time ran out. Survivors fight on. */
 function endAttack(world: World, ctx: SystemContext, cause: 'defeated' | 'expired'): void {
   const attack = mapEscalationProgress(world).attack;
   if (attack === null) return;

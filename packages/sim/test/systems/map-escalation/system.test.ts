@@ -76,11 +76,17 @@ describe('map escalation - an attack', () => {
     expect(sim.checkInvariants()).toEqual([]);
   });
 
-  it('ends when every man it sent is dead, or when its time runs out', () => {
+  it('ends once its dead share reaches the configured part, the survivors fighting on, or when its time runs out', () => {
     const killed = keepWorld().sim;
     runToSecond(killed, FIRST_LAUNCH_SECONDS + 1);
-    for (const e of ownedFighters(killed, RAIDER)) removeSettlerSilently(killed.world, e);
-    expect(eventsUntil(killed, FIRST_LAUNCH_SECONDS + 3)).toEqual(['ended 1 defeated']);
+    const [first, second, survivor] = ownedFighters(killed, RAIDER);
+    if (first === undefined || second === undefined || survivor === undefined) throw new Error('no band');
+    removeSettlerSilently(killed.world, first);
+    expect(eventsUntil(killed, FIRST_LAUNCH_SECONDS + 3)).toEqual([]);
+    removeSettlerSilently(killed.world, second);
+    expect(eventsUntil(killed, FIRST_LAUNCH_SECONDS + 5)).toEqual(['ended 1 defeated']);
+    expect(killed.mapEscalationView()?.attackRunning).toBe(false);
+    expect(killed.world.isAlive(survivor)).toBe(true);
 
     const outlasted = keepWorld().sim;
     const events = eventsUntil(outlasted, FIRST_LAUNCH_SECONDS + END_AFTER_SECONDS + 2);

@@ -14,9 +14,10 @@ const SWORD_SHORT = 34;
 const BOW_LONG = 41;
 
 /** Each player seat, the raider camp the map sends against it, and that camp's authored Attack task:
- *  the seat's headquarters, the reach and the rally point. `landing` is the seat's sea landing: a sea
- *  node in the map's edge band the ship appears on, and the shore node nearest the headquarters that a
- *  small ship can dock at from the open sea and that is on the headquarters' own land. */
+ *  the seat's headquarters, the reach and the rally point. `landings` are the seat's sea landings, one per
+ *  ship of a wave, on different stretches of its coast: a sea node in the map's edge band the ship
+ *  appears on, and a shore node a small ship can dock at from the open sea, on the headquarters' own
+ *  land and nearer it than any other seat's. The first is the shore nearest the headquarters. */
 const RAIDS = [
   {
     seat: 0,
@@ -25,7 +26,11 @@ const RAIDS = [
     y: 263,
     rallyX: 289,
     rallyY: 254,
-    landing: { spawnX: 490, spawnY: 219, x: 481, y: 263 },
+    landings: [
+      { spawnX: 490, spawnY: 219, x: 481, y: 263 },
+      { spawnX: 490, spawnY: 168, x: 455, y: 168 },
+      { spawnX: 490, spawnY: 374, x: 461, y: 375 },
+    ],
   },
   {
     seat: 1,
@@ -34,7 +39,11 @@ const RAIDS = [
     y: 203,
     rallyX: 209,
     rallyY: 220,
-    landing: { spawnX: 9, spawnY: 169, x: 65, y: 169 },
+    landings: [
+      { spawnX: 9, spawnY: 169, x: 65, y: 169 },
+      { spawnX: 9, spawnY: 223, x: 27, y: 224 },
+      { spawnX: 9, spawnY: 93, x: 65, y: 93 },
+    ],
   },
   {
     seat: 2,
@@ -43,7 +52,11 @@ const RAIDS = [
     y: 159,
     rallyX: 286,
     rallyY: 204,
-    landing: { spawnX: 351, spawnY: 9, x: 386, y: 84 },
+    landings: [
+      { spawnX: 351, spawnY: 9, x: 386, y: 84 },
+      { spawnX: 490, spawnY: 152, x: 453, y: 152 },
+      { spawnX: 367, spawnY: 9, x: 367, y: 32 },
+    ],
   },
   {
     seat: 3,
@@ -52,7 +65,11 @@ const RAIDS = [
     y: 385,
     rallyX: 206,
     rallyY: 282,
-    landing: { spawnX: 85, spawnY: 490, x: 108, y: 443 },
+    landings: [
+      { spawnX: 85, spawnY: 490, x: 108, y: 443 },
+      { spawnX: 9, spawnY: 385, x: 61, y: 385 },
+      { spawnX: 165, spawnY: 490, x: 198, y: 419 },
+    ],
   },
   {
     seat: 4,
@@ -61,7 +78,11 @@ const RAIDS = [
     y: 120,
     rallyX: 240,
     rallyY: 191,
-    landing: { spawnX: 213, spawnY: 9, x: 256, y: 103 },
+    landings: [
+      { spawnX: 213, spawnY: 9, x: 256, y: 103 },
+      { spawnX: 179, spawnY: 9, x: 180, y: 48 },
+      { spawnX: 288, spawnY: 9, x: 288, y: 30 },
+    ],
   },
   {
     seat: 5,
@@ -70,7 +91,11 @@ const RAIDS = [
     y: 375,
     rallyX: 289,
     rallyY: 254,
-    landing: { spawnX: 271, spawnY: 490, x: 294, y: 437 },
+    landings: [
+      { spawnX: 271, spawnY: 490, x: 294, y: 437 },
+      { spawnX: 356, spawnY: 490, x: 368, y: 461 },
+      { spawnX: 238, spawnY: 490, x: 243, y: 475 },
+    ],
   },
 ];
 const RAIDER_SEATS = RAIDS.map((raid) => raid.raider);
@@ -103,7 +128,13 @@ const HEAL_DRAUGHT_CHANCE_PCT = 30;
 /** How long a lost fortress catapult stays gone. */
 const CATAPULT_RESPAWN_MINUTES = 10;
 
+/** A small ship's crew: its nineteen passenger seats and the commander's. */
+const SHIP_MEN = 20;
+/** How far around a landing ship the players see it, the whole voyage, in map points. */
+const SHIP_REVEAL_NODES = 12;
+
 const MINUTE = 60;
+const QUARTER_HOUR = 15 * MINUTE;
 const HALF_HOUR = 30 * MINUTE;
 const HOUR = 60 * MINUTE;
 /** The house mission object id the plain's headquarters is placed with, which its trade rows name. */
@@ -221,7 +252,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
     mushroom: RAGNAROK_DEPOSIT_YIELD,
   },
   briefingPages: SPECJALNA_FORTECA_RAGNAROK_BRIEFING,
-  // Starter numbers proposed for the owner.
+  // The owner's numbers.
   escalation: {
     keep: { seat: FORTRESS_SEAT, ...KEEP },
     tribe: FORTRESS_TRIBE,
@@ -232,33 +263,26 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
     ],
     attacks: {
       launches: [
-        { atSeconds: 40 * MINUTE, landMen: 10, seaMen: 0 },
-        { atSeconds: 65 * MINUTE, landMen: 20, seaMen: 0 },
-        { atSeconds: 90 * MINUTE, landMen: 30, seaMen: 20 },
-        { atSeconds: 2 * HOUR, landMen: 60, seaMen: 0 },
-        { atSeconds: 150 * MINUTE, landMen: 60, seaMen: 20 },
+        { atSeconds: 30 * MINUTE, landMen: 6, ships: 0 },
+        { atSeconds: 45 * MINUTE, landMen: 12, ships: 0 },
+        { atSeconds: 65 * MINUTE, landMen: 25, ships: 0 },
+        { atSeconds: 90 * MINUTE, landMen: 25, ships: 1 },
+        { atSeconds: 110 * MINUTE, landMen: 35, ships: 2 },
+        { atSeconds: 130 * MINUTE, landMen: 90, ships: 0 },
+        { atSeconds: 150 * MINUTE, landMen: 60, ships: 3 },
       ],
-      // Waves 6, 7, ...: the odd ones bring a landing.
-      repeat: {
-        everySeconds: HALF_HOUR,
-        waves: [
-          { landMen: 60, seaMen: 0 },
-          { landMen: 60, seaMen: 20 },
-        ],
-      },
-      endAfterSeconds: 12 * MINUTE,
-      targets: RAIDS.map(({ seat, raider, x, y, landing }) => ({ seat, raider, x, y, landing })),
+      repeat: { everySeconds: 20 * MINUTE, waves: [{ landMen: 60, ships: 3 }] },
+      endDeadPct: 80,
+      endAfterSeconds: 10 * MINUTE,
+      targets: RAIDS.map(({ seat, raider, x, y, landings }) => ({ seat, raider, x, y, landings })),
     },
     guard: {
       base: 140,
       perSeatStep: 5,
       stepSeconds: HALF_HOUR,
       perSeatMax: 30,
-      // The map's own pulse, then a faster one.
-      refill: [
-        { fromSeconds: 0, everySeconds: 65, men: 3 },
-        { fromSeconds: HOUR, everySeconds: 40, men: 4 },
-      ],
+      // Two men a pulse at the start, one more for every quarter hour played.
+      refill: { everySeconds: 40, baseMen: 2, stepMen: 1, stepSeconds: QUARTER_HOUR, maxMen: 16 },
     },
     gear: {
       seats: [FORTRESS_SEAT, ...RAIDER_SEATS],
@@ -268,20 +292,25 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
           noticeKey: 'ragnarok.gear.lightArmor',
           grants: [{ goods: LIGHT_ARMOR }, { goods: ['shoes'] }],
         },
-        { atSeconds: 2 * HOUR, noticeKey: 'ragnarok.gear.heavyArmor', grants: [{ goods: HEAVY_ARMOR }] },
+        { atSeconds: 105 * MINUTE, noticeKey: 'ragnarok.gear.heavyArmor', grants: [{ goods: HEAVY_ARMOR }] },
         {
-          atSeconds: 150 * MINUTE,
+          atSeconds: 135 * MINUTE,
           noticeKey: 'ragnarok.gear.amulets',
           grants: [{ goods: COMBAT_AMULETS, chancePct: AMULET_CHANCE_PCT }],
         },
         {
-          atSeconds: 3 * HOUR,
+          atSeconds: 150 * MINUTE,
           noticeKey: 'ragnarok.gear.healDraughts',
           grants: [{ goods: ['potion_heal_big'], chancePct: HEAL_DRAUGHT_CHANCE_PCT }],
         },
       ],
     },
-    landings: { vehicle: 'ship_small', noticeKey: 'ragnarok.landing' },
+    landings: {
+      vehicle: 'ship_small',
+      menPerShip: SHIP_MEN,
+      noticeKey: 'ragnarok.landing',
+      revealNodes: SHIP_REVEAL_NODES,
+    },
     catapults: { respawnSeconds: CATAPULT_RESPAWN_MINUTES * MINUTE },
     // Owner ruling: a computer seat starts building up with every man it has.
     demobilizeComputerSeats: true,

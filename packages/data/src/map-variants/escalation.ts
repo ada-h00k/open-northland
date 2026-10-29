@@ -13,8 +13,15 @@ export const MapEscalationJobShare = z.strictObject({
 });
 export type MapEscalationJobShare = z.infer<typeof MapEscalationJobShare>;
 
-/** The men one attack sends against each targeted seat: on foot from the keep, and by ship. */
-export const MapEscalationWaveSize = z.strictObject({ landMen: count, seaMen: count });
+/** The most ships one attack sends against a seat, each from its own landing points. */
+export const MAP_ESCALATION_MAX_SHIPS = 3;
+
+/** What one attack sends against each targeted seat: men on foot from the keep, and ships, each
+ *  sailing from the next of the seat's landing points. */
+export const MapEscalationWaveSize = z.strictObject({
+  landMen: count,
+  ships: z.number().int().min(0).max(MAP_ESCALATION_MAX_SHIPS),
+});
 export type MapEscalationWaveSize = z.infer<typeof MapEscalationWaveSize>;
 
 /** Where a seat's sea landing comes from and where it puts its men ashore: a sea node the ship
@@ -27,20 +34,24 @@ const MapEscalationLandingPoints = z.strictObject({
 });
 
 /** A targeted player seat, the raider seat that attacks it and the point its men march on: the
- *  seat's headquarters, which the attack holds to while it stands. */
+ *  seat's headquarters, which the attack holds to while it stands. A wave's ships take its landings in
+ *  order, so the first ones are the seat's usual coast and the later ones spread the attack. */
 const MapEscalationTarget = z.strictObject({
   seat,
   raider: seat,
   x: mapPoint,
   y: mapPoint,
-  landing: MapEscalationLandingPoints.optional(),
+  landings: z.array(MapEscalationLandingPoints).max(MAP_ESCALATION_MAX_SHIPS).default([]),
 });
 
-/** A refill beat of the guard: from `fromSeconds` on, `men` every `everySeconds`. */
+/** The guard's refill pulse: every `everySeconds` (the first one interval in) `baseMen` plus `stepMen`
+ *  for each completed `stepSeconds` of game time, at most `maxMen`. */
 const MapEscalationRefill = z.strictObject({
-  fromSeconds: seconds,
   everySeconds: z.number().int().positive(),
-  men: count,
+  baseMen: count,
+  stepMen: count,
+  stepSeconds: z.number().int().positive(),
+  maxMen: count,
 });
 
 /** One piece of a gear step: each soldier draws `chancePct` for it, then one of `goods` (content good
@@ -86,7 +97,9 @@ export const MapEscalation = z
         everySeconds: z.number().int().positive(),
         waves: z.array(MapEscalationWaveSize).min(1),
       }),
-      /** An attack ends when every man it sent is dead, or this long after its launch. */
+      /** An attack ends once this share of the men it sent (land and sea) is dead, or `endAfterSeconds`
+       *  after its launch, whichever comes first. Survivors fight on, outside the attack. */
+      endDeadPct: z.number().int().min(1).max(100),
       endAfterSeconds: z.number().int().positive(),
       targets: z.array(MapEscalationTarget).min(1),
     }),
@@ -97,8 +110,7 @@ export const MapEscalation = z
       perSeatStep: count,
       stepSeconds: z.number().int().positive(),
       perSeatMax: count,
-      /** Ascending by `fromSeconds`, the first from 0. */
-      refill: z.array(MapEscalationRefill).min(1),
+      refill: MapEscalationRefill,
     }),
     /** The fortress side's gear over time: the seats whose soldiers get it, and the steps, ascending. */
     gear: z
@@ -107,10 +119,18 @@ export const MapEscalation = z
         steps: z.array(MapEscalationGearStep).min(1),
       })
       .optional(),
-    /** The sea landings a wave with `seaMen` brings: one ship of `vehicle` (a content vehicle slug) per
-     *  targeted seat with landing points, carrying at most its seats, commander's included. `noticeKey`
-     *  names the notice the app shows when the ships set out. */
-    landings: z.strictObject({ vehicle: z.string().min(1), noticeKey: z.string().min(1) }).optional(),
+    /** The sea landings a wave with ships brings: each ship of `vehicle` (a content vehicle slug)
+     *  carries `menPerShip`, at most its seats, commander's included. `noticeKey` names the notice the
+     *  app shows when the ships set out. Every targeted seat not counted out sees `revealNodes`
+     *  around each ship under way, 0 for none. */
+    landings: z
+      .strictObject({
+        vehicle: z.string().min(1),
+        menPerShip: count,
+        noticeKey: z.string().min(1),
+        revealNodes: count.default(0),
+      })
+      .optional(),
     /** The fortress seat's catapults standing at the first turn come back at their spot this long
      *  after one is lost, one per guard refill beat, while the keep stands. */
     catapults: z.strictObject({ respawnSeconds: z.number().int().positive() }).optional(),
@@ -121,11 +141,11 @@ export const MapEscalation = z
   .superRefine((value, ctx) => {
     if (!ascending(value.attacks.launches.map((row) => row.atSeconds)))
       ctx.addIssue({ code: 'custom', path: ['attacks', 'launches'], message: 'launches must ascend' });
-    const refill = value.guard.refill.map((row) => row.fromSeconds);
-    if (refill[0] !== 0 || !ascending(refill))
-      ctx.addIssue({ code: 'custom', path: ['guard', 'refill'], message: 'refill beats must ascend from 0' });
     if (value.gear !== undefined && !ascending(value.gear.steps.map((row) => row.atSeconds)))
       ctx.addIssue({ code: 'custom', path: ['gear', 'steps'], message: 'gear steps must ascend' });
+    const refill = value.guard.refill;
+    if (refill.baseMen > refill.maxMen)
+      ctx.addIssue({ code: 'custom', path: ['guard', 'refill'], message: 'refill starts above its max' });
     const seats = value.attacks.targets.map((row) => row.seat);
     if (new Set(seats).size !== seats.length)
       ctx.addIssue({ code: 'custom', path: ['attacks', 'targets'], message: 'a seat is targeted twice' });

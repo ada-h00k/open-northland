@@ -1,5 +1,9 @@
 import type { MapEscalation } from '@open-northland/data';
 import {
+  FOG_MODE,
+  fogMode,
+  isPlayerDead,
+  type MapEscalationLandingRecord,
   mapEscalationProgress,
   Vehicle,
   VehicleDrive,
@@ -7,8 +11,10 @@ import {
   writeMapEscalation,
 } from '../../components/index.js';
 import { contentIndex } from '../../core/content-index.js';
-import type { Entity, World } from '../../ecs/world.js';
+import type { DeepReadonly, Entity, World } from '../../ecs/world.js';
+import { type HalfCellNode, hexDistanceBetween } from '../../nav/halfcell.js';
 import type { SystemContext } from '../context.js';
+import { vehicleAnchor } from '../footprint/index.js';
 import { removeSettlerSilently } from '../lifecycle/death.js';
 import { spawnSettler } from '../spawn/index.js';
 import { createVehicle } from '../vehicles/create.js';
@@ -18,26 +24,46 @@ import { startVehicleDrive } from '../vehicles/movement.js';
 import { removeVehicle } from '../vehicles/remove.js';
 
 type Target = MapEscalation['attacks']['targets'][number];
-type LandingPoints = NonNullable<Target['landing']>;
+type LandingPoints = Target['landings'][number];
 
-// A wave's sea landing: one ship per targeted seat appears at the seat's sea spawn point with the fresh
-// men aboard, docks at the seat's landing point, sets them ashore, then sails back and leaves the map.
-// The men belong to the raider seat like the land band, so the same Attack task and aim take them.
+// A wave's sea landing: each of its ships against a seat appears at the next of the seat's sea spawn
+// points with the fresh men aboard, docks at that point's shore, sets them ashore, then sails back and
+// leaves the map. The men belong to the raider seat like the land band, so the same Attack task and aim
+// take them.
 
 /**
- * Put `jobs` aboard a fresh ship at the target's sea spawn point and send it to dock at its landing
- * point, owned by the target's raider. One ship only: the men past its seats, the commander's included,
- * stay home. Returns the men aboard; none when the ship cannot be made or finds no way to the shore.
+ * Send `ships` ships against the target, one from each of its first landing points, each with `jobs`
+ * aboard, owned by the target's raider. Returns the men aboard.
  */
-export function launchLanding(
+export function launchLandings(
   world: World,
   ctx: SystemContext,
   config: MapEscalation,
   target: Target,
+  ships: number,
+  jobs: readonly number[],
+): Entity[] {
+  const men: Entity[] = [];
+  for (let point = 0; point < Math.min(ships, target.landings.length); point++)
+    men.push(...launchShip(world, ctx, config, target, point, jobs));
+  return men;
+}
+
+/**
+ * Put `jobs` aboard a fresh ship at the landing's sea spawn point and send it to dock at its shore. The
+ * men past its seats, the commander's included, stay home. Returns the men aboard; none when the ship
+ * cannot be made or finds no way to the shore.
+ */
+function launchShip(
+  world: World,
+  ctx: SystemContext,
+  config: MapEscalation,
+  target: Target,
+  point: number,
   jobs: readonly number[],
 ): Entity[] {
   const landings = config.landings;
-  const points = target.landing;
+  const points = target.landings[point];
   const terrain = ctx.terrain;
   if (landings === undefined || points === undefined || terrain === undefined || jobs.length === 0) return [];
   const vehicleType = contentIndex(ctx.content).vehicleTypeBySlug.get(landings.vehicle);
@@ -59,7 +85,7 @@ export function launchLanding(
     return [];
   }
   writeMapEscalation(world, (progress) => {
-    progress.landings.push({ ship, seat: target.seat, leg: 'inbound' });
+    progress.landings.push({ ship, seat: target.seat, point, seen: null, leg: 'inbound' });
   });
   return men;
 }
@@ -105,31 +131,69 @@ function boardMen(
 export function landingsTurn(world: World, ctx: SystemContext, config: MapEscalation): void {
   const landings = mapEscalationProgress(world).landings;
   if (landings.length === 0) return;
-  const kept: Array<{ ship: Entity; seat: number; leg: 'inbound' | 'outbound' }> = [];
+  const kept: MapEscalationLandingRecord[] = [];
   for (const landing of landings) {
-    const { ship, seat } = landing;
+    const { ship, point } = landing;
     const state = world.tryGet(ship, Vehicle);
-    const points = config.attacks.targets.find((target) => target.seat === seat)?.landing;
+    const points = config.attacks.targets.find((target) => target.seat === landing.seat)?.landings[point];
     if (state === undefined || points === undefined) continue;
     const underWay = world.has(ship, VehicleDrive);
     if (landing.leg === 'outbound') {
-      if (underWay) kept.push({ ...landing });
+      if (underWay) kept.push(copyRecord(landing));
       else removeVehicle(world, ctx, ship, 'script');
       continue;
     }
     if (state.moored && state.mooring?.hx === points.x && state.mooring.hy === points.y) {
       unloadPeople(world, ctx, { kind: 'unloadPeople', vehicle: ship });
-      if (sailOut(world, ctx, ship, points)) kept.push({ ship, seat, leg: 'outbound' });
+      if (sailOut(world, ctx, ship, points)) kept.push({ ...copyRecord(landing), leg: 'outbound' });
       else removeVehicle(world, ctx, ship, 'script');
       continue;
     }
     const docking = underWay || state.task === 'docks';
     if (docking || dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: points.x, y: points.y }))
-      kept.push({ ...landing });
+      kept.push(copyRecord(landing));
     else scrapLanding(world, ctx, ship);
   }
   writeMapEscalation(world, (progress) => {
     progress.landings = kept;
+  });
+}
+
+function copyRecord(landing: DeepReadonly<MapEscalationLandingRecord>): MapEscalationLandingRecord {
+  return { ...landing, seen: landing.seen === null ? null : { ...landing.seen } };
+}
+
+/** How far a ship sails from where the players' view was last revealed before it is revealed again, in
+ *  map points: well inside the reveal, so the ship never leaves the revealed water. */
+const REVEAL_STEP = 2;
+
+/**
+ * Reveal the water around every ship under way to each targeted seat not counted out, again each
+ * time the ship moved {@link REVEAL_STEP} from the last reveal, so the players watch it the whole voyage.
+ * The reveal stays, as a script's reveal does. Costs a position read per ship per tick and a reveal per
+ * move.
+ */
+export function revealShips(world: World, ctx: SystemContext, config: MapEscalation): void {
+  const radius = config.landings?.revealNodes ?? 0;
+  const fog = ctx.fog;
+  const landings = mapEscalationProgress(world).landings;
+  if (radius === 0 || fog === undefined || landings.length === 0 || fogMode(world) === FOG_MODE.OFF) return;
+  const moved: Array<{ index: number; at: HalfCellNode }> = [];
+  landings.forEach((landing, index) => {
+    const at = vehicleAnchor(world, landing.ship);
+    if (at === null) return;
+    const seen = landing.seen;
+    if (seen !== null && hexDistanceBetween(seen.hx, seen.hy, at.hx, at.hy) < REVEAL_STEP) return;
+    for (const target of config.attacks.targets)
+      if (!isPlayerDead(world, target.seat)) fog.revealArea(target.seat, at, radius);
+    moved.push({ index, at });
+  });
+  if (moved.length === 0) return;
+  writeMapEscalation(world, (progress) => {
+    for (const { index, at } of moved) {
+      const record = progress.landings[index];
+      if (record !== undefined) record.seen = { hx: at.hx, hy: at.hy };
+    }
   });
 }
 

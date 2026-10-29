@@ -6,6 +6,8 @@ export interface MapEscalationAttackRecord {
   /** The attack's number, from 1. */
   wave: number;
   launchedTick: number;
+  /** How many men it spawned, land and sea: the base its dead share is counted against. */
+  sent: number;
   /** The men it spawned and that may still live, ascending by id; the end check drops the dead. */
   men: Entity[];
 }
@@ -28,6 +30,10 @@ export interface MapEscalationLandingRecord {
   ship: Entity;
   /** The targeted seat whose landing points it sails. */
   seat: number;
+  /** Which of the seat's landing points, by index. */
+  point: number;
+  /** The node the players' view was last revealed around; null before the first reveal. */
+  seen: { hx: number; hy: number } | null;
   leg: 'inbound' | 'outbound';
 }
 
