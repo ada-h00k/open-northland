@@ -6,7 +6,8 @@ import type { ContentSet } from '@open-northland/data';
 import { FOG_MODE, type FogMode, fogMode } from '../components/index.js';
 import type { World } from '../ecs/world.js';
 import type { TerrainGraph } from '../nav/terrain/index.js';
-import { type PlayerPlacementProbe, seatPlacementProbe } from '../systems/conflict/contested-ground.js';
+import { seatPlacementProbe } from '../systems/conflict/contested-ground.js';
+import type { PlacementProbe } from '../systems/footprint/index.js';
 import { buildingEnabled } from '../systems/progression/index.js';
 import { type SignpostProbe, signpostProbe } from '../systems/signposts/index.js';
 import { effectiveFogState, type FogState, maskFogState, viewedFogState } from '../systems/vision/index.js';
@@ -40,16 +41,12 @@ export function placementProbeFor(
   player?: number,
   tribe?: number,
   gated = true,
-): PlayerPlacementProbe | null {
+): PlacementProbe | null {
   if (terrain === undefined) return null;
   const probe = seatPlacementProbe(world, content, terrain, fog, buildingType, tribe, player);
   if (tribe === undefined || !gated) return probe;
   const enabled = buildingEnabled(world, { content }, player, tribe, buildingType);
-  return {
-    ...probe,
-    canPlace: (x, y) => enabled && probe.canPlace(x, y),
-    contestedKeyWithin: (...bounds) => `${enabled}:${probe.contestedKeyWithin(...bounds)}`,
-  };
+  return { canPlace: (x, y) => enabled && probe.canPlace(x, y) };
 }
 
 /** Null for a mapless sim. */

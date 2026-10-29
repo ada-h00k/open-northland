@@ -92,7 +92,6 @@ import {
   type SyncDigestRecorderOptions,
 } from './simulation/sync-digest.js';
 import { BattleFront, holdsGround } from './systems/conflict/battle-alert.js';
-import type { PlayerPlacementProbe } from './systems/conflict/contested-ground.js';
 import type { MapContext, SystemContext } from './systems/context.js';
 import type { PlacementProbe } from './systems/footprint/index.js';
 import {
@@ -437,12 +436,7 @@ export class Simulation {
    * contests and the ground a lobby peace keeps the seat off. A supplied tribe picks the footprint and, while `gated`, adds its player-scoped technology
    * gate, which a placing paper waives. Null for a mapless sim.
    */
-  placementProbe(
-    buildingType: number,
-    player?: number,
-    tribe?: number,
-    gated = true,
-  ): PlayerPlacementProbe | null {
+  placementProbe(buildingType: number, player?: number, tribe?: number, gated = true): PlacementProbe | null {
     return placementProbeFor(
       this.world,
       this.content,

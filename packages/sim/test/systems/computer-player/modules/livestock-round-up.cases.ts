@@ -15,6 +15,7 @@ import {
   BUILDER,
   collectModule,
   ctxOf,
+  HQ_TYPE,
   makeAiSeat,
   placeAnimal,
   placeHq,
@@ -30,6 +31,9 @@ import {
 /** The scout's second duty: walking into nearby un-owned livestock so contact claims it. */
 
 const guideBuild = scoutModule(DEFAULT_BUILD_ORDER);
+
+/** A lobby peace still holding through every decision these cases run. */
+const PEACE_UNTIL = 1000;
 
 describe('scout module (guideBuild) - the livestock round-up', () => {
   const CENTER = { x: 128, y: 128 };
@@ -118,6 +122,28 @@ describe('scout module (guideBuild) - the livestock round-up', () => {
     if (order?.kind !== 'moveUnit') throw new Error('expected a round-up walk');
     expect({ x: order.x, y: order.y }).toEqual({ x: CENTER.x + 10, y: CENTER.y });
     expect(sim.world.has(first, Owner)).toBe(false);
+  });
+
+  it("skips an animal on a peace partner's ground, whose walk the peace refuses every decision", () => {
+    const partner = SEAT + 1;
+    const partnerHq = { x: CENTER.x + 40, y: CENTER.y };
+    const sim = tiledSim();
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: PEACE_UNTIL, players: [SEAT, partner] });
+    sim.enqueueSetup({
+      kind: 'placeBuilding',
+      buildingType: HQ_TYPE,
+      ...partnerHq,
+      tribe: VIKING,
+      owner: partner,
+      force: true,
+    });
+    sim.step();
+    placeAnimal(sim, partnerHq.x - 4, partnerHq.y);
+    placeAnimal(sim, CENTER.x - 50, CENTER.y);
+
+    const order = [...guideBuild.run(sim.world, ctxOf(sim), SEAT)][0];
+    if (order?.kind !== 'moveUnit') throw new Error('expected a round-up walk');
+    expect({ x: order.x, y: order.y }).toEqual({ x: CENTER.x - 50, y: CENTER.y });
   });
 
   it('never counts the claimed herd as a bachelor the garrison may draft', () => {

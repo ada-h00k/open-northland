@@ -265,7 +265,6 @@ export {
   type SyncDigestInputs,
   type SystemInstrument,
 } from './simulation.js';
-export type { PlayerPlacementProbe } from './systems/conflict/contested-ground.js';
 export type { GatheringTrade } from './systems/economy/gather-goods.js';
 export {
   buildingWalkBodyOf,

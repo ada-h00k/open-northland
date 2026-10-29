@@ -15,6 +15,7 @@ import { leashedAttack, strikeParty } from '../../conflict/leash.js';
 import { forgetOffenders, liveOffenders } from '../../conflict/offenders.js';
 import { strikeBackLeash } from '../../conflict/strike-back.js';
 import type { System, SystemContext } from '../../context.js';
+import { peaceGroundFor } from '../../match/peace.js';
 import { hexNodeDistance } from '../../spatial/metric.js';
 import { entityNode } from '../../spatial/nodes.js';
 import { militaryDecisionDue } from '../cadence.js';
@@ -136,7 +137,11 @@ function deriveSettlementDefence(
     () => raiders,
   );
   const free = without(home, posts.claimed);
-  const raid = raidOnTheSettlement(world, ctx, terrain, owned, raiders);
+  // A raider on a peace partner's ground draws no sortie: the peace refuses the walk, so he would hold the
+  // whole home band in refused orders for as long as he stands there.
+  const peace = peaceGroundFor(world, player);
+  const raidable = peace === null ? raiders : raiders.filter((raider) => !peace.bars(raider.x, raider.y));
+  const raid = raidOnTheSettlement(world, ctx, terrain, owned, raidable);
   const threat = autonomous
     ? assessSeatThreat(
         world,

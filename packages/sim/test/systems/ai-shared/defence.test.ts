@@ -75,6 +75,12 @@ const SEAT = 2;
 const CONTROLLED_DEFENCE_TICK = SEAT * AI_SEAT_SLOT_STEP_TICKS + MILITARY_DECISION_PHASE;
 const MAP_AI_DEFENCE_TICK = SEAT * MAP_AI_SEAT_SLOT_STEP_TICKS + MILITARY_DECISION_PHASE;
 const FOE = 3;
+/** A seat a lobby peace binds to {@link SEAT}. */
+const PARTNER = 4;
+/** A peace still holding through every decision these cases run. */
+const PEACE_UNTIL = 1000;
+/** How far east of a raider a partner's headquarters stands: nearer him than the seat's own town. */
+const PARTNER_HQ_OFFSET = 8;
 const HQ_TYPE = 1;
 const BARRACKS_TYPE = 12;
 const TOWER_TYPE = 15;
@@ -575,6 +581,21 @@ describe('ai defence - the sortie', () => {
     expect(attackMoves(run(sim)).map((m) => m.entity)).toEqual([free]);
     const defence = planSettlementDefence(sim.world, ctxOf(sim), terrainOf(sim), SEAT, false);
     expect(attackMoves(defence.commands).map((m) => m.entity)).toEqual([free]);
+  });
+
+  it("sends no band at a raider on a peace partner's ground, whose walk the peace refuses", () => {
+    const sim = aiSim();
+    place(sim, BARRACKS_TYPE, BARRACKS);
+    const hq = place(sim, HQ_TYPE, SEAT_HQ);
+    spawn(sim, 4, { x: BARRACKS.x, y: BARRACKS.y + 6 }, SPEARMAN);
+    // Raised before the raider comes: a hostile fighter in sight contests the site.
+    const hqAt = nodeOf(sim, hq);
+    place(sim, HQ_TYPE, { x: hqAt.x + watchOf(sim) + PARTNER_HQ_OFFSET, y: hqAt.y }, PARTNER);
+    const raider = standOff(sim, hq, watchOf(sim), SPEARMAN);
+    const at = nodeOf(sim, raider);
+    apply(sim, [{ kind: 'setPeaceTime', untilTick: PEACE_UNTIL, players: [SEAT, PARTNER] }]);
+
+    expect(attackMoves(run(sim)).filter((m) => m.x === at.x && m.y === at.y)).toEqual([]);
   });
 
   it('stays quiet while the nearest enemy fighter is outside every watch band', () => {

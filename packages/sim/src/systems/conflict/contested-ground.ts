@@ -25,11 +25,6 @@ export interface ContestedGround {
   readonly keyWithin: (minHx: number, maxHx: number, minHy: number, maxHy: number) => string;
 }
 
-/** A seat's whole placement rule: the footprint probe, off the ground a hostile army contests. */
-export interface PlayerPlacementProbe extends PlacementProbe {
-  readonly contestedKeyWithin: ContestedGround['keyWithin'];
-}
-
 const NO_FIGHTERS: readonly HalfCellNode[] = [];
 
 /** Coarse cells of one radius an edge: a fighter within the radius of a node lies in that node's cell or a
@@ -84,15 +79,13 @@ export function seatPlacementProbe(
   buildingType: number,
   tribe: number | undefined,
   player: number | undefined,
-): PlayerPlacementProbe {
+): PlacementProbe {
   const footprint = placementProbe(world, content, terrain, buildingType, tribe);
-  if (player === undefined)
-    return { canPlace: (x, y) => footprint.canPlace(x, y), contestedKeyWithin: () => '' };
+  if (player === undefined) return footprint;
   const ground = contestedGroundFor(world, content, fog, player);
   const peace = peaceGroundFor(world, player);
   return {
     canPlace: (x, y) => footprint.canPlace(x, y) && !ground.contested(x, y) && !(peace?.bars(x, y) ?? false),
-    contestedKeyWithin: ground.keyWithin,
   };
 }
 

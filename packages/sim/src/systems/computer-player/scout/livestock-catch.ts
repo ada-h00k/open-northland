@@ -5,6 +5,7 @@ import { anchorNodeOf } from '../../ai-shared/node-geometry.js';
 import type { SystemContext } from '../../context.js';
 import { interactionNode, routeRegions } from '../../footprint/index.js';
 import { claimableBy } from '../../livestock/index.js';
+import { peaceGroundFor } from '../../match/peace.js';
 import { seatBaseOf } from '../base.js';
 
 /**
@@ -30,7 +31,8 @@ export const SCOUT_CATCH_RADIUS_NODES = 64;
  * An animal inside a workplace ({@link Resting}) is out of contact reach until its batch releases
  * it, and one sealed away from the settlement would otherwise win the pick every decision and pin a
  * man as a scout for good, so the candidates run the same sealed-pocket veto `nextSignpostTarget`
- * does, judged from the same base door.
+ * does, judged from the same base door. An animal on a peace partner's ground is skipped too: the peace
+ * refuses the walk, so it would win every decision while the scout never moves.
  */
 export function nextLivestockCatch(world: World, ctx: SystemContext, player: number): HalfCellNode | null {
   const terrain = ctx.terrain;
@@ -58,7 +60,9 @@ export function nextLivestockCatch(world: World, ctx: SystemContext, player: num
   // reference, which would invert the veto (see RouteRegions.pocketed).
   const regions = routeRegions(world, ctx, terrain);
   const veto = regions.pocketed(reference) ? null : regions;
+  const peace = peaceGroundFor(world, player);
   for (const candidate of candidates) {
+    if (peace?.bars(candidate.node.hx, candidate.node.hy) === true) continue;
     const at = terrain.nodeAt(candidate.node.hx, candidate.node.hy);
     if (veto?.unroutable(reference, at) === true) continue;
     return candidate.node;
