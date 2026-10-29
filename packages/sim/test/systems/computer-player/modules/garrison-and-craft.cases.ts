@@ -5,11 +5,9 @@ import {
   type AssistantCounterKind,
   AssistantRecruit,
   type AssistantRecruitIntent,
-  aiControlEntity,
   Building,
   CompletedCycles,
   type ComputerDifficulty,
-  ComputerPeace,
   Garrison,
   Health,
   JobAssignment,
@@ -292,11 +290,9 @@ function rivalSeat(
       owner: RIVAL,
     });
   }
+  seat.sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: peaceUntil, players: [SEAT] });
   setup?.(seat.sim);
   seat.sim.step();
-  const carrier = aiControlEntity(seat.sim.world, SEAT);
-  if (carrier === null) throw new Error('setup: no AI seat');
-  seat.sim.world.add(carrier, ComputerPeace, { untilTick: peaceUntil });
   return seat;
 }
 

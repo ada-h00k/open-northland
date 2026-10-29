@@ -1,4 +1,5 @@
 import {
+  atPeace,
   computerControllerRuns,
   diplomacyStance,
   MAX_PLAYERS,
@@ -15,7 +16,8 @@ const ORIGINAL_PLAYER_SLOTS = 20;
  * step). Computer permission gates this independently of map tasks. Each turn looks at one
  * other slot: a neutral seat turns enemy toward a player
  * that holds it as enemy, and a friendly one lowers its stance to the other's. An enemy seat never makes
- * peace. The write goes past any lock, as the original's setter does.
+ * peace. The write goes past any lock, as the original's setter does. A lobby peace freezes the stances
+ * between its members until it ends.
  *
  * Approximation: the original's cursor starts at slot 0 and moves once per turn the handler runs; it is
  * read here off the round index, which agrees while the seat's AI has run since the start. Not
@@ -27,7 +29,7 @@ export const computerDiplomacySystem: System = (world, ctx) => {
   const seat = machineSeatOnTurn(world, ctx.tick);
   if (seat === null || !computerControllerRuns(world, seat)) return;
   const other = handlerTurn(ctx.tick) % ORIGINAL_PLAYER_SLOTS;
-  if (other === seat || other >= MAX_PLAYERS) return;
+  if (other === seat || other >= MAX_PLAYERS || atPeace(world, seat, other)) return;
   const ours = diplomacyStance(world, seat, other);
   const theirs = diplomacyStance(world, other, seat);
   if (ours === 'neutral' && theirs === 'enemy') setDiplomacyStance(world, seat, other, 'enemy');

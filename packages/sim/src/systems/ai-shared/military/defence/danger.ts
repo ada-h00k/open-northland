@@ -2,7 +2,7 @@ import {
   Armor,
   Building,
   DefenceMode,
-  diplomacyStance,
+  fightsPlayer,
   Health,
   MAX_PLAYERS,
   Owner,
@@ -218,7 +218,7 @@ function intrudersOf(
   }
   let enemies = 0;
   for (let side = 0; side < MAX_PLAYERS; side++) {
-    if (side !== player && diplomacyStance(world, side, player) === 'enemy') enemies |= playerBit(side);
+    if (side !== player && fightsPlayer(world, side, player)) enemies |= playerBit(side);
   }
   for (const e of combatGridOf(world, ctx, terrain).ownedUnitsInBox(world, ctx.tick, enemies, box)) {
     if (!world.has(e, Person) || !isCivilian(world, ctx, e) || !isAdultSettler(world, e)) continue;
@@ -231,7 +231,7 @@ function intrudersOf(
     const e = o.entity;
     if (listed.has(e)) continue;
     const side = world.tryGet(e, Owner)?.player;
-    if (side === undefined || diplomacyStance(world, side, player) !== 'enemy') continue;
+    if (side === undefined || !fightsPlayer(world, side, player)) continue;
     const at = boxedNode(world, terrain, box, e);
     if (at === null) continue;
     const civilian = isCivilian(world, ctx, e);

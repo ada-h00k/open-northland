@@ -26,6 +26,7 @@ import type { Command } from '../../core/commands/index.js';
 import type { Entity, World } from '../../ecs/world.js';
 import type { NodeId } from '../../nav/terrain/index.js';
 import type { SystemContext } from '../context.js';
+import { ownersAtPeace } from '../match/peace.js';
 import { clearNavState } from '../movement/nav-state.js';
 import {
   defaultStance,
@@ -121,6 +122,7 @@ export function attackUnit(
   if (world.has(target, Age)) return;
   if (target === e) return; // a unit can't attack itself
   if (!world.isAlive(target) || !world.has(target, Health) || !world.has(target, Position)) return;
+  if (ownersAtPeace(world, e, target)) return;
   // A unit, a besiegeable building, a wall or a vehicle.
   if (
     !world.has(target, Settler) &&

@@ -86,12 +86,6 @@ export const BuildOrderFrontier = defineComponent<BuildOrderFrontierState>('Buil
  */
 export const BuildOrderPause = defineComponent<{ untilTick: number }>('BuildOrderPause', 'players');
 
-/**
- * The tick before which the seat's waves never march, held on its {@link AiControl} carrier: a lobby
- * match's peace time. A seat without it, such as a map's own computer player, may march from the start.
- */
-export const ComputerPeace = defineComponent<{ untilTick: number }>('ComputerPeace', 'players');
-
 export interface RoadTrafficState {
   /** The seat whose settlers walked here. */
   player: number;

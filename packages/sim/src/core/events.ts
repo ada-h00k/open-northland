@@ -450,6 +450,15 @@ export type SimEvent =
       readonly notificationAlreadySent?: true;
     }
   | {
+      /** The lobby peace (`PeaceRules`) ends in `minutesLeft` minutes of match time; one event per notice. */
+      readonly kind: 'peaceEnding';
+      readonly minutesLeft: number;
+    }
+  | {
+      /** The lobby peace ended this tick: its members may harm each other again. */
+      readonly kind: 'peaceEnded';
+    }
+  | {
       /**
        * The map script reached a goal or result opcode this build has no evaluator for. A goal's answer
        * is unknown, so the mission fires only when its known goals decide its rule either way; a result

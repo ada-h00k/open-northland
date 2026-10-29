@@ -163,6 +163,7 @@ export const COMMAND_ISSUER: {
   setProductionCount: 'seat',
   setDefenceMode: 'seat',
   setDiplomacy: 'trusted',
+  setPeaceTime: 'trusted',
   setFogMode: 'trusted',
   setGatherGood: 'seat',
   setHouseholdGoodUse: 'seat',

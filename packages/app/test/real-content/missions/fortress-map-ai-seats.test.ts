@@ -11,11 +11,7 @@ import {
 } from '@open-northland/sim';
 import { describe, expect, it } from 'vitest';
 import type { ContentIr } from '../../../src/content/ir/rows.js';
-import {
-  buildMapWorld,
-  LOBBY_COMPUTER_PEACE_TICKS,
-  type MapWorldOptions,
-} from '../../../src/entries/map/world.js';
+import { buildMapWorld, type MapWorldOptions } from '../../../src/entries/map/world.js';
 import { mapSession } from '../../../src/game/match/session-url.js';
 import { sessionWorldOptions } from '../../../src/game/match/session-world.js';
 import { mapScriptWorld } from '../../../src/game/world/mission-script.js';
@@ -149,15 +145,6 @@ describe.runIf(hasRealIr())('the fortress map’s authored AI seats', () => {
       expect(row?.tasks.filter((t) => t.kind === 'createCreatures')).toHaveLength(12);
     }
     sim.step();
-    const peace = (seat: number): number | undefined => {
-      const carrier = components.aiControlEntity(sim.world, seat);
-      return carrier === null ? undefined : sim.world.tryGet(carrier, components.ComputerPeace)?.untilTick;
-    };
-    for (const seat of [...ALLY_SEATS, ...FORTRESS_SEATS]) {
-      expect(peace(seat), `seat ${seat}`).toBe(
-        LOBBY_SEATS.includes(seat) ? LOBBY_COMPUTER_PEACE_TICKS : undefined,
-      );
-    }
     for (const seat of FORTRESS_SEATS) {
       expect(components.isMachinePlayer(sim.world, seat)).toBe(true);
       expect(

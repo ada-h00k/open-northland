@@ -29,12 +29,14 @@ export { buildTribes } from './components/players/placement.js';
 export type { UnlockKind } from './components/players/unlocks.js';
 export { roadShardKey } from './components/roads.js';
 export {
+  atPeace,
   type DiplomacyState,
   FOG_MODE,
   type FogMode,
   type FogSettings,
   fogModeOf,
   fogSettings,
+  peaceEndsAtTick,
 } from './components/rules.js';
 export {
   type NeedDrain,

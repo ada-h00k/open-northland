@@ -15,6 +15,7 @@ import { orderedAttack } from '../conflict/engage-vehicle.js';
 import { vehicleWeapon } from '../conflict/weapons.js';
 import type { SystemContext } from '../context.js';
 import { vehicleAnchor } from '../footprint/index.js';
+import { ownersAtPeace } from '../match/peace.js';
 import { recordAiOrder } from '../orders/ai-lifecycle.js';
 import { crewInside, dropHeldGoal, endMarch, refuseMove } from './movement.js';
 
@@ -72,6 +73,7 @@ export function attackWithVehicle(
     const t = target.entity;
     if (!Number.isInteger(t) || t === e) return;
     if (!world.isAlive(t) || !world.has(t, Health) || !world.has(t, Position)) return;
+    if (ownersAtPeace(world, e, t)) return;
     const body = world.has(t, Building) || world.has(t, Palisade) || world.has(t, Vehicle);
     if (!body && !world.has(t, Settler)) return;
   }

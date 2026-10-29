@@ -14,7 +14,6 @@ import {
   type SaveGame,
   type Simulation,
   type TerrainMap,
-  TICKS_PER_SECOND,
   warmWorldIndexes,
 } from '@open-northland/sim';
 import type { ContentIr } from '../../content/ir/rows.js';
@@ -69,7 +68,7 @@ export interface MapWorldOptions extends SimSessionRules {
   /** Seats whose authored placements and walls the world leaves out. */
   readonly absentSeats?: readonly number[];
   /** The AI seats a person set to computer in the lobby, as against the map's own computer players, which
-   *  its scripts drive; only these keep {@link LOBBY_COMPUTER_PEACE_TICKS}. */
+   *  its scripts drive. */
   readonly lobbyComputerSeats?: readonly number[];
   /** Computer seats that enable all modules their tribe supports instead of the map’s toggles. */
   readonly computerSeats?: readonly number[];
@@ -107,13 +106,6 @@ export interface MapWorld {
 /** Placements are queued commands: one tick drains them, so the start-camera focus sees entities a
  *  0-tick snapshot would not, while leaving the spawned settlers at their start. */
 const PLACEMENT_DRAIN_TICKS = 1;
-
-const SECONDS_PER_MINUTE = 60;
-/** How long a lobby computer seat's waves stay at home: the usual multiplayer peace time (authored). */
-const LOBBY_COMPUTER_PEACE_MINUTES = 60;
-
-export const LOBBY_COMPUTER_PEACE_TICKS =
-  LOBBY_COMPUTER_PEACE_MINUTES * SECONDS_PER_MINUTE * TICKS_PER_SECOND;
 
 /** Session rules and visibility are applied before the briefing can pause the world. */
 export function buildMapWorld(options: MapWorldOptions): MapWorld {
@@ -218,7 +210,6 @@ function applySessionRules(sim: Simulation, options: MapWorldOptions): void {
       player: seat,
       enabled: true,
       ...control,
-      ...(options.lobbyComputerSeats?.includes(seat) ? { peaceUntil: LOBBY_COMPUTER_PEACE_TICKS } : {}),
       ...(difficulty === undefined ? {} : { difficulty }),
     });
   }

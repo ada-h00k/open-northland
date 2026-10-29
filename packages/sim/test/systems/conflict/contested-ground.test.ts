@@ -109,6 +109,14 @@ describe('contested ground - who contests it', () => {
     expect(contestedFor(sim, SEAT, CAMP)).toBe(false);
   });
 
+  it("is not contested by a lobby peace partner's soldier while the peace holds", () => {
+    const sim = fresh();
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: 10_000, players: [SEAT, FOE] });
+    spawn(sim, SPEARMAN, FOE);
+
+    expect(contestedFor(sim, SEAT, CAMP)).toBe(false);
+  });
+
   it('a fighter holding his tower post is a fortification, not an army', () => {
     const sim = fresh();
     const post = sim.world.create();

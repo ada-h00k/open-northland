@@ -1,5 +1,5 @@
 import {
-  enemyPlayerMask,
+  combatEnemyMask,
   Owner,
   Palisade,
   PalisadeBlocking,
@@ -80,7 +80,7 @@ class GatePlans {
       this.plans.clear();
       this.blockVersion = mask.version;
     }
-    const enemies = enemyPlayerMask(this.world, player);
+    const enemies = combatEnemyMask(this.world, player);
     let plan = this.plans.get(enemies);
     if (plan !== undefined) return plan;
     const gates = new Map<NodeId, Entity>();

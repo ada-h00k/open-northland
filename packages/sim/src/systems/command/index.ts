@@ -12,6 +12,7 @@ import {
   setMatchParticipants,
   setMissionsEnabled,
   setNeedsEnabled,
+  setPeaceTime,
   setPlayerPlacementTribes,
   setProfessionProgression,
   setSignpostNavigation,
@@ -24,6 +25,7 @@ import { forceFinishConstruction } from '../economy/construction.js';
 import { carriesFoodAmulet } from '../equipment/effects.js';
 import { setHouseholdGoodUse } from '../family/home-quality.js';
 import { razePalisade } from '../lifecycle/cleanup.js';
+import { peaceBarsWalk } from '../match/peace.js';
 import { payTribute } from '../missions/tributes.js';
 // Deliberately the module, not the orders barrel: the handler reaches into
 // `computer-player/assistant-counters.js` for the published-counter map, and routing that through the
@@ -163,6 +165,8 @@ function applyCommand(
     !jobCanPray(ctx.content.jobs, world.tryGet(command.entity, Settler)?.jobType ?? null)
   )
     return;
+  // A soldier sent to a peace partner's door is held back; a civilian of the same group still goes.
+  if (peaceBarsWalk(world, ctx, command)) return;
   // A Shift-clicked order waits behind the settler's or vehicle's current one; an order that takes it at
   // once drops every order still waiting in its handler.
   if (isQueuedOrder(command) && queueBehindCurrentOrder(world, command, origin)) return;
@@ -540,6 +544,9 @@ function applyCommand(
       return;
     case 'setDiplomacy':
       setDiplomacyStance(world, command.from, command.to, command.state);
+      return;
+    case 'setPeaceTime':
+      setPeaceTime(world, ctx.tick, command.untilTick, command.players);
       return;
     case 'endMatchContinuation':
       endMatchContinuation(world);

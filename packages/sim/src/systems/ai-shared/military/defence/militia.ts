@@ -1,7 +1,7 @@
 import {
   AttackOrder,
   Building,
-  diplomacyStance,
+  fightsPlayer,
   Garrison,
   Health,
   hasMissionBehaviour,
@@ -172,10 +172,11 @@ function keepChasing(
   return ctx.tick < member.releaseTick || !standDown(world, ctx, e, member);
 }
 
-/** Whether `quarry` still belongs to an enemy of `e`'s seat; a truce or a handover ends the chase. */
+/** Whether `quarry` still belongs to an enemy of `e`'s seat; a truce, a lobby peace or a handover ends the
+ *  chase. */
 function stillEnemy(world: World, e: Entity, quarry: Entity): boolean {
   const side = world.tryGet(quarry, Owner)?.player;
-  return side !== undefined && diplomacyStance(world, side, world.get(e, Owner).player) === 'enemy';
+  return side !== undefined && fightsPlayer(world, side, world.get(e, Owner).player);
 }
 
 /** Push `e`'s release `hold` ticks past this decision. */

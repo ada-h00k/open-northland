@@ -15,6 +15,7 @@ import {
   assistantPostsGraduatesEntity,
   assistantSoldierOnlyGoods,
   assistantWeaponOrder,
+  atPeace,
   Building,
   buildTribes,
   type DiplomacyState,
@@ -34,6 +35,7 @@ import {
   needsEnabled,
   type Paper,
   Position,
+  peaceEndsAtTick,
   playerGoodList,
   playerPaperSlots,
   professionProgressionEnabled,
@@ -701,6 +703,16 @@ export class Simulation {
    *  command sets; a pair never set reads `enemy`. */
   diplomacyStance(from: number, to: number): DiplomacyState {
     return diplomacyStance(this.world, from, to);
+  }
+
+  /** Whether the lobby peace the `setPeaceTime` command opened still binds `a` and `b`. */
+  atPeace(a: number, b: number): boolean {
+    return atPeace(this.world, a, b);
+  }
+
+  /** The match tick the holding lobby peace ends at; null with no peace or once it ended. */
+  peaceEndsAtTick(): number | null {
+    return peaceEndsAtTick(this.world);
   }
 
   /** Whether the pair's stances are locked, so neither seat's `declareDiplomacy` changes them. */

@@ -1,4 +1,4 @@
-import { Building, diplomacyStance, Health, MAX_PLAYERS, Vehicle } from '../../../../components/index.js';
+import { Building, fightsPlayer, Health, MAX_PLAYERS, Vehicle } from '../../../../components/index.js';
 import type { PlayerCommand } from '../../../../core/commands/index.js';
 import { TICKS_PER_SECOND } from '../../../../core/loop.js';
 import type { Entity, World } from '../../../../ecs/world.js';
@@ -169,7 +169,7 @@ function enemyTowersNear(
   const at = nodeOf(terrain, objective);
   const towers: Entity[] = [];
   for (let other = 0; other < MAX_PLAYERS; other++) {
-    if (other === player || diplomacyStance(world, player, other) !== 'enemy') continue;
+    if (other === player || !fightsPlayer(world, player, other)) continue;
     for (const e of ownedBuildings(world, other)) {
       if (buildingCombatClass(ctx, world.get(e, Building).buildingType) !== 'tower') continue;
       if ((world.tryGet(e, Health)?.hitpoints ?? 0) <= 0) continue;

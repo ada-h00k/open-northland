@@ -265,6 +265,95 @@ export function setDiplomacyStance(world: World, from: number, to: number, state
   });
 }
 
+const peaceRules = defineWorldSingleton<{
+  /** The match tick the peace ends at, kept after it ended. */
+  untilTick: number;
+  /** The slot bits of the seats the peace binds. */
+  players: number;
+  /** Whether the peace still holds: cleared at the head of tick {@link untilTick}. */
+  holds: boolean;
+}>('PeaceRules', 'players', () => ({ untilTick: 0, players: 0, holds: false }));
+
+/**
+ * A lobby match's timed peace: while it holds, its member seats cannot harm each other, whatever their
+ * diplomacy stances say. The stance table stays untouched, so victory, mission goals and trade read
+ * it unchanged; the combat and harm gates read {@link fightsPlayer} and {@link combatHostileMasks}. A
+ * project rule: the original has no peace time.
+ */
+export const PeaceRules = peaceRules.component;
+
+/** Open a peace among `players` until match tick `untilTick`, replacing any earlier one. A deadline not
+ *  after `tick` opens none; an invalid slot is dropped. */
+export function setPeaceTime(
+  world: World,
+  tick: number,
+  untilTick: number,
+  players: readonly number[],
+): void {
+  let bits = 0;
+  for (const p of players) if (isValidPlayer(p)) bits |= 1 << p;
+  peaceRules.write(world, (rules) => {
+    rules.untilTick = untilTick;
+    rules.players = bits;
+    rules.holds = untilTick > tick;
+  });
+}
+
+/** End a holding peace; false when none held. */
+export function endPeace(world: World): boolean {
+  if (!peaceRules.read(world).holds) return false;
+  peaceRules.write(world, (rules) => {
+    rules.holds = false;
+  });
+  return true;
+}
+
+/** Whether a peace binds `a` and `b`: it still holds, they are two seats, and both are members. */
+export function atPeace(world: World, a: number, b: number): boolean {
+  if (a === b) return false;
+  return (peacePartnerBits(world, a) & (isValidPlayer(b) ? 1 << b : 0)) !== 0;
+}
+
+/** The match tick the holding peace ends at; null with no peace or once it ended. */
+export function peaceEndsAtTick(world: World): number | null {
+  const rules = peaceRules.read(world);
+  return rules.holds ? rules.untilTick : null;
+}
+
+/** The tick `player`'s peace ends or ended at, kept after the end, so a computer seat ramps its waves
+ *  from it; null for a seat outside the peace or a match without one. */
+export function peaceEndTickOf(world: World, player: number): number | null {
+  const rules = peaceRules.read(world);
+  return isValidPlayer(player) && (rules.players & (1 << player)) !== 0 ? rules.untilTick : null;
+}
+
+/** The slot bits of the seats a holding peace binds `player` to, itself excluded. */
+export function peacePartnerBits(world: World, player: number): number {
+  const rules = peaceRules.read(world);
+  if (!rules.holds || !isValidPlayer(player)) return 0;
+  const self = 1 << player;
+  return (rules.players & self) === 0 ? 0 : rules.players & ~self;
+}
+
+/** Whether `from` fights `to`: it holds the `enemy` stance toward it and no peace binds them. The player
+ *  axis every combat and harm gate reads. */
+export function fightsPlayer(world: World, from: number, to: number): boolean {
+  return diplomacyStance(world, from, to) === 'enemy' && !atPeace(world, from, to);
+}
+
+/** {@link hostilePlayerMasks} without the pairs a peace binds: the either-way rule a fight reads. A body
+ *  block keeps the bare masks. */
+export function combatHostileMasks(world: World): number[] {
+  const masks = hostilePlayerMasks(world);
+  for (let p = 0; p < MAX_PLAYERS; p++) masks[p] = (masks[p] ?? 0) & ~peacePartnerBits(world, p);
+  return masks;
+}
+
+/** {@link enemyPlayerMask} without the seats a peace binds `player` to: whom it fights, one way. */
+export function combatEnemyMask(world: World, player: number): number {
+  return enemyPlayerMask(world, player) & ~peacePartnerBits(world, player);
+}
+
 const playerContacts = defineWorldSingleton<{
   /** viewer player → bitmask of player slots seen (fits one integer: slots are < {@link MAX_PLAYERS}). */
   met: Map<number, number>;

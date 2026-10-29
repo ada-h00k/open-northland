@@ -29,6 +29,7 @@ import {
 } from './livestock/index.js';
 import { mapAiSystem } from './map-ai/index.js';
 import { matchSystem } from './match/index.js';
+import { peaceSystem } from './match/peace.js';
 import { missionSystem } from './missions/index.js';
 import { animalWanderSystem } from './movement/animal-wander.js';
 import { separationSystem } from './movement/collision/index.js';
@@ -72,6 +73,8 @@ interface ScheduledSystem {
 
 /** Canonical per-tick execution order. Engine wiring, not part of the public systems namespace. */
 export const SYSTEM_ORDER: readonly ScheduledSystem[] = [
+  // Ahead of the commands, so neither an order nor a pass of a peace's deadline tick still reads it.
+  { name: 'peace', system: peaceSystem },
   { name: 'command', system: commandSystem },
   // Directly after the commands that enable it, and at the head of the tick, so a mission judges the
   // settled world the previous tick's cleanup left behind.

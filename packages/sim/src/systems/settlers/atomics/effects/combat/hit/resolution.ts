@@ -26,6 +26,7 @@ import { isStructureTarget } from '../../../../../conflict/targeting.js';
 import type { SystemContext } from '../../../../../context.js';
 import { markStructureDamaged } from '../../../../../economy/repair.js';
 import { woundBearer } from '../../../../../equipment/index.js';
+import { ownersAtPeace } from '../../../../../match/peace.js';
 import { grantFightExperience } from '../../../../../progression/index.js';
 import { hexNodeDistance } from '../../../../../spatial/metric.js';
 import { entityNode } from '../../../../../spatial/nodes.js';
@@ -137,6 +138,9 @@ export function resolveCombatHit(
   // Children are immune until growth removes Age, including collateral projectile hits.
   // Original behavior reported by the owner; not independently verified in the running original.
   if (world.has(target, Age)) return null;
+  // A lobby peace spares its members every blow from each other, a stray or splash shot included, and so
+  // provokes no stance change either.
+  if (ownersAtPeace(world, attacker, target)) return null;
   // A target felled earlier this tick still holds its Health until cleanup reaps it: a blow there lands on a
   // corpse, which earns nothing and provokes no one, the same as a shot that is never loosed at one.
   const pool = world.tryGet(target, Health);

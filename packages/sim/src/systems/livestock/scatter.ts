@@ -1,8 +1,8 @@
 import {
   DraughtAnimal,
-  diplomacyStance,
   FarmAnimal,
   Frightened,
+  fightsPlayer,
   Health,
   ownerOf,
   Resting,
@@ -56,8 +56,7 @@ export function scatterFrom(
  *  breeder's summoned animal keep to the drive that holds them. */
 function scatters(world: World, tick: number, animal: Entity, player: number): boolean {
   const owner = ownerOf(world, animal);
-  if (owner === undefined || owner === player || diplomacyStance(world, player, owner) !== 'enemy')
-    return false;
+  if (owner === undefined || owner === player || !fightsPlayer(world, player, owner)) return false;
   if ((world.tryGet(animal, Health)?.hitpoints ?? 0) <= 0) return false;
   if (world.has(animal, Frightened) || world.has(animal, Resting) || world.has(animal, DraughtAnimal))
     return false;

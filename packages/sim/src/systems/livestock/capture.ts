@@ -1,7 +1,7 @@
 import {
   DraughtAnimal,
-  diplomacyStance,
   FarmAnimal,
+  fightsPlayer,
   HerdMember,
   Livestock,
   LivestockSweep,
@@ -28,14 +28,15 @@ export const LIVESTOCK_CAPTURE_RANGE = 2;
 
 /**
  * Whether `player` may claim `animal`: a `catchable` creature that is wild, or held by a player this one
- * counts an enemy (`DIPLOMACY_STATE_ENEMY`, the state the original's per-point claim tests).
+ * counts an enemy (`DIPLOMACY_STATE_ENEMY`, the state the original's per-point claim tests) and no lobby
+ * peace binds it to.
  * Its own stock is never a candidate.
  */
 export function claimableBy(world: World, animal: Entity, player: number): boolean {
   if (!world.has(animal, Livestock)) return false;
   const owner = ownerOf(world, animal);
   if (owner === undefined) return true; // wild
-  return owner !== player && diplomacyStance(world, player, owner) === 'enemy';
+  return owner !== player && fightsPlayer(world, player, owner);
 }
 
 /**

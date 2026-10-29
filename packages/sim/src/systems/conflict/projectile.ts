@@ -1,6 +1,6 @@
 import {
   Building,
-  diplomacyStance,
+  fightsPlayer,
   Health,
   isWildlife,
   Owner,
@@ -166,14 +166,12 @@ function strike(
   return resolveCombatHit(world, ctx, proj.source, victim, blow, pendingReactions, source);
 }
 
-/** Whether a blow between these owners is an act of war: either side holds `enemy` toward the other, or
- *  one of them is no player (wildlife and neutral bodies take no diplomacy). */
+/** Whether a blow between these owners is an act of war: either side fights the other ({@link fightsPlayer}),
+ *  or one of them is no player (wildlife and neutral bodies take no diplomacy). */
 function atWar(world: World, shooter: number | undefined, victim: number | undefined): boolean {
   if (shooter === undefined || victim === undefined) return true;
   if (shooter === victim) return false;
-  return (
-    diplomacyStance(world, shooter, victim) === 'enemy' || diplomacyStance(world, victim, shooter) === 'enemy'
-  );
+  return fightsPlayer(world, shooter, victim) || fightsPlayer(world, victim, shooter);
 }
 
 /**

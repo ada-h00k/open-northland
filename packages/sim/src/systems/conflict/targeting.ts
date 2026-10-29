@@ -3,9 +3,9 @@ import {
   ANIMAL_FLAG,
   Anger,
   Building,
-  diplomacyStance,
   Engagement,
   Frightened,
+  fightsPlayer,
   Garrison,
   Health,
   hasAnimalFlag,
@@ -385,7 +385,7 @@ export function isFleeThreat(
   const selfOwner = world.tryGet(self, Owner);
   const tOwner = world.tryGet(t, Owner);
   if (selfOwner === undefined || tOwner === undefined || selfOwner.player === tOwner.player) return false;
-  if (diplomacyStance(world, tOwner.player, selfOwner.player) !== 'enemy') return false;
+  if (!fightsPlayer(world, tOwner.player, selfOwner.player)) return false;
   if (!world.has(t, Health) || !world.has(t, Position)) return false;
   if (world.get(t, Health).hitpoints <= 0) return false;
   if (building) return true;
@@ -420,9 +420,10 @@ export function isHuntTarget(world: World, ctx: SystemContext, t: Entity, hunter
  * consult, so autonomous engagement and explicit orders obey the same rule.
  *
  * When both sides carry an {@link Owner} the player axis alone decides, through the directed
- * {@link diplomacyStance} table: the attacker engages only a player it holds an `enemy` stance toward
- * (source basis "Combat hostility axis": the maps' `diplomacy` rows), and a pair no map or command ever
- * set reads `enemy` - itself an approximation on maps that author only one direction of a pair.
+ * {@link fightsPlayer} rule: the attacker engages only a player it holds an `enemy` stance toward (source
+ * basis "Combat hostility axis": the maps' `diplomacy` rows) and no lobby peace binds it to, and a pair no
+ * map or command ever set reads `enemy` - itself an approximation on maps that author only one direction
+ * of a pair.
  * Otherwise the content relations decide: {@link mayAttack} tribe hostility, {@link mayHunt} predation
  * over unowned prey only (claimed livestock is property), and a live {@link Anger} timer or a pressed
  * attack ({@link pressesWildAttack}) that makes a civ-animal fight valid in both directions.
@@ -445,7 +446,7 @@ export function mayTarget(
   const targetOwner = world.tryGet(t, Owner);
   if (selfOwner !== undefined && targetOwner !== undefined) {
     if (selfOwner.player === targetOwner.player) return false;
-    return diplomacyStance(world, selfOwner.player, targetOwner.player) === 'enemy';
+    return fightsPlayer(world, selfOwner.player, targetOwner.player);
   }
   // An angry wild animal may turn on a player's animal; original behavior, where wild animals never fight
   // each other. Wildlife carries no Owner in this sim, so its directed diplomacy stance cannot yet be

@@ -2,11 +2,12 @@ import {
   Building,
   DefenceMode,
   DiplomacyRules,
-  diplomacyStance,
+  fightsPlayer,
   Garrison,
   Health,
   MAX_PLAYERS,
   Owner,
+  PeaceRules,
   Person,
   Position,
   Settler,
@@ -176,8 +177,18 @@ const POSTED = 4;
 const looseFighterScans = new WeakMap<World, LooseFighterScan>();
 
 /** Every store the scan reads, membership and in-place writes: a man born, killed, moved, re-owned,
- *  re-jobbed, re-armed or posted, or a stance changed, starts a fresh scan. */
-const SCAN_STORES = [Person, Owner, Position, Health, Settler, Weapon, Garrison, DiplomacyRules] as const;
+ *  re-jobbed, re-armed or posted, or a stance changed or a peace ended, starts a fresh scan. */
+const SCAN_STORES = [
+  Person,
+  Owner,
+  Position,
+  Health,
+  Settler,
+  Weapon,
+  Garrison,
+  DiplomacyRules,
+  PeaceRules,
+] as const;
 
 /** The stores one man's {@link LooseFighter} record is derived from: a write to any re-derives his. */
 const RECORD_STORES = [Person, Owner, Position, Health, Settler, Weapon, Garrison] as const;
@@ -390,10 +401,10 @@ const UNREAD = -1;
 /** Whether `owner`'s fighters are `player`'s raiders, the stance read once per owner per call. */
 function engages(world: World, owner: number, player: number): boolean {
   if (owner === player) return false;
-  if (owner < 0 || owner >= MAX_PLAYERS) return diplomacyStance(world, owner, player) === 'enemy';
+  if (owner < 0 || owner >= MAX_PLAYERS) return fightsPlayer(world, owner, player);
   let stance = stanceOf[owner] as number;
   if (stance === UNREAD) {
-    stance = diplomacyStance(world, owner, player) === 'enemy' ? 1 : 0;
+    stance = fightsPlayer(world, owner, player) ? 1 : 0;
     stanceOf[owner] = stance;
   }
   return stance === 1;

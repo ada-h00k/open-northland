@@ -4,7 +4,6 @@ import {
   AssistantMovesFlags,
   aiControlEntity,
   type ComputerModuleEnables,
-  ComputerPeace,
   computerModuleEnables,
   DefenceMode,
   Owner,
@@ -90,11 +89,8 @@ function applyAiControl(
       computerEnabled,
       difficulty,
     });
-    if (command.peaceUntil !== undefined)
-      world.add(created, ComputerPeace, { untilTick: command.peaceUntil });
     return;
   }
-  if (command.peaceUntil !== undefined) world.add(carrier, ComputerPeace, { untilTick: command.peaceUntil });
   const old = world.get(carrier, AiControl);
   const previous = computerModuleEnables(
     Object.fromEntries(

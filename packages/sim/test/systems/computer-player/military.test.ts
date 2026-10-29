@@ -5,6 +5,7 @@ import {
   Building,
   type ComputerModuleEnables,
   Engagement,
+  endPeace,
   MoveGoal,
   MusterPlan,
   Owner,
@@ -427,15 +428,17 @@ describe('military module - the campaign', () => {
     expect(commands.some((c) => c.kind === 'attackUnit')).toBe(false);
   });
 
-  it('keeps every wave at home through a lobby seat peace, and sends it the decision the peace ends', () => {
+  it('keeps every wave at home through a lobby peace, and sends it the decision the peace ends', () => {
     const sim = bandSim(WAVE_MIN_SOLDIERS);
     const PEACE_END = 60_000;
-    sim.enqueueSetup({ kind: 'setAiControl', player: SEAT, enabled: true, peaceUntil: PEACE_END });
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: PEACE_END, players: [SEAT, FOE] });
     sim.step();
     const foeHq = buildingOfType(sim, HQ_TYPE, FOE);
 
     expect(assaulting(sim, run(sim, EAGER_SEED, PEACE_END - 1), foeHq)).toEqual([]);
     expect(sim.world.has(buildingOfType(sim, BARRACKS_TYPE, SEAT), MusterPlan)).toBe(false);
+    // What the peace system does at the head of the deadline tick, without stepping the whole peace.
+    endPeace(sim.world);
     // The band is still the opening one, since the growth counts from the end of the peace.
     expect(assaulting(sim, run(sim, EAGER_SEED, PEACE_END), foeHq)).toHaveLength(WAVE_MIN_SOLDIERS);
   });

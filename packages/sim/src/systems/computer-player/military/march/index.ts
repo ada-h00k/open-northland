@@ -1,8 +1,8 @@
 import {
   AttackOrder,
   Building,
-  diplomacyStance,
   Engagement,
+  fightsPlayer,
   Health,
   MAX_PLAYERS,
   Vehicle,
@@ -535,7 +535,7 @@ function shellingCatapult(
   const men = new Set(wave.members);
   let best: { at: HalfCellNode; distance: number; vehicle: Entity } | null = null;
   for (let other = 0; other < MAX_PLAYERS; other++) {
-    if (other === player || diplomacyStance(world, player, other) !== 'enemy') continue;
+    if (other === player || !fightsPlayer(world, player, other)) continue;
     for (const vehicle of vehicleIndex(world).ownedBy(other)) {
       const target = world.get(vehicle, Vehicle).attack?.target;
       if (target?.kind !== 'entity' || !men.has(target.entity)) continue;

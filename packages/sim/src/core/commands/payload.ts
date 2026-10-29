@@ -404,6 +404,9 @@ const COMMAND_PAYLOAD: { readonly [K in Command['kind']]: PayloadSpec<Extract<Co
   setProductionCount: { required: { entity: 'integer', goodType: 'integer', count: 'integer' } },
   setDefenceMode: { required: { building: 'integer', enabled: 'boolean' } },
   setDiplomacy: { required: { from: 'integer', to: 'integer', state: { oneOf: DIPLOMACY_STATES } } },
+  setPeaceTime: {
+    required: { untilTick: 'integer', players: { arrayOf: 'integer', maxLength: MAX_PLAYERS } },
+  },
   setFogMode: { required: { mode: 'integer' } },
   setGatherGood: { required: { entity: 'integer', goodType: { nullOr: 'integer' } } },
   setHouseholdGoodUse: {
@@ -438,7 +441,6 @@ const COMMAND_PAYLOAD: { readonly [K in Command['kind']]: PayloadSpec<Extract<Co
       modules: AI_MODULES,
       computerEnabled: 'boolean',
       mapAiEnabled: 'boolean',
-      peaceUntil: 'integer',
       difficulty: { oneOf: COMPUTER_DIFFICULTIES },
     },
   },

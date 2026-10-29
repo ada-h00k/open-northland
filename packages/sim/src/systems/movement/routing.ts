@@ -1,7 +1,7 @@
 import {
+  combatEnemyMask,
   Engagement,
   EVERY_PLAYER,
-  enemyPlayerMask,
   Fleeing,
   hostileMaskOf,
   hostilePlayerMasks,
@@ -177,11 +177,11 @@ class PathDrain {
   }
 
   /** The bodies an attack-move of `player` cannot fight its way through: the hostile ones it does not
-   *  fight itself, as a side that holds it an enemy it holds a friend. */
+   *  fight itself, as a side that holds it an enemy it holds a friend, or one a lobby peace binds it to. */
   besideTargetsFor(player: number, structures: BlockOverlay): ColliderWalkBlocks {
     let view = this.besideTargetsByPlayer.get(player);
     if (view === undefined) {
-      const passable = hostileMaskOf(this.hostileMasks(), player) & ~enemyPlayerMask(this.world, player);
+      const passable = hostileMaskOf(this.hostileMasks(), player) & ~combatEnemyMask(this.world, player);
       view = new ColliderWalkBlocks(structures, this.unitBlocks(), passable);
       this.besideTargetsByPlayer.set(player, view);
     }

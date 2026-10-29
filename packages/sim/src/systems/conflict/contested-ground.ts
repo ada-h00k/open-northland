@@ -1,5 +1,5 @@
 import type { ContentSet } from '@open-northland/data';
-import { diplomacyStance, Health, isValidPlayer, Owner, Position, Settler } from '../../components/index.js';
+import { fightsPlayer, Health, isValidPlayer, Owner, Position, Settler } from '../../components/index.js';
 import type { World } from '../../ecs/world.js';
 import { type HalfCellNode, nodeHxOfPosition, nodeHyOfPosition } from '../../nav/halfcell.js';
 import type { TerrainGraph } from '../../nav/terrain/index.js';
@@ -47,7 +47,7 @@ const memo = new WeakMap<World, Map<number, ContestedMemo>>();
 
 /**
  * The ground `player` may not build on right now: every node within {@link CONTESTED_GROUND_RADIUS_NODES}
- * of a living fighter the seat can see whose owner holds an `enemy` stance toward it. Civilians and animals
+ * of a living fighter the seat can see whose owner fights it ({@link fightsPlayer}). Civilians and animals
  * are no army, and a garrison at its post is a fortification rather than one, so none of them contest.
  */
 export function contestedGroundFor(
@@ -102,7 +102,7 @@ function scanContestedGround(
   if (isValidPlayer(player)) {
     for (const e of world.query(Settler, Owner)) {
       const owner = world.get(e, Owner).player;
-      if (owner === player || diplomacyStance(world, owner, player) !== 'enemy') continue;
+      if (owner === player || !fightsPlayer(world, owner, player)) continue;
       if (!isFighterJob(content, world.get(e, Settler).jobType)) continue;
       const health = world.tryGet(e, Health);
       if (health === undefined || health.hitpoints <= 0) continue;

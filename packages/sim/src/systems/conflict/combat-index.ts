@@ -1,8 +1,8 @@
 import {
+  combatHostileMasks,
   EVERY_PLAYER,
   Health,
   hostileMaskOf,
-  hostilePlayerMasks,
   Owner,
   Position,
   Vehicle,
@@ -92,9 +92,9 @@ export class CombatIndex {
   private readonly grid: CombatGrid;
   /** The tick this index was built on. */
   readonly tick: number;
-  /** Per player slot, the {@link playerBit}s of the players it holds `enemy` toward or from, resolved once at
-   *  build: every stance writer ahead of `combat` in the tick schedule has run by then and none runs inside
-   *  it, so a stance flipped earlier this tick is already seen. */
+  /** Per player slot, the {@link playerBit}s of the players it fights either way ({@link combatHostileMasks}),
+   *  resolved once at build: every stance writer ahead of `combat` in the tick schedule has run by then and
+   *  none runs inside it, so a stance flipped or a peace ended earlier this tick is already seen. */
   private readonly hostileMasks: readonly number[];
   /** The buildings able to shoot this build, the only ones a struck civilian runs from. The next index
    *  built for the same world refreshes this set in place. */
@@ -109,7 +109,7 @@ export class CombatIndex {
    *  disc, so a search finds a body at the distance to its nearest face. */
   constructor(world: World, ctx: SystemContext, terrain: TerrainGraph) {
     this.tick = ctx.tick;
-    this.hostileMasks = hostilePlayerMasks(world);
+    this.hostileMasks = combatHostileMasks(world);
     this.grid = combatGridOf(world, ctx, terrain);
     this.grid.startBuild(world, ctx);
     const firing = heldFiringOf(world).refresh(world, ctx);

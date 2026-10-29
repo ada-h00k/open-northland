@@ -79,6 +79,16 @@ export type RulesCommand =
     }
   | {
       /**
+       * Open a lobby peace among `players` until match tick `untilTick` (`PeaceRules`), replacing any
+       * earlier one: while it holds, the members cannot harm each other. A deadline not after the
+       * applying tick opens none.
+       */
+      readonly kind: 'setPeaceTime';
+      readonly untilTick: number;
+      readonly players: readonly number[];
+    }
+  | {
+      /**
        * Declare the seats that play the skirmish match (`MatchRules`), replacing any earlier set. An
        * invalid slot is dropped. A world that never declares one runs no match: nobody dies or wins.
        */

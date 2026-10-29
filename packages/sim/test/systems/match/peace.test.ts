@@ -1,0 +1,183 @@
+import { describe, expect, it } from 'vitest';
+import {
+  Building,
+  diplomacyStance,
+  Engagement,
+  Health,
+  PlayerOrder,
+  Settler,
+} from '../../../src/components/index.js';
+import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
+import type { Entity } from '../../../src/ecs/world.js';
+import { Simulation } from '../../../src/index.js';
+import { PEACE_KEEP_OUT_RADIUS_NODES } from '../../../src/systems/match/peace.js';
+import { resolveCombatHit } from '../../../src/systems/settlers/atomics/effects/combat/hit/resolution.js';
+import { aiContent } from '../../fixtures/ai-content.js';
+import { testContent } from '../../fixtures/content.js';
+import { grassNodeMap } from '../../fixtures/terrain.js';
+import { ctxOf, fighterAt, grassMap, P0, P1, VIKING, WOODCUTTER } from '../conflict/engagement/support.js';
+
+/** A seat outside the peace: a map's own scripted tribe. */
+const P2 = 2;
+/** Far enough into the match that a fight would have landed several blows. */
+const PEACE_END = 40;
+const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
+
+function skirmishSim(): Simulation {
+  return new Simulation({ seed: 1, content: testContent(), map: grassMap(5, 1) });
+}
+
+function stepTo(sim: Simulation, tick: number): void {
+  while (sim.tick < tick) sim.step();
+}
+
+function unhurt(sim: Simulation, e: Entity): boolean {
+  const pool = sim.world.get(e, Health);
+  return pool.hitpoints === pool.max;
+}
+
+describe('lobby peace - harm between seats', () => {
+  it('members neither engage nor wound each other while it holds, and fight from the tick it ends', () => {
+    const sim = skirmishSim();
+    const a = fighterAt(sim, 0, 0, VIKING, WOODCUTTER, { owner: P0 });
+    const b = fighterAt(sim, 1, 0, VIKING, WOODCUTTER, { owner: P1 });
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: PEACE_END, players: [P0, P1] });
+
+    stepTo(sim, PEACE_END - 1);
+    expect(sim.atPeace(P0, P1)).toBe(true);
+    expect(sim.world.has(a, Engagement) || sim.world.has(b, Engagement)).toBe(false);
+    expect(unhurt(sim, a) && unhurt(sim, b)).toBe(true);
+
+    sim.step();
+    expect(sim.atPeace(P0, P1)).toBe(false);
+    expect(sim.peaceEndsAtTick()).toBeNull();
+    expect(sim.world.has(a, Engagement)).toBe(true);
+  });
+
+  it('a member still fights a seat outside the peace', () => {
+    const sim = skirmishSim();
+    const member = fighterAt(sim, 0, 0, VIKING, WOODCUTTER, { owner: P0 });
+    const outsider = fighterAt(sim, 1, 0, VIKING, WOODCUTTER, { owner: P2 });
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: PEACE_END, players: [P0, P1] });
+
+    sim.step();
+
+    expect(sim.world.has(member, Engagement)).toBe(true);
+    expect(sim.world.has(outsider, Engagement)).toBe(true);
+  });
+
+  it('refuses an attack order on a peace partner, leaving the walk the unit had', () => {
+    const sim = skirmishSim();
+    const a = fighterAt(sim, 0, 0, VIKING, WOODCUTTER, { owner: P0 });
+    const partner = fighterAt(sim, 4, 0, VIKING, WOODCUTTER, { owner: P1 });
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: PEACE_END, players: [P0, P1] });
+    sim.enqueueSetup({ kind: 'moveUnit', entity: a, x: 4, y: 1 });
+    sim.step();
+    expect(sim.world.has(a, PlayerOrder)).toBe(true);
+
+    sim.enqueueSetup({ kind: 'attackUnit', entity: a, target: partner });
+    sim.step();
+
+    expect(sim.world.has(a, PlayerOrder)).toBe(true);
+    expect(sim.world.has(a, Engagement)).toBe(false);
+  });
+
+  it('a blow or shot on a peace partner deals nothing and turns no stance', () => {
+    const sim = skirmishSim();
+    const shooter = fighterAt(sim, 0, 0, VIKING, WOODCUTTER, { owner: P0 });
+    const partner = fighterAt(sim, 1, 0, VIKING, WOODCUTTER, { owner: P1 });
+    sim.enqueueSetup({ kind: 'setDiplomacy', from: P1, to: P0, state: 'friend' });
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: PEACE_END, players: [P0, P1] });
+    sim.step();
+
+    const wound = resolveCombatHit(sim.world, ctxOf(sim), shooter, partner, { damage: 50 }, [], 'projectile');
+
+    expect(wound).toBeNull();
+    expect(unhurt(sim, partner)).toBe(true);
+    expect(diplomacyStance(sim.world, P1, P0)).toBe('friend');
+  });
+});
+
+describe('lobby peace - walk orders near a partner', () => {
+  const SPEARMAN = 32;
+  const CIVILIST = 6;
+  const HQ_TYPE = 1;
+  const PARTNER_HQ = { x: 50, y: 16 };
+  const HOME = { x: 4, y: 16 };
+
+  function spawnAt(sim: Simulation, jobType: number, owner: number): Entity {
+    const before = new Set(sim.world.query(Settler));
+    sim.enqueueSetup({ kind: 'spawnSettler', jobType, x: HOME.x, y: HOME.y, tribe: VIKING, owner });
+    sim.step();
+    const spawned = [...sim.world.query(Settler)].find((e) => !before.has(e));
+    if (spawned === undefined) throw new Error('setup: nothing spawned');
+    return spawned;
+  }
+
+  function partnerSim(): { sim: Simulation; soldier: Entity; civilian: Entity } {
+    const sim = new Simulation({ seed: 1, content: aiContent(), map: grassNodeMap(64, 32) });
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: 10_000, players: [P0, P1] });
+    sim.enqueueSetup({
+      kind: 'placeBuilding',
+      buildingType: HQ_TYPE,
+      ...PARTNER_HQ,
+      tribe: VIKING,
+      owner: P1,
+      force: true,
+    });
+    const soldier = spawnAt(sim, SPEARMAN, P0);
+    const civilian = spawnAt(sim, CIVILIST, P0);
+    expect([...sim.world.query(Building)]).toHaveLength(1);
+    return { sim, soldier, civilian };
+  }
+
+  it("refuses a soldier sent to a partner's door while a civilian of the same order goes", () => {
+    const { sim, soldier, civilian } = partnerSim();
+    const door = { x: PARTNER_HQ.x - PEACE_KEEP_OUT_RADIUS_NODES + 2, y: PARTNER_HQ.y };
+
+    sim.enqueueSetup({
+      kind: 'moveUnitGroup',
+      members: [
+        { entity: soldier, ...door },
+        { entity: civilian, ...door },
+      ],
+    });
+    sim.step();
+
+    expect(sim.world.has(soldier, PlayerOrder)).toBe(false);
+    expect(sim.world.has(civilian, PlayerOrder)).toBe(true);
+  });
+
+  it('lets a soldier walk short of the zone', () => {
+    const { sim, soldier } = partnerSim();
+    const short = { x: PARTNER_HQ.x - PEACE_KEEP_OUT_RADIUS_NODES - 4, y: PARTNER_HQ.y };
+
+    sim.enqueueSetup({ kind: 'attackMoveUnit', entity: soldier, ...short });
+    sim.step();
+
+    expect(sim.world.has(soldier, PlayerOrder)).toBe(true);
+  });
+});
+
+describe('lobby peace - its clock', () => {
+  it('announces the end five and one minute ahead and ends at the deadline, once each', () => {
+    const sim = new Simulation({ seed: 1, content: testContent() });
+    // Off the minute, so the notices cannot coincide with a whole-minute tick count from the start.
+    const until = 5 * TICKS_PER_MINUTE + 7;
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: until, players: [P0, P1] });
+    const heard: string[] = [];
+    while (sim.tick < until + TICKS_PER_MINUTE) {
+      sim.step();
+      for (const ev of sim.events.current()) {
+        if (ev.kind === 'peaceEnding') heard.push(`${sim.tick}:ending:${ev.minutesLeft}`);
+        if (ev.kind === 'peaceEnded') heard.push(`${sim.tick}:ended`);
+      }
+    }
+
+    expect(heard).toEqual([
+      `${until - 5 * TICKS_PER_MINUTE}:ending:5`,
+      `${until - TICKS_PER_MINUTE}:ending:1`,
+      `${until}:ended`,
+    ]);
+  });
+});

@@ -75,7 +75,7 @@ describe('AI difficulty profiles', () => {
     sim.enqueueSetup({ kind: 'setAiControl', player: SEAT, enabled: true, difficulty: 'easy' });
     sim.step();
     expect(difficulty()).toBe('easy');
-    sim.enqueueSetup({ kind: 'setAiControl', player: SEAT, enabled: true, peaceUntil: 100 });
+    sim.enqueueSetup({ kind: 'setAiControl', player: SEAT, enabled: true });
     sim.step();
     expect(difficulty()).toBe('easy');
   });
