@@ -4,7 +4,6 @@ import {
   type MapScript,
   type MapVariant,
   type MapVariantKind,
-  mapVariantsOf,
 } from '@open-northland/data';
 import type { SessionWorld } from '@open-northland/lockstep';
 import type { MapScriptWorld } from '../world/build.js';
@@ -45,8 +44,4 @@ export function variantScriptWorld(script: MapScriptWorld, world: SessionWorld):
 /** The map world a launch plays: `mapId` under `variant`, or as authored. */
 export function mapSessionWorld(mapId: string, variant: string | null): SessionWorld {
   return variant === null ? { kind: 'map', mapId } : { kind: 'map', mapId, variant };
-}
-
-export function hasMapVariants(mapId: string): boolean {
-  return mapVariantsOf(mapId).length > 0;
 }

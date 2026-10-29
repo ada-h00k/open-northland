@@ -1,7 +1,6 @@
-import { TICKS_PER_SECOND } from '@open-northland/sim';
+import { type MapEscalationView, TICKS_PER_SECOND } from '@open-northland/sim';
 import type { MissionInfoRow } from '../../game/map/info-lines.js';
 import { formatMessage } from '../../i18n/index.js';
-import type { MapEscalationView } from '../../session/index.js';
 
 const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;

@@ -275,6 +275,7 @@ export {
 } from './systems/footprint/index.js';
 export type { LandscapeEditView } from './systems/landscape/view.js';
 export { RUIN_COLLAPSE_TICKS } from './systems/lifecycle/ruins.js';
+export type { MapEscalationView } from './systems/map-escalation/index.js';
 export type { MatchGoalProgress } from './systems/match/index.js';
 export type {
   InfoLineView,

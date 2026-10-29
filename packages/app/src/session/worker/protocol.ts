@@ -9,6 +9,7 @@ import type {
   ExportSaveOptions,
   FogMaskAnswer,
   FogMode,
+  MapEscalationView,
   MatchOutcome,
   MatchRank,
   MatchRulesView,
@@ -19,7 +20,7 @@ import type {
   SnapshotDelta,
 } from '@open-northland/sim';
 import type { DiagEntry } from '../../diag/log.js';
-import type { MapEscalationView, SessionHost, TickDiagnostics } from '../host.js';
+import type { SessionHost, TickDiagnostics } from '../host.js';
 
 /**
  * The messages between the runtime and the worker that owns the sim. Everything crossing is plain

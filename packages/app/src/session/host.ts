@@ -19,6 +19,7 @@ import type {
   InfoLineView,
   LandscapeEditView,
   LoggedCommand,
+  MapEscalationView,
   MatchGoalProgress,
   MatchOutcome,
   MatchRank,
@@ -83,15 +84,6 @@ export interface OffThreadTickCost {
 export interface ProfileSource {
   rows(): Promise<readonly SystemProfileRow[]>;
   reset(): void;
-}
-
-/** What `Simulation.mapEscalationView()` reports, in sim ticks. */
-export interface MapEscalationView {
-  /** The running attack's number, else the last launch that fell due; 0 before the first. */
-  readonly wave: number;
-  readonly attackRunning: boolean;
-  readonly attackEndsByTick: number | null;
-  readonly nextAttackTick: number;
 }
 
 /**
