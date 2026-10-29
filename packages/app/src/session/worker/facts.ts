@@ -51,6 +51,7 @@ export function readWorldFacts(sim: Simulation): WorldFacts {
     matchOutcomes: SEATS.map((player) => sim.matchOutcome(player)),
     matchRanking: sim.matchRanking(),
     missionStatus: sim.missionStatus(),
+    mapEscalation: sim.mapEscalationView(),
   };
 }
 
@@ -77,5 +78,6 @@ export function changedFacts(last: WorldFacts, next: WorldFacts): Partial<WorldF
   if (!samePlainData(next.matchOutcomes, last.matchOutcomes)) changed.matchOutcomes = next.matchOutcomes;
   if (!samePlainData(next.matchRanking, last.matchRanking)) changed.matchRanking = next.matchRanking;
   if (!samePlainData(next.missionStatus, last.missionStatus)) changed.missionStatus = next.missionStatus;
+  if (!samePlainData(next.mapEscalation, last.mapEscalation)) changed.mapEscalation = next.mapEscalation;
   return changed;
 }

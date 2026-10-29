@@ -9032,6 +9032,70 @@ body.on-drag-scroll.on-drag-scroll-free * {
   }
 }
 
+/* ---------- centre notice (centre-notice.ts) ---------- */
+.on-hud .on-centre-notice {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  width: min(760px, 90%);
+  transform: translateX(-50%);
+  padding: 14px 32px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #182521cc 0%, #18252199 45%, #18252100 72%);
+  opacity: 0;
+  animation: on-centre-notice-life var(--notice-ms, 5000ms) ease-in-out forwards;
+}
+.on-hud .on-centre-notice__title {
+  margin: 0;
+  color: var(--bronze-hi);
+  font: 600 34px / 1.25 var(--font-title);
+  text-shadow:
+    0 2px 3px #000000cc,
+    0 0 18px #000000aa;
+}
+.on-hud .on-centre-notice__detail {
+  margin: 0;
+  color: var(--text-hi);
+  font-size: 22px;
+  line-height: 1.4;
+  text-shadow: 0 1px 3px #000000dd;
+}
+@keyframes on-centre-notice-life {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  8%,
+  78% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .on-hud .on-centre-notice {
+    animation-name: on-centre-notice-fade;
+  }
+}
+@keyframes on-centre-notice-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  8%,
+  78% {
+    opacity: 1;
+  }
+}
+
 /* ---------- match results ---------- */
 .on-result-backdrop {
   z-index: 2500;

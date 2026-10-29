@@ -9,6 +9,27 @@ export const deGame = {
     retry: 'Erneut versuchen',
   },
   hud: {
+    escalation: {
+      nextAttack: 'Nächster Angriff in {time}',
+      attackRunning: 'Angriff läuft',
+      notices: {
+        attack: { title: 'Die Festung zieht in den Angriff!' },
+        landing: { title: 'Schiffe der Dunkelländer legen am Ufer an!' },
+        lightArmor: {
+          title: 'Die Krieger der Festung werden stärker.',
+          detail: 'Sie haben leichte Rüstungen erhalten.',
+        },
+        heavyArmor: {
+          title: 'Die Krieger der Festung werden stärker.',
+          detail: 'Sie haben schwere Rüstungen erhalten.',
+        },
+        amulets: { title: 'Die Krieger der Festung werden stärker.', detail: 'Sie haben Amulette erhalten.' },
+        healDraughts: {
+          title: 'Die Krieger der Festung werden stärker.',
+          detail: 'Sie haben Heiltränke erhalten.',
+        },
+      },
+    },
     armyOrderLimit:
       'Wähle höchstens {limit} Einheiten für einen Befehl aus. Keine Einheit hat diesen Befehl erhalten.',
     mapOverlays: {

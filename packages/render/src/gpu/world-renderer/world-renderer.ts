@@ -380,6 +380,11 @@ export class WorldRenderer {
     this.sceneLight.setTarget(target, snap);
   }
 
+  /** While a siege attack runs the scene fades into a slight red, and back out once it ends. */
+  setAlarm(on: boolean): void {
+    this.sceneLight.setAlarm(on);
+  }
+
   brightnessField(): BrightnessField {
     return this.terrain.brightnessField();
   }

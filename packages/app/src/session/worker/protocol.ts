@@ -19,7 +19,7 @@ import type {
   SnapshotDelta,
 } from '@open-northland/sim';
 import type { DiagEntry } from '../../diag/log.js';
-import type { SessionHost, TickDiagnostics } from '../host.js';
+import type { MapEscalationView, SessionHost, TickDiagnostics } from '../host.js';
 
 /**
  * The messages between the runtime and the worker that owns the sim. Everything crossing is plain
@@ -172,6 +172,7 @@ export interface WorldFacts {
   readonly matchOutcomes: readonly MatchOutcome[];
   readonly matchRanking: readonly MatchRank[];
   readonly missionStatus: readonly MissionStatus[];
+  readonly mapEscalation: MapEscalationView | null;
 }
 
 export interface AssistantFacts {

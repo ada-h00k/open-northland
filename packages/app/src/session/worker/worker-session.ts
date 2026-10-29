@@ -530,6 +530,7 @@ class WorkerClient<E> {
       matchOutcome: (player) => facts().matchOutcomes[player] ?? 'undecided',
       matchRanking: () => facts().matchRanking,
       missionStatus: () => facts().missionStatus,
+      mapEscalation: () => facts().mapEscalation,
 
       tickEvents: () => this.events,
       tickDiagnostics: () =>

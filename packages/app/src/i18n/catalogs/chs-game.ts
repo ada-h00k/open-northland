@@ -8,6 +8,18 @@ export const chsGame = {
     retry: '重试',
   },
   hud: {
+    escalation: {
+      nextAttack: '下次进攻：{time} 后',
+      attackRunning: '进攻进行中',
+      notices: {
+        attack: { title: '要塞发起了进攻！' },
+        landing: { title: '暗地人的战船正在靠岸！' },
+        lightArmor: { title: '要塞的战士变得更强了。', detail: '他们获得了轻甲。' },
+        heavyArmor: { title: '要塞的战士变得更强了。', detail: '他们获得了重甲。' },
+        amulets: { title: '要塞的战士变得更强了。', detail: '他们获得了护身符。' },
+        healDraughts: { title: '要塞的战士变得更强了。', detail: '他们获得了治疗药水。' },
+      },
+    },
     armyOrderLimit: '一道命令最多只能选择 {limit} 个单位。没有任何单位收到这道命令。',
     mapOverlays: {
       label: '主地图图层',

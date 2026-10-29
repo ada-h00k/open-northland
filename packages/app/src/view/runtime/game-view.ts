@@ -114,6 +114,7 @@ import {
 } from '../camera/index.js';
 import { clearCanvasCursors } from '../cursors/element.js';
 import { createDiplomacyActions } from '../diplomacy-actions.js';
+import { mountSiegePresentation } from '../escalation/index.js';
 import {
   applyGameSpeed,
   buildingLabelsFromContent,
@@ -871,6 +872,13 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
     // Assembled below, once the controls and the camera it steers exist.
     const scriptTints = await mountScriptTints(host, renderer, { pinnedIndex: tintParam(params) });
     cleanup.push(() => scriptTints.dispose());
+    const siege = mountSiegePresentation({
+      host,
+      plane: hudDom.element,
+      setAlarm: (on) => renderer.setAlarm(on),
+      now: () => performance.now(),
+    });
+    cleanup.push(() => siege.dispose());
     let presentation: ReturnType<typeof createScriptPresentation> | null = null;
     const subMissions = createSubMissions({
       host,
@@ -897,7 +905,10 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
       verdict: (events) => {
         if (deps.observer !== true && !watching) verdict?.onEvents(events);
       },
-      presentation: (events) => presentation?.onEvents(events),
+      presentation: (events) => {
+        presentation?.onEvents(events);
+        siege.onEvents(events);
+      },
     });
 
     const finishScript = (): void => {
@@ -1174,6 +1185,7 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
       ),
       mapText,
       goodLabel: (typeId) => goodLabelByType.get(typeId),
+      siegeRows: siege.infoRows,
       now: () => performance.now(),
       keepPlayingAfterResult: () =>
         keepsPlayingAfterResult(host.matchOutcome(localPlayer), sharedClock, scriptEndsVictory),
@@ -1407,6 +1419,7 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
         onEvents,
         onFrame: (snapshot) => {
           autosave.update(snapshot.tick, liveSettings.settings.current());
+          siege.frame();
           netOverlays?.refresh();
           followLink?.();
           deps.onFrame?.(snapshot);

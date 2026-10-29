@@ -9,6 +9,18 @@ export const plGame = {
     retry: 'Spróbuj ponownie',
   },
   hud: {
+    escalation: {
+      nextAttack: 'Następny atak za {time}',
+      attackRunning: 'Atak trwa',
+      notices: {
+        attack: { title: 'Twierdza rusza do ataku!' },
+        landing: { title: 'Okręty Krainy Ciemności przybijają do brzegu!' },
+        lightArmor: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali lekkie zbroje.' },
+        heavyArmor: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali ciężkie zbroje.' },
+        amulets: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali amulety.' },
+        healDraughts: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali mikstury leczenia.' },
+      },
+    },
     armyOrderLimit:
       'Zaznacz najwyżej {limit} jednostek do jednego rozkazu. Żadna jednostka nie otrzymała tego rozkazu.',
     mapOverlays: {

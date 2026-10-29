@@ -9,6 +9,21 @@ export const enGame = {
     retry: 'Try again',
   },
   hud: {
+    escalation: {
+      nextAttack: 'Next attack in {time}',
+      attackRunning: 'Attack under way',
+      notices: {
+        attack: { title: 'The fortress marches to war!' },
+        landing: { title: 'Darkland ships are landing on the shore!' },
+        lightArmor: { title: 'The fortress warriors grow stronger.', detail: 'They received light armour.' },
+        heavyArmor: { title: 'The fortress warriors grow stronger.', detail: 'They received heavy armour.' },
+        amulets: { title: 'The fortress warriors grow stronger.', detail: 'They received amulets.' },
+        healDraughts: {
+          title: 'The fortress warriors grow stronger.',
+          detail: 'They received healing potions.',
+        },
+      },
+    },
     armyOrderLimit: 'Select at most {limit} units for one order. No units received this order.',
     mapOverlays: {
       label: 'Main map overlays',

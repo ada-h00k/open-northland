@@ -67,6 +67,7 @@ export function inlineSessionHost(sim: Simulation, options: InlineSessionHostOpt
     matchOutcome: (player) => sim.matchOutcome(player),
     matchRanking: () => sim.matchRanking(),
     missionStatus: () => sim.missionStatus(),
+    mapEscalation: () => sim.mapEscalationView(),
 
     tickEvents: () => sim.events.current(),
     tickDiagnostics: () => {

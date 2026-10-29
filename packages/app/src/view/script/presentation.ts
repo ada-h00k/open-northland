@@ -46,6 +46,8 @@ export interface ScriptPresentationDeps {
   readonly mapText: (stringId: number) => string | undefined;
   /** A good's display name, for the goal table's progress lines. */
   readonly goodLabel: (typeId: number) => string | undefined;
+  /** The info lines at `tick` with what the map's siege leads them with; absent, they pass as read. */
+  readonly siegeRows?: (rows: readonly MissionInfoRow[], tick: number) => readonly MissionInfoRow[];
   readonly now: () => number;
   /** A local verdict offers continued play, so a later script Exit must not leave the map. */
   readonly keepPlayingAfterResult?: () => boolean;
@@ -198,7 +200,7 @@ export function createScriptPresentation(deps: ScriptPresentationDeps): ScriptPr
               `${linesTick}`,
             ) ?? NO_LINES);
       // Pushed every frame; the book keeps an unchanged list as it is.
-      toolPanel.controller.setInfoLines(lines);
+      toolPanel.controller.setInfoLines(deps.siegeRows?.(lines, snapshot.tick) ?? lines);
       const screen = deps.screen();
       markers.update(camera, screen, nowMs);
     },

@@ -85,6 +85,15 @@ export interface ProfileSource {
   reset(): void;
 }
 
+/** What `Simulation.mapEscalationView()` reports, in sim ticks. */
+export interface MapEscalationView {
+  /** The running attack's number, else the last launch that fell due; 0 before the first. */
+  readonly wave: number;
+  readonly attackRunning: boolean;
+  readonly attackEndsByTick: number | null;
+  readonly nextAttackTick: number;
+}
+
 /**
  * Everything the running game reads of the world. The runtime (frame loop, HUD, controls, saves,
  * diagnostics) consumes this interface and never the `Simulation` behind it, which a host owns: an
@@ -152,6 +161,8 @@ export interface SessionHost {
   /** A goal table's verdicts in the order they landed; empty under any other rule. */
   matchRanking(): readonly MatchRank[];
   missionStatus(): readonly MissionStatus[];
+  /** A map variant's siege schedule as it stands; null on a map without one. */
+  mapEscalation(): MapEscalationView | null;
 
   // Per tick.
 

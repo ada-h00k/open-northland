@@ -7,6 +7,7 @@ import {
   Sprite,
   Texture,
 } from 'pixi.js';
+import { applyAlarm, fadeAlarm } from '../../data/lighting/alarm.js';
 import { fadeGrade } from '../../data/lighting/fade.js';
 import { nightLevel, shownGrade } from '../../data/lighting/grade.js';
 import { LIGHT_LOOKS, type LightSite, lightShare } from '../../data/lighting/light-sites.js';
@@ -121,6 +122,9 @@ export class SceneLight {
   private readonly shown: [number, number, number] = [1, 1, 1];
   private readonly clearColor: [number, number, number, number] = [1, 1, 1, 1];
   private lastSeconds: number | null = null;
+  /** Whether a siege attack runs, and the alarm grade's linear level fading toward it. */
+  private alarmOn = false;
+  private alarm = 0;
   /** This frame's night composite, while the night lights the world. */
   private night: NightComposite | null = null;
   /** {@link night}'s record, refilled each night frame. */
@@ -145,6 +149,11 @@ export class SceneLight {
     if (snap) {
       [this.grade[0], this.grade[1], this.grade[2]] = this.target;
     }
+  }
+
+  /** Whether the alarm grade (`data/lighting/alarm.ts`) fades in over the scene or out of it. */
+  setAlarm(on: boolean): void {
+    this.alarmOn = on;
   }
 
   /** How strongly the night lights burn under the grade the last frame drew, 0 by day. */
@@ -173,8 +182,15 @@ export class SceneLight {
   update(frame: SceneLightFrame): void {
     const last = this.lastSeconds;
     this.lastSeconds = frame.gameSeconds;
-    fadeGrade(this.grade, this.target, last === null ? Infinity : frame.gameSeconds - last);
-    const [r, g, b] = shownGrade(this.grade, this.shown);
+    const dt = last === null ? Infinity : frame.gameSeconds - last;
+    fadeGrade(this.grade, this.target, dt);
+    shownGrade(this.grade, this.shown);
+    // The alarm tints the shown grade but not the night level: it lights no lamps.
+    if (this.alarmOn || this.alarm > 0) {
+      this.alarm = fadeAlarm(this.alarm, this.alarmOn, dt);
+      applyAlarm(this.shown, this.alarm);
+    }
+    const [r, g, b] = this.shown;
     const level = frame.nightLights === false ? 0 : nightLevel(this.grade);
     if (r === 1 && g === 1 && b === 1) {
       this.container.visible = false;

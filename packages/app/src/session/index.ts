@@ -1,5 +1,6 @@
 export type {
   InstrumentRequest,
+  MapEscalationView,
   OffThreadTickCost,
   ProfileSource,
   SessionHost,
