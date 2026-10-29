@@ -1,4 +1,4 @@
-import { MusterPlan, type MusterPlanState, peaceEndTickOf } from '../../../components/index.js';
+import { MusterPlan, type MusterPlanState } from '../../../components/index.js';
 import { TICKS_PER_SECOND } from '../../../core/loop.js';
 import type { Entity, World } from '../../../ecs/world.js';
 import type { WeaponMix } from '../../ai-shared/military/census.js';
@@ -29,11 +29,6 @@ export const LATE_WAVE: WaveBand = { min: 50, max: 100 };
 export const ARMY_CAP_SOLDIERS = 150;
 
 const SECONDS_PER_HOUR = 3600;
-/** The tick the seat's first wave may march from: the end of the lobby peace it is a member of
- *  (`PeaceRules`), else the start. */
-export function peaceEndsAt(world: World, player: number): number {
-  return peaceEndTickOf(world, player) ?? 0;
-}
 
 /** Game time over which the band grows linearly from {@link OPENING_WAVE} to {@link LATE_WAVE}, counted
  *  from the end of the peace, then holds (authored). Three hours of game time is one hour of play at

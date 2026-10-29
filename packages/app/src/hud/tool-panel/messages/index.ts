@@ -15,7 +15,7 @@ import {
   isPalisade,
   isRoadSite,
   num,
-  peaceEndsAtTickOf,
+  peaceHoldsUntilTickOf,
   type SnapshotEntity,
 } from '../../../game/snapshot/index.js';
 import type { ViewerSeat } from '../../../game/viewer-seat.js';
@@ -453,7 +453,7 @@ export function createMessageCenter(deps: MessageCenterDeps): MessageCenter {
       }
       if (!peaceAnnounced && seat !== null) {
         peaceAnnounced = true;
-        const endsAt = peaceEndsAtTickOf(snapshot);
+        const endsAt = peaceHoldsUntilTickOf(snapshot);
         if (endsAt !== null) take(peaceNote(peaceMinutesLeft(endsAt, snapshot.tick), naming), snapshot.tick);
       }
       if (restartLabels !== null) {

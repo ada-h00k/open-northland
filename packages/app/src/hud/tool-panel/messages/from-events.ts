@@ -15,7 +15,7 @@ import {
   type FightVictimKind,
   fightPlaceOf,
 } from './fight-areas.js';
-import { peaceNote } from './peace.js';
+import { peaceNote, peaceRefusalNote } from './peace.js';
 import { type MessageNaming, MessageRaiser, type RaisedMessage } from './raise.js';
 import type { SightingOf } from './sighting.js';
 import type { NamedSettler } from './text.js';
@@ -490,6 +490,12 @@ export function messagesFromEvents(
         // Every seat hears the peace: a seat outside it is a map AI camp, which no person plays.
         const note = peaceNote(ev.kind === 'peaceEnding' ? ev.minutesLeft : null, naming);
         raiser.raise(`${note.pending.type}|minutes:${note.pending.about ?? ''}`, note.pending, note.compose);
+        break;
+      }
+      case 'peaceRefusedWalk': {
+        if (ev.player !== localPlayer) break;
+        const note = peaceRefusalNote({ hx: ev.x, hy: ev.y }, naming);
+        raiser.raise(`${note.pending.type}|peace`, note.pending, note.compose);
         break;
       }
       case 'combatHit':

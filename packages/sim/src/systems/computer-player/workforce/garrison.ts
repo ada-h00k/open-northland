@@ -10,6 +10,7 @@ import {
   ownerOf,
   playerGoodList,
   Settler,
+  seatPeaceEndTick,
   TrainingOrder,
 } from '../../../components/index.js';
 import type { PlayerCommand } from '../../../core/commands/index.js';
@@ -34,7 +35,7 @@ import { assistantCounterCommand } from '../assistant-counters.js';
 import { seatBarracksOf } from '../base.js';
 import { type ComputerProfile, shareOf } from '../difficulty.js';
 import { WAVE_MIN_SOLDIERS } from '../military/muster.js';
-import { peaceEndsAt, WAVE_GATHER_TICKS } from '../military/plan.js';
+import { WAVE_GATHER_TICKS } from '../military/plan.js';
 import { productsOf } from './craft.js';
 
 /** The army's armed classes; publication order breaks a draft tie, leaving the odd man in reach. */
@@ -111,7 +112,7 @@ export function garrisonArms(
 
 /**
  * The army floor: once the seat's peace is within {@link ARMY_FLOOR_LEAD_TICKS} of its end ({@link
- * peaceEndsAt}, the start when there is none), the seat keeps its profile's share of the fighters its
+ * seatPeaceEndTick}, the start when there is none), the seat keeps its profile's share of the fighters its
  * strongest enemy fields ({@link strongestEnemyStrength}), never fewer than {@link ARMY_FLOOR_MIN} and never
  * past a cap it drafts to. Its fighters and the recruits already in drill count toward it, so only the
  * missing men are claimed out of `force`, which the ladder calls after the target-tier posts and ahead of
@@ -130,7 +131,7 @@ export function claimArmyFloor(
 ): readonly Entity[] {
   const barracks = drillFloorOf(world, ctx, player);
   if (barracks === null) return [];
-  if (ctx.tick < peaceEndsAt(world, player) - ARMY_FLOOR_LEAD_TICKS) return [];
+  if (ctx.tick < seatPeaceEndTick(world, player) - ARMY_FLOOR_LEAD_TICKS) return [];
   // The seat's own roster settles the draftable count before the enemies' rosters are walked.
   const surplus = arms.surplus();
   if (surplus <= 0) return [];

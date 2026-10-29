@@ -14,7 +14,7 @@ import {
   type SaveGame,
   type Simulation,
   type TerrainMap,
-  TICKS_PER_SECOND,
+  TICKS_PER_MINUTE,
   warmWorldIndexes,
 } from '@open-northland/sim';
 import type { ContentIr } from '../../content/ir/rows.js';
@@ -106,8 +106,6 @@ export interface MapWorld {
 /** Placements are queued commands: one tick drains them, so the start-camera focus sees entities a
  *  0-tick snapshot would not, while leaving the spawned settlers at their start. */
 const PLACEMENT_DRAIN_TICKS = 1;
-
-const SECONDS_PER_MINUTE = 60;
 
 /** Session rules and visibility are applied before the briefing can pause the world. */
 export function buildMapWorld(options: MapWorldOptions): MapWorld {
@@ -247,7 +245,7 @@ function openPeace(sim: Simulation, options: MapWorldOptions): void {
   if (options.peace === null) return;
   const players = (options.peaceSeats ?? []).filter((seat) => !options.absentSeats?.includes(seat));
   if (players.length === 0) return;
-  const untilTick = options.peace * SECONDS_PER_MINUTE * TICKS_PER_SECOND;
+  const untilTick = options.peace * TICKS_PER_MINUTE;
   sim.enqueueSetup({ kind: 'setPeaceTime', untilTick, players });
 }
 

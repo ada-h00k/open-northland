@@ -1752,6 +1752,7 @@ export const plGame = {
       settingsNeedRestart: 'Wymaga restartu',
       peaceEnding: 'Pokój: {count} min',
       peaceEnded: 'Koniec pokoju',
+      peaceRefusedWalk: 'Pokój: odmowa',
       houseUpgraded: 'Rozbudowano',
       vehicleNoPath: 'Brak trasy',
       vehicleNoCommander: 'Brak dowódcy',
@@ -1843,6 +1844,8 @@ export const plGame = {
       settingsNeedRestart: 'Zmiana ustawień zadziała po ponownym uruchomieniu mapy: {settings}.',
       peaceEnding: 'Pokój kończy się za {minutes}. Do tego czasu gracze nie mogą się atakować.',
       peaceEnded: 'Pokój dobiegł końca. Gracze znów mogą się atakować.',
+      peaceRefusedWalk:
+        'Dopóki trwa pokój, nie możesz wysyłać wojska pod osadę gracza, z którym łączy cię pokój.',
       houseUpgraded: 'Rozbudowa ukończona: {building}.',
       vehicleNoPath: '{vehicle}: brak drogi do celu. Wskaż inny cel.',
       vehicleNoCommander: '{vehicle}: nikt nie kieruje tym wehikułem. Wyślij do wehikułu osadnika.',

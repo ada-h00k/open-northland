@@ -138,8 +138,8 @@ export function resolveCombatHit(
   // Children are immune until growth removes Age, including collateral projectile hits.
   // Original behavior reported by the owner; not independently verified in the running original.
   if (world.has(target, Age)) return null;
-  // A lobby peace spares its members every blow from each other, a stray or splash shot included, and so
-  // provokes no stance change either.
+  // A lobby peace spares its members every blow from each other, and so provokes no stance change either.
+  // A shot outliving its shooter has no owner here; the flight keys the peace on its recorded side.
   if (ownersAtPeace(world, attacker, target)) return null;
   // A target felled earlier this tick still holds its Health until cleanup reaps it: a blow there lands on a
   // corpse, which earns nothing and provokes no one, the same as a shot that is never loosed at one.

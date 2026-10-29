@@ -1776,6 +1776,7 @@ export const enGame = {
       settingsNeedRestart: 'Needs a restart',
       peaceEnding: 'Peace: {count} min',
       peaceEnded: 'Peace over',
+      peaceRefusedWalk: 'Peace: refused',
       houseUpgraded: 'Upgraded',
       vehicleNoPath: 'No route',
       vehicleNoCommander: 'No commander',
@@ -1865,6 +1866,8 @@ export const enGame = {
       settingsNeedRestart: 'A settings change takes effect after the map is restarted: {settings}.',
       peaceEnding: 'The peace ends in {minutes}. Until then, the players cannot attack each other.',
       peaceEnded: 'The peace has ended. The players can attack each other again.',
+      peaceRefusedWalk:
+        'While the peace holds, you cannot send troops near the settlement of a player you are at peace with.',
       houseUpgraded: 'Upgrade finished: {building}.',
       vehicleNoPath: '{vehicle} cannot find a way there. Pick another destination.',
       vehicleNoCommander: '{vehicle} has nobody to command it. Send a settler aboard.',

@@ -1,7 +1,7 @@
 import { mapLobbySlots } from '@open-northland/data';
 import { PEACE_MINUTES, type PeaceMinutes } from '@open-northland/lockstep';
 import type { prepareInitialSave } from '@open-northland/net-client';
-import { components, type SaveGame, type Simulation, TICKS_PER_SECOND } from '@open-northland/sim';
+import { components, type SaveGame, type Simulation, TICKS_PER_MINUTE } from '@open-northland/sim';
 import { buildingFootprints } from '../../../content/ir/joins.js';
 import { loadIr } from '../../../content/ir/load.js';
 import { loadRuntimeRealContent } from '../../../content/real-content.js';
@@ -61,12 +61,10 @@ export async function validateNetworkSave(save: SaveGame, handle: VerifiedMapDoc
   };
 }
 
-const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
-
 /** The length of the peace the saved match opened while it still holds, so the room shows it; the
  *  restored world keeps its own deadline and never opens another. Null once it ended. */
 function savedPeace(sim: Simulation): PeaceMinutes | null {
-  const until = sim.peaceEndsAtTick();
+  const until = sim.peaceHoldsUntilTick();
   return PEACE_MINUTES.find((minutes) => minutes * TICKS_PER_MINUTE === until) ?? null;
 }
 

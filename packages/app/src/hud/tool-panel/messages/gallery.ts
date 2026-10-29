@@ -13,7 +13,7 @@ import {
 import { messages } from '../../../i18n/index.js';
 import type { MetSeat } from './from-diplomacy.js';
 import { type BuildingTrades, isPerson, raiseFight, raiseUnlocks } from './from-events.js';
-import { peaceNote } from './peace.js';
+import { peaceNote, peaceRefusalNote } from './peace.js';
 import { type MessageNaming, MessageRaiser, nodeOf, type RaisedMessage } from './raise.js';
 import { settingsRestartNote } from './settings-restart.js';
 import { raiseShortage } from './site-shortages.js';
@@ -183,6 +183,11 @@ export function galleryMessages(
     }
     if (name === 'peaceEnding' || name === 'peaceEnded') {
       const note = peaceNote(name === 'peaceEnding' ? GALLERY_PEACE_MINUTES : null, naming);
+      raiser.raise(`${type}|peace`, note.pending, note.compose);
+      continue;
+    }
+    if (name === 'peaceRefusedWalk') {
+      const note = peaceRefusalNote(null, naming);
       raiser.raise(`${type}|peace`, note.pending, note.compose);
       continue;
     }

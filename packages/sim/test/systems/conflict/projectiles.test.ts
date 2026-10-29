@@ -18,6 +18,7 @@ import {
   Stockpile,
   Stump,
   setMissionBehaviour,
+  setPeaceTime,
 } from '../../../src/components/index.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import { type Fixed, fx, nodeOfPosition, ONE, positionOfNode, Simulation } from '../../../src/index.js';
@@ -735,6 +736,49 @@ describe('projectiles - area shots', () => {
       [enemy, OWN, undefined],
       [comrade, OWN, true],
     ]);
+  });
+});
+
+describe('projectiles - a lobby peace', () => {
+  it('spares a peace partner where a stone lands after its shooter is gone, under a weapon that hits itself', () => {
+    const OWN = 0;
+    const PARTNER = 1;
+    const FOE = 2;
+    const PEACE_UNTIL = 1000;
+    const sim = new Simulation({ seed: 1, content: content(), map: grassMap(24, 6) });
+    const shooter = marksmanAt(sim, 0, 0);
+    const enemy = fighterAt(sim, 8, 2, FRANK, IDLE);
+    const partner = fighterAt(sim, 8, 2, FRANK, IDLE);
+    sim.world.add(enemy, Owner, { player: FOE });
+    sim.world.add(partner, Owner, { player: PARTNER });
+    setPeaceTime(sim.world, sim.tick, PEACE_UNTIL, [OWN, PARTNER]);
+    const aim = sim.world.get(enemy, Position);
+    const p = sim.world.create();
+    sim.world.add(p, Position, { x: aim.x, y: aim.y });
+    sim.world.add(p, Projectile, {
+      source: shooter,
+      target: enemy,
+      player: OWN,
+      hitSelf: true,
+      area: true,
+      damage: { '0': BOW_DAMAGE },
+      hitSounds: {},
+      weaponMainType: null,
+      missSounds: {},
+      munitionType: ARROW,
+      originX: fx.fromInt(0),
+      originY: fx.fromInt(0),
+      aimX: aim.x,
+      aimY: aim.y,
+      cover: null,
+      launchTick: sim.tick,
+      landTick: sim.tick + 1,
+      impact: null,
+    });
+    sim.world.destroy(shooter);
+    sim.step();
+    expect(sim.world.get(enemy, Health).hitpoints).toBe(TARGET_HP - BOW_DAMAGE);
+    expect(sim.world.get(partner, Health).hitpoints).toBe(TARGET_HP);
   });
 });
 

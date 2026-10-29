@@ -19,7 +19,7 @@ import {
 } from '../../diag/index.js';
 import { reportProblem } from '../../diag/report/problem.js';
 import { HUMAN_PLAYER } from '../../game/rules.js';
-import { peaceEndsAtTickOf } from '../../game/snapshot/index.js';
+import { peaceHoldsUntilTickOf } from '../../game/snapshot/index.js';
 import type { ViewerSeat } from '../../game/viewer-seat.js';
 import type { MinimapHandle } from '../../hud/minimap/index.js';
 import { type BuildingPick, probeOwner, techWaived } from '../../hud/tool-panel/placement.js';
@@ -356,7 +356,7 @@ export function startFrameLoop(loop: FrameLoopDeps): RafLoop {
       fogView === null
         ? frameEvents
         : frameEvents.filter((ev) => !('at' in ev) || fogGates.seesNode(ev.at.hx, ev.at.hy));
-    toolPanel.controller.update(hudModelFor(snap), peaceEndsAtTickOf(snap));
+    toolPanel.controller.update(hudModelFor(snap), peaceHoldsUntilTickOf(snap));
     // An open briefing's map pictures, painted over the window during `renderer.update`.
     renderer.setMapViews(toolPanel.controller.mapViews());
     // Unfiltered: the notes are the seat's own affairs, and its own settler in the fog still starves.

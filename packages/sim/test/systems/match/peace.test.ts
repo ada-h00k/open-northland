@@ -1,3 +1,4 @@
+import { type ContentSet, parseContentSet } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
 import {
   Building,
@@ -7,11 +8,13 @@ import {
   PlayerOrder,
   Settler,
 } from '../../../src/components/index.js';
-import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
+import { TICKS_PER_MINUTE } from '../../../src/core/loop.js';
 import type { Entity } from '../../../src/ecs/world.js';
-import { Simulation } from '../../../src/index.js';
+import { type SimEvent, Simulation } from '../../../src/index.js';
 import { PEACE_KEEP_OUT_RADIUS_NODES } from '../../../src/systems/match/peace.js';
+import { WEAPON_MAIN_TYPE } from '../../../src/systems/readviews/index.js';
 import { resolveCombatHit } from '../../../src/systems/settlers/atomics/effects/combat/hit/resolution.js';
+import { createVehicle } from '../../../src/systems/vehicles/index.js';
 import { aiContent } from '../../fixtures/ai-content.js';
 import { testContent } from '../../fixtures/content.js';
 import { grassNodeMap } from '../../fixtures/terrain.js';
@@ -21,7 +24,6 @@ import { ctxOf, fighterAt, grassMap, P0, P1, VIKING, WOODCUTTER } from '../confl
 const P2 = 2;
 /** Far enough into the match that a fight would have landed several blows. */
 const PEACE_END = 40;
-const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 
 function skirmishSim(): Simulation {
   return new Simulation({ seed: 1, content: testContent(), map: grassMap(5, 1) });
@@ -50,7 +52,7 @@ describe('lobby peace - harm between seats', () => {
 
     sim.step();
     expect(sim.atPeace(P0, P1)).toBe(false);
-    expect(sim.peaceEndsAtTick()).toBeNull();
+    expect(sim.peaceHoldsUntilTick()).toBeNull();
     expect(sim.world.has(a, Engagement)).toBe(true);
   });
 
@@ -98,12 +100,46 @@ describe('lobby peace - harm between seats', () => {
   });
 });
 
-describe('lobby peace - walk orders near a partner', () => {
+describe('lobby peace - orders that send arms near a partner', () => {
   const SPEARMAN = 32;
   const CIVILIST = 6;
   const HQ_TYPE = 1;
+  const CATAPULT = 5;
+  const CART = 6;
+  /** The catapult crew's class, which binds the siege weapon; a cart's class binds none. */
+  const CATAPULT_JOB = 54;
+  const CART_JOB = 55;
   const PARTNER_HQ = { x: 50, y: 16 };
   const HOME = { x: 4, y: 16 };
+  const OWN_HQ = { x: 20, y: 16 };
+  /** The partner's building dropped beside {@link OWN_HQ}, nearer to it than its own town. */
+  const PARTNER_OUTPOST = { x: 27, y: 16 };
+
+  /** {@link aiContent} with an armed catapult and an unarmed cart. */
+  function vehicleContent(): ContentSet {
+    const base = aiContent();
+    const vehicle = { stockSlots: 0, logicSize: 1, passengerJobs: [SPEARMAN], commanderJob: SPEARMAN };
+    return parseContentSet({
+      ...base,
+      jobs: [...base.jobs, { typeId: CATAPULT_JOB, id: 'catapult' }, { typeId: CART_JOB, id: 'cart' }],
+      vehicles: [
+        { ...vehicle, typeId: CATAPULT, id: 'catapult', jobId: CATAPULT_JOB, hitpoints: 3000 },
+        { ...vehicle, typeId: CART, id: 'cart', jobId: CART_JOB, hitpoints: 500 },
+      ],
+      weapons: [
+        ...base.weapons,
+        {
+          typeId: 30,
+          id: 'viking_catapult',
+          tribeType: VIKING,
+          jobType: CATAPULT_JOB,
+          mainType: WEAPON_MAIN_TYPE.CATAPULT,
+          minRange: 10,
+          maxRange: 40,
+        },
+      ],
+    });
+  }
 
   function spawnAt(sim: Simulation, jobType: number, owner: number): Entity {
     const before = new Set(sim.world.query(Settler));
@@ -114,38 +150,49 @@ describe('lobby peace - walk orders near a partner', () => {
     return spawned;
   }
 
-  function partnerSim(): { sim: Simulation; soldier: Entity; civilian: Entity } {
-    const sim = new Simulation({ seed: 1, content: aiContent(), map: grassNodeMap(64, 32) });
-    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: 10_000, players: [P0, P1] });
+  function placeHq(sim: Simulation, at: { x: number; y: number }, owner: number): void {
     sim.enqueueSetup({
       kind: 'placeBuilding',
       buildingType: HQ_TYPE,
-      ...PARTNER_HQ,
+      ...at,
       tribe: VIKING,
-      owner: P1,
+      owner,
       force: true,
     });
+  }
+
+  function partnerSim(content = aiContent()): { sim: Simulation; soldier: Entity; civilian: Entity } {
+    const sim = new Simulation({ seed: 1, content, map: grassNodeMap(64, 32) });
+    sim.enqueueSetup({ kind: 'setPeaceTime', untilTick: 10_000, players: [P0, P1] });
+    placeHq(sim, PARTNER_HQ, P1);
     const soldier = spawnAt(sim, SPEARMAN, P0);
     const civilian = spawnAt(sim, CIVILIST, P0);
     expect([...sim.world.query(Building)]).toHaveLength(1);
     return { sim, soldier, civilian };
   }
 
-  it("refuses a soldier sent to a partner's door while a civilian of the same order goes", () => {
+  function refusals(sim: Simulation): Extract<SimEvent, { kind: 'peaceRefusedWalk' }>[] {
+    return sim.events.current().flatMap((ev) => (ev.kind === 'peaceRefusedWalk' ? [ev] : []));
+  }
+
+  it("refuses soldiers sent to a partner's door, with one note, while a civilian of the same order goes", () => {
     const { sim, soldier, civilian } = partnerSim();
+    const second = spawnAt(sim, SPEARMAN, P0);
     const door = { x: PARTNER_HQ.x - PEACE_KEEP_OUT_RADIUS_NODES + 2, y: PARTNER_HQ.y };
 
     sim.enqueueSetup({
       kind: 'moveUnitGroup',
       members: [
         { entity: soldier, ...door },
+        { entity: second, ...door },
         { entity: civilian, ...door },
       ],
     });
     sim.step();
 
-    expect(sim.world.has(soldier, PlayerOrder)).toBe(false);
+    expect(sim.world.has(soldier, PlayerOrder) || sim.world.has(second, PlayerOrder)).toBe(false);
     expect(sim.world.has(civilian, PlayerOrder)).toBe(true);
+    expect(refusals(sim)).toEqual([{ kind: 'peaceRefusedWalk', player: P0, ...door }]);
   });
 
   it('lets a soldier walk short of the zone', () => {
@@ -156,6 +203,58 @@ describe('lobby peace - walk orders near a partner', () => {
     sim.step();
 
     expect(sim.world.has(soldier, PlayerOrder)).toBe(true);
+  });
+
+  /** A seat with its own town and a partner's building dropped right beside it. */
+  function outpostSim(): { sim: Simulation; soldier: Entity } {
+    const { sim, soldier } = partnerSim();
+    placeHq(sim, OWN_HQ, P0);
+    placeHq(sim, PARTNER_OUTPOST, P1);
+    sim.step();
+    return { sim, soldier };
+  }
+
+  it("lets a soldier defend its own town beside a partner's building, since own ground wins", () => {
+    const { sim, soldier } = outpostSim();
+
+    sim.enqueueSetup({ kind: 'moveUnit', entity: soldier, x: OWN_HQ.x + 2, y: OWN_HQ.y });
+    sim.step();
+
+    expect(sim.world.has(soldier, PlayerOrder)).toBe(true);
+  });
+
+  it("still refuses a soldier sent deep into the partner's base", () => {
+    const { sim, soldier } = outpostSim();
+
+    sim.enqueueSetup({ kind: 'moveUnit', entity: soldier, x: PARTNER_HQ.x - 3, y: PARTNER_HQ.y });
+    sim.step();
+
+    expect(sim.world.has(soldier, PlayerOrder)).toBe(false);
+  });
+
+  it("refuses a catapult driven to a partner's door, while a cart goes", () => {
+    const content = vehicleContent();
+    const { sim } = partnerSim(content);
+    const door = { x: PARTNER_HQ.x - PEACE_KEEP_OUT_RADIUS_NODES + 2, y: PARTNER_HQ.y };
+    const vehicleAt = (vehicleType: number, y: number): Entity => {
+      const e = createVehicle(sim.world, ctxOf(sim), { vehicleType, ...HOME, y, tribe: VIKING, owner: P0 });
+      if (e === null) throw new Error('setup: the vehicle is not in the content');
+      return e;
+    };
+    const catapult = vehicleAt(CATAPULT, HOME.y - 8);
+    const cart = vehicleAt(CART, HOME.y + 8);
+
+    sim.enqueueSetup({ kind: 'moveVehicle', vehicle: catapult, ...door });
+    sim.enqueueSetup({ kind: 'moveVehicle', vehicle: cart, ...door });
+    sim.step();
+
+    // Neither has a commander: the cart's order reaches the drive and is refused there, the catapult's
+    // never does.
+    const moveRefused = sim.events
+      .current()
+      .flatMap((ev) => (ev.kind === 'vehicleMoveRefused' ? [ev.entity] : []));
+    expect(moveRefused).toEqual([cart]);
+    expect(refusals(sim)).toEqual([{ kind: 'peaceRefusedWalk', player: P0, ...door }]);
   });
 });
 

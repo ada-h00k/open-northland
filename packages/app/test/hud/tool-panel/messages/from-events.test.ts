@@ -93,6 +93,20 @@ describe('user messages from sim events', () => {
     ]);
   });
 
+  it("notes the peace's refusal of this seat's orders once, at the first refused spot, and no other seat's", () => {
+    const notes = run(
+      [
+        { kind: 'peaceRefusedWalk', player: ENEMY, x: 1, y: 1 },
+        { kind: 'peaceRefusedWalk', player: LOCAL, x: 4, y: 6 },
+        { kind: 'peaceRefusedWalk', player: LOCAL, x: 8, y: 6 },
+      ],
+      snapshot(1, []),
+    );
+    expect(notes.map((note) => [note.type, note.at])).toEqual([
+      [USER_MESSAGE_TYPE.peaceRefusedWalk, { hx: 4, hy: 6 }],
+    ]);
+  });
+
   it("raises finished and upgraded buildings the seat owns, and no one else's", () => {
     const snap = snapshot(50, [
       { id: 1, player: LOCAL, kind: 'building' },

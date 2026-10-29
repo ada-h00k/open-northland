@@ -47,9 +47,9 @@ export interface HudSystemBar {
   setSpeed(control: GameSpeedControl): void;
   /** Null restores the plain look. While `held`, a click on the bar does nothing. */
   setLook(look: SpeedBarLook | null): void;
-  /** Show the tick's figures and clock, and the countdown to `peaceEndsAt` (null hides it); the same
+  /** Show the tick's figures and clock, and the countdown to `peaceHoldsUntil` (null hides it); the same
    *  model twice costs nothing. */
-  update(model: HudModel, peaceEndsAt: number | null): void;
+  update(model: HudModel, peaceHoldsUntil: number | null): void;
   /** Hang `node` just left of the bar, right-aligned to it on its vertical centre; null takes the hung
    *  node down. The bar owns the place, the caller the node. */
   setAside(node: HTMLElement | null): void;
@@ -156,10 +156,10 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
       look = next;
       showSpeed();
     },
-    update: (model, peaceEndsAt) => {
+    update: (model, peaceHoldsUntil) => {
       picker?.refresh();
       summary.update(model);
-      const left = peaceEndsAt === null ? '' : formatPeaceLeft(peaceEndsAt, model.tick);
+      const left = peaceHoldsUntil === null ? '' : formatPeaceLeft(peaceHoldsUntil, model.tick);
       if (left !== shownPeace) {
         shownPeace = left;
         peace.hidden = left === '';

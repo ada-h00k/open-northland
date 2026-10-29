@@ -1901,6 +1901,7 @@ export const ruGame = {
       settingsNeedRestart: 'Нужен перезапуск',
       peaceEnding: 'Мир: {count} мин',
       peaceEnded: 'Мир окончен',
+      peaceRefusedWalk: 'Мир: отказ',
       houseUpgraded: 'Улучшено',
       vehicleNoPath: 'Нет пути',
       vehicleNoCommander: 'Нет начальника',
@@ -1992,6 +1993,8 @@ export const ruGame = {
       settingsNeedRestart: 'Изменение настроек вступит в силу после перезапуска карты: {settings}.',
       peaceEnding: 'Мир закончится через {minutes}. До тех пор игроки не могут нападать друг на друга.',
       peaceEnded: 'Мир окончен. Игроки снова могут нападать друг на друга.',
+      peaceRefusedWalk:
+        'Пока действует мир, нельзя отправлять войска к поселению игрока, с которым у вас мир.',
       houseUpgraded: 'Улучшение завершено: {building}.',
       vehicleNoPath: '{vehicle}: путь к цели не найден. Выберите другое место назначения.',
       vehicleNoCommander: '{vehicle}: некому командовать. Отправьте поселенца на борт.',

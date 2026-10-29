@@ -25,7 +25,7 @@ import { forceFinishConstruction } from '../economy/construction.js';
 import { carriesFoodAmulet } from '../equipment/effects.js';
 import { setHouseholdGoodUse } from '../family/home-quality.js';
 import { razePalisade } from '../lifecycle/cleanup.js';
-import { peaceBarsWalk } from '../match/peace.js';
+import { type PeaceRefusal, peaceRefusal } from '../match/peace.js';
 import { payTribute } from '../missions/tributes.js';
 // Deliberately the module, not the orders barrel: the handler reaches into
 // `computer-player/assistant-counters.js` for the published-counter map, and routing that through the
@@ -120,8 +120,7 @@ import { demolish, demolishSignpost, dropGood, placeResource } from './world-edi
  * validation and treat stale ids as recoverable input, so one rejected order cannot abort the tick.
  */
 export const commandSystem: System = (world, ctx) => {
-  // The pass's vehicle gotos share their long routes, so a group order costs about one search.
-  const orders = new VehicleOrderRoutes();
+  const pass: CommandPass = { orders: new VehicleOrderRoutes(), peaceRefused: new Set() };
   for (const queued of ctx.commands.drain(ctx.tick)) {
     const command = authorizedCommand(world, queued, ctx.terrain);
     if (command !== undefined) {
@@ -129,7 +128,7 @@ export const commandSystem: System = (world, ctx) => {
         queued.origin === 'ai' && queued.decisionSource !== undefined
           ? { player: queued.player, source: queued.decisionSource }
           : undefined;
-      applyCommand(world, ctx, command, orders, origin);
+      applyCommand(world, ctx, command, pass, origin);
       wakeAddressed(world, command);
     }
     ctx.commands.record(ctx.tick, queued);
@@ -143,11 +142,27 @@ function wakeAddressed(world: World, command: Command): void {
   if ('members' in command) for (const member of command.members) wakeIdle(world, member.entity);
 }
 
+/** Tell a player once per pass that the peace refused a person's order of theirs, naming the first refused
+ *  destination, so a group order raises one note however many members it held back. */
+function tellPeaceRefusal(ctx: SystemContext, pass: CommandPass, refusal: PeaceRefusal): void {
+  if (pass.peaceRefused.has(refusal.player)) return;
+  pass.peaceRefused.add(refusal.player);
+  ctx.events.emit({ kind: 'peaceRefusedWalk', ...refusal });
+}
+
+/** What the commands of one pass share. */
+interface CommandPass {
+  /** The pass's vehicle gotos share their long routes, so a group order costs about one search. */
+  readonly orders: VehicleOrderRoutes;
+  /** The players already told this pass that the peace refused an order of theirs. */
+  readonly peaceRefused: Set<number>;
+}
+
 function applyCommand(
   world: World,
   ctx: SystemContext,
   command: Command,
-  orders: VehicleOrderRoutes,
+  pass: CommandPass,
   origin?: AiOrderOrigin,
 ): void {
   // Original behavior (not yet confirmed in a running game): a food amulet makes an eat order a no-op,
@@ -165,8 +180,13 @@ function applyCommand(
     !jobCanPray(ctx.content.jobs, world.tryGet(command.entity, Settler)?.jobType ?? null)
   )
     return;
-  // A soldier sent to a peace partner's door is held back; a civilian of the same group still goes.
-  if (peaceBarsWalk(world, ctx, command)) return;
+  // Arms sent to a peace partner's door are held back; a civilian of the same group still goes. A computer
+  // seat's planner hears no note.
+  const refused = peaceRefusal(world, ctx, command);
+  if (refused !== null) {
+    if (origin === undefined) tellPeaceRefusal(ctx, pass, refused);
+    return;
+  }
   // A Shift-clicked order waits behind the settler's or vehicle's current one; an order that takes it at
   // once drops every order still waiting in its handler.
   if (isQueuedOrder(command) && queueBehindCurrentOrder(world, command, origin)) return;
@@ -174,7 +194,8 @@ function applyCommand(
   // A vehicle's commander hands a walk order to the vehicle. Any other settler crewing a vehicle is
   // taken off it before an order sends it elsewhere; one that may not leave (aboard a ship at sea)
   // keeps its seat and the order is dropped.
-  if (isCommanderWalkOrder(command) && driveCommandedVehicle(world, ctx, command, orders, origin)) return;
+  if (isCommanderWalkOrder(command) && driveCommandedVehicle(world, ctx, command, pass.orders, origin))
+    return;
   if (forcesDetach(command) && !detachBeforeOrder(world, ctx, command.entity)) return;
   if (releasesHaulingCart(command)) releaseHaulingCart(world, ctx, command.entity);
   switch (command.kind) {
@@ -197,7 +218,7 @@ function applyCommand(
             ...(command.attackMove ? { attackMove: true } : {}),
             ...(command.queued ? { queued: true } : {}),
           },
-          orders,
+          pass,
           origin,
         );
       }
@@ -214,7 +235,7 @@ function applyCommand(
             target: command.target,
             ...(command.queued ? { queued: true } : {}),
           },
-          orders,
+          pass,
           origin,
         );
       return;
@@ -225,13 +246,13 @@ function applyCommand(
       )
         return;
       for (const { entity, actions } of command.members) {
-        for (const action of actions) applyCommand(world, ctx, { ...action, entity }, orders, origin);
+        for (const action of actions) applyCommand(world, ctx, { ...action, entity }, pass, origin);
       }
       return;
     case 'unitActionGroup':
       if (command.members.length > MAX_UNIT_ORDER_MEMBERS) return;
       for (const { entity } of command.members) {
-        applyCommand(world, ctx, { ...command.action, entity }, orders, origin);
+        applyCommand(world, ctx, { ...command.action, entity }, pass, origin);
       }
       return;
     case 'moveUnitGroup':
@@ -243,7 +264,7 @@ function applyCommand(
           world,
           ctx,
           { kind, ...member, ...(command.queued ? { queued: true } : {}) },
-          orders,
+          pass,
           origin,
         );
       }
@@ -265,7 +286,7 @@ function applyCommand(
             : command.kind === 'setStanceGroup'
               ? { kind: 'setStance', entity, mode: command.mode }
               : { kind: 'setRegeneration', entity, enabled: command.enabled };
-        applyCommand(world, ctx, single, orders, origin);
+        applyCommand(world, ctx, single, pass, origin);
       }
       return;
     case 'placeBuilding':
@@ -329,7 +350,7 @@ function applyCommand(
       obeyDespiteHunger(world, ctx, command.entity, () => moveUnit(world, ctx, command, origin));
       return;
     case 'moveVehicle':
-      moveVehicle(world, ctx, command, orders, origin);
+      moveVehicle(world, ctx, command, pass.orders, origin);
       return;
     case 'dockVehicle':
       dockVehicle(world, ctx, command, origin);

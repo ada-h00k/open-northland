@@ -1,4 +1,4 @@
-import { ownerOf, WaveMarch } from '../../../components/index.js';
+import { ownerOf, seatPeaceEndTick, WaveMarch } from '../../../components/index.js';
 import type { PlayerCommand } from '../../../core/commands/index.js';
 import type { Entity, World } from '../../../ecs/world.js';
 import type { NodeId, TerrainGraph } from '../../../nav/terrain/index.js';
@@ -12,7 +12,7 @@ import { computerProfileOf } from '../difficulty.js';
 import { campaignTarget, objectiveNode } from './campaign.js';
 import { advanceWave, endMarch, launchWave } from './march/index.js';
 import { gatherAt, marchOrders, meleeCoreFor, musterAround, rallyAt, waveWorthy } from './muster.js';
-import { abandonWave, decideWave, peaceEndsAt } from './plan.js';
+import { abandonWave, decideWave } from './plan.js';
 
 /** What the caller has left to spend on the campaign: the tower garrison and the band a raid takes are
  *  already out of `army`, `awaitingWeapon` is only ever called home, and `wave` holds the free men of the
@@ -29,7 +29,7 @@ const NO_CAMPAIGN: readonly PlayerCommand[] = [];
  * One strategic decision for the seat's campaign: the marching wave takes its next step
  * ({@link advanceWave}), then the rest of `army` is sorted around the barracks door ({@link musterAround})
  * and, with no wave out, the launch is judged ({@link decideWave}). Until the peace ends
- * ({@link peaceEndsAt}) and the difficulty's first wave may march, the army only gathers at the door, as
+ * ({@link seatPeaceEndTick}) and the difficulty's first wave may march, the army only gathers at the door, as
  * it does with no target. The men at the door set out as a wave when the muster is the one it was
  * gathering and the target's owner does not outnumber the seat; a body already nearer the objective goes
  * in whatever the muster says, having nowhere safe to wait; everybody else is called in.
@@ -49,7 +49,7 @@ export function runOffensive(
   if (!atHome && !world.has(barracks, WaveMarch)) return NO_CAMPAIGN;
   const home = interactionCell(world, ctx, terrain, barracks);
   const { army: armyProfile } = computerProfileOf(world, player);
-  const peaceEnd = Math.max(peaceEndsAt(world, player), armyProfile.firstWaveFromTick);
+  const peaceEnd = Math.max(seatPeaceEndTick(world, player), armyProfile.firstWaveFromTick);
   const target = ctx.tick < peaceEnd ? null : campaignTarget(world, ctx, terrain, player, home);
   if (target === null) {
     abandonWave(world, barracks);

@@ -1,4 +1,5 @@
 import {
+  atPeace,
   Building,
   fightsPlayer,
   Health,
@@ -91,6 +92,7 @@ function land(
   const at = eventAt(proj.aimX, proj.aimY);
   let struckAny = false;
   for (const victim of struckVictims(world, ctx, proj)) {
+    if (peaceSpares(world, proj, victim)) continue;
     const hitSoundType = hitSoundVsMaterial(proj, targetMaterial(world, ctx, victim));
     const source = atWar(world, proj.player ?? undefined, ownerOf(world, victim))
       ? 'projectile'
@@ -287,6 +289,14 @@ function sparedSide(world: World, proj: Flight, owner: number | undefined): bool
   return owner === proj.player || !atWar(world, proj.player, owner);
 }
 
+/** Whether a lobby peace binds `e`'s owner to the side that loosed `proj`. Keyed on the side the flight
+ *  recorded at launch, so a shot still spares the partners once its shooter is gone; a `hitSelf` weapon
+ *  spares them too. */
+function peaceSpares(world: World, proj: Flight, e: Entity): boolean {
+  const owner = ownerOf(world, e);
+  return proj.player !== null && owner !== undefined && atPeace(world, proj.player, owner);
+}
+
 /** The six map-point neighbours of `node` that lie on the map. */
 function inBoundsNeighbours(terrain: TerrainGraph, node: NodeId): NodeId[] {
   return hexNeighboursOf(terrain.xOf(node), terrain.yOf(node))
@@ -301,7 +311,7 @@ function inBoundsNeighbours(terrain: TerrainGraph, node: NodeId): NodeId[] {
  * shooter's, and an ownerless house or wall is never struck.
  */
 function strayMayStrike(world: World, ctx: SystemContext, proj: Flight, e: Entity): boolean {
-  if (e === proj.source) return false;
+  if (e === proj.source || peaceSpares(world, proj, e)) return false;
   if (world.has(e, Building) || world.has(e, Palisade)) return world.has(e, Owner);
   if (isWildlife(world, e) || proj.hitSelf) return true;
   if (proj.player !== null && world.has(e, Owner)) return true;

@@ -7,6 +7,9 @@
 /** Approximation: the base game clock advances at 12 simulation ticks per second. */
 export const TICKS_PER_SECOND = 12;
 export const MS_PER_TICK = 1000 / TICKS_PER_SECOND;
+const SECONDS_PER_MINUTE = 60;
+/** Match ticks in one minute of game time at the base clock. */
+export const TICKS_PER_MINUTE = SECONDS_PER_MINUTE * TICKS_PER_SECOND;
 
 export class FixedTimestep {
   private accumulatorMs = 0;

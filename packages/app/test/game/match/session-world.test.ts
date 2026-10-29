@@ -1,6 +1,6 @@
 import { type MapDiplomacy, MapScript } from '@open-northland/data';
 import type { GameSession } from '@open-northland/lockstep';
-import { components, FOG_MODE, TICKS_PER_SECOND } from '@open-northland/sim';
+import { components, FOG_MODE, TICKS_PER_MINUTE } from '@open-northland/sim';
 import { describe, expect, it } from 'vitest';
 import { buildMapWorld } from '../../../src/entries/map/world.js';
 import { sessionWorldOptions } from '../../../src/game/match/session-world.js';
@@ -94,12 +94,12 @@ describe('session world options', () => {
         absentSeats: [3],
       }).sim;
     const sim = build(PEACE_MINUTES);
-    expect(sim.peaceEndsAtTick()).toBe(PEACE_MINUTES * 60 * TICKS_PER_SECOND);
+    expect(sim.peaceHoldsUntilTick()).toBe(PEACE_MINUTES * TICKS_PER_MINUTE);
     expect(sim.atPeace(0, 1)).toBe(true);
     expect(sim.atPeace(0, 3)).toBe(false);
     expect(sim.atPeace(0, 2)).toBe(false);
     const none = build(null);
-    expect(none.peaceEndsAtTick()).toBeNull();
+    expect(none.peaceHoldsUntilTick()).toBeNull();
     expect(none.commands.log.some((entry) => entry.command.kind === 'setPeaceTime')).toBe(false);
   });
 

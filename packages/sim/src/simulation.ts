@@ -35,7 +35,7 @@ import {
   needsEnabled,
   type Paper,
   Position,
-  peaceEndsAtTick,
+  peaceHoldsUntilTick,
   playerGoodList,
   playerPaperSlots,
   professionProgressionEnabled,
@@ -711,8 +711,8 @@ export class Simulation {
   }
 
   /** The match tick the holding lobby peace ends at; null with no peace or once it ended. */
-  peaceEndsAtTick(): number | null {
-    return peaceEndsAtTick(this.world);
+  peaceHoldsUntilTick(): number | null {
+    return peaceHoldsUntilTick(this.world);
   }
 
   /** Whether the pair's stances are locked, so neither seat's `declareDiplomacy` changes them. */

@@ -36,7 +36,7 @@ export {
   type FogSettings,
   fogModeOf,
   fogSettings,
-  peaceEndsAtTick,
+  peaceHoldsUntilTick,
 } from './components/rules.js';
 export {
   type NeedDrain,
@@ -91,7 +91,7 @@ export {
   type WorkerRefusalReason,
 } from './core/events.js';
 export { type Fixed, fx, ONE } from './core/fixed.js';
-export { FixedTimestep, MS_PER_TICK, TICKS_PER_SECOND } from './core/loop.js';
+export { FixedTimestep, MS_PER_TICK, TICKS_PER_MINUTE, TICKS_PER_SECOND } from './core/loop.js';
 export { PersonalNames } from './core/personal-names.js';
 export { Rng } from './core/rng.js';
 export type { Component, Entity, MutationSink, SyncDomain } from './ecs/world.js';

@@ -315,16 +315,16 @@ export function atPeace(world: World, a: number, b: number): boolean {
 }
 
 /** The match tick the holding peace ends at; null with no peace or once it ended. */
-export function peaceEndsAtTick(world: World): number | null {
+export function peaceHoldsUntilTick(world: World): number | null {
   const rules = peaceRules.read(world);
   return rules.holds ? rules.untilTick : null;
 }
 
 /** The tick `player`'s peace ends or ended at, kept after the end, so a computer seat ramps its waves
- *  from it; null for a seat outside the peace or a match without one. */
-export function peaceEndTickOf(world: World, player: number): number | null {
+ *  from it; 0, the match start, for a seat outside the peace or a match without one. */
+export function seatPeaceEndTick(world: World, player: number): number {
   const rules = peaceRules.read(world);
-  return isValidPlayer(player) && (rules.players & (1 << player)) !== 0 ? rules.untilTick : null;
+  return isValidPlayer(player) && (rules.players & (1 << player)) !== 0 ? rules.untilTick : 0;
 }
 
 /** The slot bits of the seats a holding peace binds `player` to, itself excluded. */

@@ -33,6 +33,7 @@ const GLYPH_BY_TYPE: ReadonlyMap<UserMessageType, NoticeGlyph> = new Map<UserMes
   [USER_MESSAGE_TYPE.tradeRefused, 'banner'],
   [USER_MESSAGE_TYPE.peaceEnding, 'banner'],
   [USER_MESSAGE_TYPE.peaceEnded, 'swords'],
+  [USER_MESSAGE_TYPE.peaceRefusedWalk, 'banner'],
   [USER_MESSAGE_TYPE.specialItemFound, 'chest'],
 ]);
 

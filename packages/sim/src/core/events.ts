@@ -459,6 +459,14 @@ export type SimEvent =
       readonly kind: 'peaceEnded';
     }
   | {
+      /** The lobby peace refused a person's order sending `player`'s arms to node `(x, y)`, by a peace
+       *  partner's settlement. Once per player per command pass, however many of a group it held back. */
+      readonly kind: 'peaceRefusedWalk';
+      readonly player: number;
+      readonly x: number;
+      readonly y: number;
+    }
+  | {
       /**
        * The map script reached a goal or result opcode this build has no evaluator for. A goal's answer
        * is unknown, so the mission fires only when its known goals decide its rule either way; a result

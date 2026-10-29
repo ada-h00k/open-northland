@@ -1909,6 +1909,7 @@ export const deGame = {
       settingsNeedRestart: 'Neustart nötig',
       peaceEnding: 'Frieden: {count} Min.',
       peaceEnded: 'Frieden vorbei',
+      peaceRefusedWalk: 'Friedenssperre',
       houseUpgraded: 'Ausgebaut',
       vehicleNoPath: 'Kein Weg',
       vehicleNoCommander: 'Kein Kommandant',
@@ -2001,6 +2002,8 @@ export const deGame = {
       settingsNeedRestart: 'Eine geänderte Einstellung wirkt erst nach einem Neustart der Karte: {settings}.',
       peaceEnding: 'Der Frieden endet in {minutes}. Bis dahin können sich die Spieler nicht angreifen.',
       peaceEnded: 'Der Frieden ist vorbei. Die Spieler können sich wieder angreifen.',
+      peaceRefusedWalk:
+        'Solange der Frieden gilt, kannst du keine Truppen in die Nähe der Siedlung eines Spielers schicken, mit dem du Frieden hast.',
       houseUpgraded: 'Ausbau abgeschlossen: {building}.',
       vehicleNoPath: '{vehicle}: Kein Weg zum Ziel gefunden. Wähle ein anderes Ziel.',
       vehicleNoCommander: '{vehicle}: Niemand übernimmt das Kommando. Schicke einen Siedler an Bord.',

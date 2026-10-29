@@ -94,7 +94,7 @@ export function needsRuleEnabled(snapshot: WorldSnapshot): boolean {
 
 /** The match tick the lobby peace ends at while it holds, off the sim's `PeaceRules` singleton; null
  *  with no peace or once it ended. */
-export function peaceEndsAtTickOf(snapshot: WorldSnapshot): number | null {
+export function peaceHoldsUntilTickOf(snapshot: WorldSnapshot): number | null {
   const rules = entitiesWith(snapshot, 'PeaceRules')[0]?.components.PeaceRules as
     | { holds?: unknown; untilTick?: unknown }
     | undefined;

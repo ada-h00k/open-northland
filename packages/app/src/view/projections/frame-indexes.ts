@@ -24,7 +24,7 @@ import {
   isBuilding,
   isSettler,
   needsRuleEnabled,
-  peaceEndsAtTickOf,
+  peaceHoldsUntilTickOf,
   settlersOfTrade,
   staffOf,
   supplyRunsTo,
@@ -80,7 +80,7 @@ export const FRAME_INDEX_READERS: readonly AppFrameIndexReader[] = [
   },
   { name: 'needs rule', read: (snapshot) => needsRuleEnabled(snapshot) },
   // The system bar's peace countdown, read every frame.
-  { name: 'peace rule', read: (snapshot) => peaceEndsAtTickOf(snapshot) },
+  { name: 'peace rule', read: (snapshot) => peaceHoldsUntilTickOf(snapshot) },
   { name: 'actors', read: (snapshot) => actorIdsOf(snapshot) },
   { name: 'minimap layers', read: (snapshot) => readMinimapIndexes(snapshot) },
   { name: 'minimap standing nodes', read: (snapshot) => standingNodesRevision(snapshot, NO_GOODS) },
