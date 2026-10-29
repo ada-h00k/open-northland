@@ -16,7 +16,10 @@ export const plGame = {
       notices: {
         attack: { title: 'Siepacze Twierdzy ruszają do ataku!' },
         landing: { title: 'Okręty Krainy Ciemności przybijają do brzegu!' },
-        lightArmor: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali lekkie zbroje.' },
+        lightArmor: {
+          title: 'Wojownicy twierdzy rosną w siłę.',
+          detail: 'Otrzymali lepszą broń i lekkie zbroje.',
+        },
         heavyArmor: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali ciężkie zbroje.' },
         amulets: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali amulety.' },
         healDraughts: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali mikstury leczenia.' },

@@ -5,6 +5,7 @@ import {
   mapEscalationProgress,
   Owner,
   Settler,
+  Stance,
   writeEquipSlot,
   writeMapEscalation,
 } from '../../components/index.js';
@@ -14,10 +15,13 @@ import { TICKS_PER_SECOND } from '../../core/loop.js';
 import type { Entity, World } from '../../ecs/world.js';
 import { ownedSettlers } from '../ai-shared/seat-roster.js';
 import type { SystemContext } from '../context.js';
+import { weaponKeepsLockedJob } from '../readviews/equip-pick.js';
 import { isSoldierJob, mayChangeEquipment } from '../readviews/index.js';
+import { takeUpWeaponGood } from '../settlers/atomics/effects/goods/weapon-class.js';
 
 type GearConfig = NonNullable<MapEscalation['gear']>;
 type GearStep = GearConfig['steps'][number];
+type WeaponUpgrade = GearStep['weaponUpgrades'][number];
 
 const PERCENT = 100;
 /** Ticks between two looks at the entities created since the last one. */
@@ -78,19 +82,76 @@ function isGearedSoldier(world: World, ctx: SystemContext, e: Entity): boolean {
   );
 }
 
-/** Each grant draws its chance, then one of its goods; the good's equip category names the slot. A misc
- *  good takes the first free misc slot and is lost when none is free; a good without one is skipped. */
+/** The step's weapon upgrades, then its grants: each grant draws its chance, then one of its goods, then
+ *  its extra chance for a different one. The good's equip category names the slot. A misc good takes the
+ *  first free misc slot and is lost when none is free; a good without one is skipped. */
 function grantStep(world: World, ctx: SystemContext, e: Entity, step: GearStep): void {
-  const index = contentIndex(ctx.content);
+  for (const upgrade of step.weaponUpgrades) upgradeWeapon(world, ctx, e, upgrade);
   for (const grant of step.grants) {
-    if (grant.chancePct < PERCENT && ctx.rng.int(PERCENT) >= grant.chancePct) continue;
-    const slug = grant.goods.length === 1 ? grant.goods[0] : grant.goods[ctx.rng.int(grant.goods.length)];
-    const goodType = slug === undefined ? undefined : index.goodTypeBySlug.get(slug);
-    const category = goodType === undefined ? undefined : index.goods.get(goodType)?.equip?.category;
-    if (goodType === undefined || category === undefined) continue;
-    ensureEquipment(world, e);
-    const slot = category === 'misc' ? world.get(e, Equipment).misc.indexOf(null) : 0;
-    if (slot < 0) continue;
-    writeEquipSlot(world, e, category, slot, { goodType, degreeOfUse: ZERO });
+    if (!rolls(ctx, grant.chancePct)) continue;
+    const first = drawGood(ctx, grant.goods, undefined);
+    giveGood(world, ctx, e, first);
+    if (rolls(ctx, grant.extraChancePct)) giveGood(world, ctx, e, drawGood(ctx, grant.goods, first));
   }
+}
+
+/** A percent chance, drawn only when it is neither sure nor nil. */
+function rolls(ctx: SystemContext, pct: number): boolean {
+  if (pct >= PERCENT) return true;
+  return pct > 0 && ctx.rng.int(PERCENT) < pct;
+}
+
+/** One of `goods` at random, other than `except`; a single candidate draws nothing, none gives nothing. */
+function drawGood(
+  ctx: SystemContext,
+  goods: readonly string[],
+  except: string | undefined,
+): string | undefined {
+  const candidates = except === undefined ? goods : goods.filter((slug) => slug !== except);
+  if (candidates.length <= 1) return candidates[0];
+  return candidates[ctx.rng.int(candidates.length)];
+}
+
+function giveGood(world: World, ctx: SystemContext, e: Entity, slug: string | undefined): void {
+  const index = contentIndex(ctx.content);
+  const goodType = slug === undefined ? undefined : index.goodTypeBySlug.get(slug);
+  const category = goodType === undefined ? undefined : index.goods.get(goodType)?.equip?.category;
+  if (goodType === undefined || category === undefined) return;
+  ensureEquipment(world, e);
+  const slot = category === 'misc' ? world.get(e, Equipment).misc.indexOf(null) : 0;
+  if (slot < 0) return;
+  writeEquipSlot(world, e, category, slot, { goodType, degreeOfUse: ZERO });
+}
+
+/**
+ * Swap the soldier's weapon `from` for a fresh `to` and take it up as a soldier equipping it at a store
+ * does: the trade that weapon arms and the combat weapon follow. The old weapon is gone. A trade the
+ * script locks keeps its weapon. The soldier keeps the stance and anchor it had, so a guard stays posted.
+ */
+function upgradeWeapon(world: World, ctx: SystemContext, e: Entity, upgrade: WeaponUpgrade): void {
+  const index = contentIndex(ctx.content);
+  const from = index.goodTypeBySlug.get(upgrade.from);
+  const to = index.goodTypeBySlug.get(upgrade.to);
+  if (from === undefined || to === undefined || carriedWeapon(world, ctx, e) !== from) return;
+  if (!weaponKeepsLockedJob(world, ctx.content, e, to)) return;
+  const stance = world.tryGet(e, Stance);
+  const kept = stance === undefined ? undefined : { mode: stance.mode, anchorCell: stance.anchorCell };
+  ensureEquipment(world, e);
+  writeEquipSlot(world, e, 'weapon', 0, { goodType: to, degreeOfUse: ZERO });
+  takeUpWeaponGood(world, ctx, e, to);
+  const now = world.tryGet(e, Stance);
+  if (kept === undefined || now === undefined) return;
+  if (now.mode === kept.mode && now.anchorCell === kept.anchorCell) return;
+  const live = world.mut(e, Stance);
+  live.mode = kept.mode;
+  live.anchorCell = kept.anchorCell;
+}
+
+/** The weapon good the soldier carries: its weapon slot, else its class's own weapon. */
+function carriedWeapon(world: World, ctx: SystemContext, e: Entity): number | undefined {
+  const worn = world.tryGet(e, Equipment)?.weapon?.goodType;
+  if (worn !== undefined) return worn;
+  const settler = world.get(e, Settler);
+  if (settler.jobType === null) return undefined;
+  return contentIndex(ctx.content).weaponsByTribeAndJob.get(settler.tribe)?.get(settler.jobType)?.goodType;
 }

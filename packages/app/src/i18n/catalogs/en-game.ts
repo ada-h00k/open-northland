@@ -16,7 +16,10 @@ export const enGame = {
       notices: {
         attack: { title: 'The Fortress enforcers march to attack!' },
         landing: { title: 'Darkland ships are landing on the shore!' },
-        lightArmor: { title: 'The fortress warriors grow stronger.', detail: 'They received light armour.' },
+        lightArmor: {
+          title: 'The fortress warriors grow stronger.',
+          detail: 'They received better weapons and light armour.',
+        },
         heavyArmor: { title: 'The fortress warriors grow stronger.', detail: 'They received heavy armour.' },
         amulets: { title: 'The fortress warriors grow stronger.', detail: 'They received amulets.' },
         healDraughts: {

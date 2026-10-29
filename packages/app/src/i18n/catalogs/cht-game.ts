@@ -15,7 +15,7 @@ export const chtGame = {
       notices: {
         attack: { title: '要塞的爪牙發起了進攻！' },
         landing: { title: '暗地人的戰船正在靠岸！' },
-        lightArmor: { title: '要塞的戰士變得更強了。', detail: '他們獲得了輕甲。' },
+        lightArmor: { title: '要塞的戰士變得更強了。', detail: '他們獲得了更好的武器和輕甲。' },
         heavyArmor: { title: '要塞的戰士變得更強了。', detail: '他們獲得了重甲。' },
         amulets: { title: '要塞的戰士變得更強了。', detail: '他們獲得了護身符。' },
         healDraughts: { title: '要塞的戰士變得更強了。', detail: '他們獲得了治療藥水。' },

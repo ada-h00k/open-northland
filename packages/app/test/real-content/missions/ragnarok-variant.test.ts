@@ -266,6 +266,19 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     for (const step of gear.steps)
       for (const grant of step.grants)
         for (const slug of grant.goods) expect(goods.get(slug)?.equip, slug).toBeDefined();
+    const upgrades = gear.steps.flatMap((step) => step.weaponUpgrades);
+    expect(upgrades.length).toBeGreaterThan(0);
+    // Each better weapon arms the tribe's next class of the same kind.
+    const armed = (slug: string) =>
+      sim.content.weapons.find((w) => w.tribeType === escalation.tribe && w.goodType === typeOf(slug));
+    for (const { from, to } of upgrades) {
+      expect(armed(to)?.mainType, `${from} -> ${to}`).toBe(armed(from)?.mainType);
+      expect(armed(to)?.jobType, `${from} -> ${to}`).not.toBe(armed(from)?.jobType);
+    }
+    const spearJobs = sim.content.jobs
+      .filter((job) => job.id.startsWith('soldier_spear'))
+      .map((j) => j.typeId);
+    expect(escalation.jobMix.some((share) => spearJobs.includes(share.job))).toBe(true);
     expect(goods.get('potion_heal_big')?.equip?.restorePct?.healthMax).toBeGreaterThan(0);
     expect(goods.get('amulet_defense')?.equip?.damageTakenPct).toBeDefined();
 
@@ -287,14 +300,23 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
       (sim.world.get(e, components.Equipment).misc ?? []).flatMap((slot) =>
         slot === null ? [] : [slot.goodType],
       );
+    const worse = new Set(upgrades.map(({ from }) => typeOf(from)));
     for (const e of garrison) {
       const eq = sim.world.get(e, components.Equipment);
       expect(heavyArmor).toContain(eq.armor?.goodType);
       expect(eq.boots?.goodType).toBe(typeOf('shoes'));
       expect(eq.weapon).not.toBeNull();
+      expect(worse.has(eq.weapon?.goodType ?? -1)).toBe(false);
+      // The trade is the one the worn weapon arms.
+      const worn = sim.content.weapons.find(
+        (w) =>
+          w.tribeType === sim.world.get(e, components.Settler).tribe && w.goodType === eq.weapon?.goodType,
+      );
+      expect(sim.world.get(e, components.Settler).jobType).toBe(worn?.jobType);
+      expect(misc(e).some((good) => amulets.includes(good))).toBe(true);
+      expect(misc(e)).toContain(healDraught);
     }
-    expect(garrison.some((e) => misc(e).some((good) => amulets.includes(good)))).toBe(true);
-    expect(garrison.some((e) => misc(e).includes(healDraught))).toBe(true);
+    expect(garrison.some((e) => misc(e).filter((good) => amulets.includes(good)).length === 2)).toBe(true);
 
     const [lost] = catapults;
     if (lost === undefined) throw new Error('no catapult');

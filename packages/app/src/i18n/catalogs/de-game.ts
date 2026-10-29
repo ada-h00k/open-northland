@@ -18,7 +18,7 @@ export const deGame = {
         landing: { title: 'Schiffe der Dunkelländer legen am Ufer an!' },
         lightArmor: {
           title: 'Die Krieger der Festung werden stärker.',
-          detail: 'Sie haben leichte Rüstungen erhalten.',
+          detail: 'Sie haben bessere Waffen und leichte Rüstungen erhalten.',
         },
         heavyArmor: {
           title: 'Die Krieger der Festung werden stärker.',

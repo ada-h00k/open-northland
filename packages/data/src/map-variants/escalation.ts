@@ -55,19 +55,31 @@ const MapEscalationRefill = z.strictObject({
 });
 
 /** One piece of a gear step: each soldier draws `chancePct` for it, then one of `goods` (content good
- *  slugs) at random; the good's own equip category names the slot, a misc good the first free one. */
+ *  slugs) at random, and then `extraChancePct` for one more, a different one of `goods`; the good's own
+ *  equip category names the slot, a misc good the first free one. */
 const MapEscalationGearGrant = z.strictObject({
   goods: z.array(z.string().min(1)).min(1),
   chancePct: z.number().int().min(1).max(100).default(100),
+  extraChancePct: z.number().int().min(0).max(100).default(0),
 });
 
-/** At `atSeconds` every soldier of the gear seats gets the step's grants, and so does every soldier
- *  they create later; `noticeKey` names the notice the app shows. */
-const MapEscalationGearStep = z.strictObject({
-  atSeconds: seconds,
-  noticeKey: z.string().min(1),
-  grants: z.array(MapEscalationGearGrant).min(1),
+/** A soldier whose weapon is the good `from` takes up `to` instead (content good slugs), and with it the
+ *  trade that weapon arms, as a soldier equipping it at a store does. */
+const MapEscalationWeaponUpgrade = z.strictObject({
+  from: z.string().min(1),
+  to: z.string().min(1),
 });
+
+/** At `atSeconds` every soldier of the gear seats gets the step's grants and weapon upgrades, and so
+ *  does every soldier they create later; `noticeKey` names the notice the app shows. */
+const MapEscalationGearStep = z
+  .strictObject({
+    atSeconds: seconds,
+    noticeKey: z.string().min(1),
+    grants: z.array(MapEscalationGearGrant).default([]),
+    weaponUpgrades: z.array(MapEscalationWeaponUpgrade).default([]),
+  })
+  .refine((step) => step.grants.length + step.weaponUpgrades.length > 0, 'a gear step gives nothing');
 
 const ascending = (values: readonly number[]) => values.every((v, i) => i === 0 || (values[i - 1] ?? v) < v);
 

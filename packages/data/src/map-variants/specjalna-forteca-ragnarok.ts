@@ -12,6 +12,8 @@ const FORTRESS_TRIBE = 2;
 const SWORD_LONG = 35;
 const SWORD_SHORT = 34;
 const BOW_LONG = 41;
+const SPEAR_WOODEN = 32;
+const SPEAR_IRON = 33;
 
 /** Each player seat, the raider camp the map sends against it, and that camp's authored Attack task:
  *  the seat's headquarters, the reach and the rally point. `landings` are the seat's sea landings, one per
@@ -123,13 +125,18 @@ const INNER_POST_RANGE = 12;
 /** The condition reference that always holds (`[AIData]`). */
 const ALWAYS = 100000;
 
-/** The fortress side's gear, by content good slug: the light and heavy armor pairs, the four combat
- *  amulets and the large healing draught, with the share of soldiers that draws each misc piece. */
+/** The fortress side's gear, by content good slug: the better weapon of each class, the light and heavy
+ *  armor pairs, the four combat amulets and the large healing draught. Every soldier gets one amulet and
+ *  this share a second, different one. */
+const BETTER_WEAPONS = [
+  { from: 'spear_wooden', to: 'spear_iron' },
+  { from: 'bow_short', to: 'bow_long' },
+  { from: 'sword_shord', to: 'sword_long' },
+];
 const LIGHT_ARMOR = ['armor_wool', 'armor_leather'];
 const HEAVY_ARMOR = ['armor_chain', 'armor_plate'];
 const COMBAT_AMULETS = ['amulet_strength', 'amulet_defense', 'amulet_speed', 'amulet_crithit'];
-const AMULET_CHANCE_PCT = 35;
-const HEAL_DRAUGHT_CHANCE_PCT = 30;
+const SECOND_AMULET_CHANCE_PCT = 30;
 /** How long a lost fortress catapult stays gone. */
 const CATAPULT_RESPAWN_MINUTES = 10;
 
@@ -265,6 +272,8 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
       { job: SWORD_LONG, weight: 2 },
       { job: SWORD_SHORT, weight: 1 },
       { job: BOW_LONG, weight: 2 },
+      { job: SPEAR_IRON, weight: 1 },
+      { job: SPEAR_WOODEN, weight: 1 },
     ],
     attacks: {
       launches: [
@@ -296,17 +305,18 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
           atSeconds: HOUR,
           noticeKey: 'ragnarok.gear.lightArmor',
           grants: [{ goods: LIGHT_ARMOR }, { goods: ['shoes'] }],
+          weaponUpgrades: BETTER_WEAPONS,
         },
         { atSeconds: 105 * MINUTE, noticeKey: 'ragnarok.gear.heavyArmor', grants: [{ goods: HEAVY_ARMOR }] },
         {
           atSeconds: 135 * MINUTE,
           noticeKey: 'ragnarok.gear.amulets',
-          grants: [{ goods: COMBAT_AMULETS, chancePct: AMULET_CHANCE_PCT }],
+          grants: [{ goods: COMBAT_AMULETS, extraChancePct: SECOND_AMULET_CHANCE_PCT }],
         },
         {
           atSeconds: 150 * MINUTE,
           noticeKey: 'ragnarok.gear.healDraughts',
-          grants: [{ goods: ['potion_heal_big'], chancePct: HEAL_DRAUGHT_CHANCE_PCT }],
+          grants: [{ goods: ['potion_heal_big'] }],
         },
       ],
     },
