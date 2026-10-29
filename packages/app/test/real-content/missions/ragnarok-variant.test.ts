@@ -140,7 +140,10 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     };
   }
 
-  async function earlyAttackWorld(escalation: MapEscalation = earlyAttack()): Promise<Simulation> {
+  async function earlyAttackWorld(
+    escalation: MapEscalation = earlyAttack(),
+    absentSeats: readonly number[] = [ABSENT_SEAT],
+  ): Promise<Simulation> {
     const ir = rawIrUnderTest() as ContentIr;
     const { merge } = await loadContentUnderTest();
     const map = TerrainMapFile.parse(JSON.parse(readFileSync(realMapPath(MAP_ID), 'utf8')));
@@ -151,7 +154,7 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
       ir,
       content: { content: merge.content },
       machineSeats: [...COMPUTER_SEATS, ...FORTRESS_SIDE],
-      absentSeats: [ABSENT_SEAT],
+      absentSeats,
       assistantSeats: [0],
       script: { ...mapScriptWorld(script, ir), escalation },
       fog: null,
@@ -283,6 +286,72 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     expect(back).toHaveLength(1);
     expect(sim.world.get(back[0] as Entity, components.Vehicle).guard).toEqual(spot);
   }, 300_000);
+
+  it('lands each occupied seat’s ship at its landing point, on the land its men walk to the target', async () => {
+    const real = ragnarok();
+    const landingWave = real.attacks.launches.find((row) => row.seaMen > 0);
+    if (landingWave === undefined || real.landings === undefined)
+      throw new Error('Ragnarök ships no landing');
+    // The first landing wave moved to the first launch, every seat occupied.
+    const escalation: MapEscalation = {
+      ...real,
+      attacks: {
+        ...real.attacks,
+        launches: [{ ...landingWave, atSeconds: EARLY_LAUNCH_SECONDS }, ...real.attacks.launches.slice(1)],
+      },
+    };
+    const sim = await earlyAttackWorld(escalation, []);
+    const terrain = sim.terrain;
+    if (terrain === undefined) throw new Error('no terrain');
+    /** Time for the farthest ship to sail in, set its men down, and sail back off the map. */
+    const VOYAGE_SECONDS = 240;
+    /** How near the landing point the men step ashore, in map points. */
+    const ASHORE = 8;
+    let landed: readonly number[] = [];
+    sim.run(EARLY_LAUNCH_SECONDS * TICKS_PER_SECOND - sim.tick - 1);
+    sim.step();
+    for (const ev of sim.events.current()) if (ev.kind === 'mapEscalationLanding') landed = ev.seats;
+    expect(landed).toEqual(escalation.attacks.targets.map((target) => target.seat));
+    const aboard = new Map(
+      escalation.attacks.targets.map((target) => [
+        target,
+        owned(sim, target.raider).filter((e) => sim.world.has(e, components.Rider)),
+      ]),
+    );
+    const ships = () =>
+      [...sim.world.query(components.Vehicle, components.Owner)].filter((e) =>
+        escalation.attacks.targets.some(
+          (target) => target.raider === sim.world.get(e, components.Owner).player,
+        ),
+      );
+    expect(ships()).toHaveLength(aboard.size);
+    for (const [target, men] of aboard)
+      expect(men, `raider ${target.raider}`).toHaveLength(landingWave.seaMen);
+
+    // Each band's distance from its landing point on the tick its last man steps ashore.
+    const landedAt = new Map<(typeof escalation.attacks.targets)[number], number>();
+    while (
+      sim.tick < (EARLY_LAUNCH_SECONDS + VOYAGE_SECONDS) * TICKS_PER_SECOND &&
+      landedAt.size < aboard.size
+    ) {
+      sim.step();
+      for (const [target, men] of aboard) {
+        if (landedAt.has(target) || target.landing === undefined) continue;
+        if (men.every((e) => sim.world.has(e, components.Position)))
+          landedAt.set(target, meanDistance(sim, men, target.landing));
+      }
+    }
+    for (const target of aboard.keys()) {
+      const landing = target.landing;
+      if (landing === undefined) throw new Error(`seat ${target.seat} has no landing points`);
+      expect(landedAt.get(target), `raider ${target.raider}`).toBeLessThan(ASHORE);
+      const shore = terrain.componentOf(terrain.nodeAt(landing.x, landing.y));
+      expect(shore).toBe(terrain.componentOf(terrain.nodeAt(target.x, target.y)));
+    }
+    while (sim.tick < (EARLY_LAUNCH_SECONDS + 2 * VOYAGE_SECONDS) * TICKS_PER_SECOND && ships().length > 0)
+      sim.step();
+    expect(ships()).toEqual([]);
+  }, 600_000);
 
   it('schedules the owner’s waves: the first at 0:40, landings on the odd ones from the third', () => {
     const { launches, repeat } = ragnarok().attacks;

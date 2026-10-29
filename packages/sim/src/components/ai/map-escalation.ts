@@ -23,6 +23,24 @@ export interface MapEscalationCatapultRecord {
   lostTick: number | null;
 }
 
+/** A ship a sea landing sent: inbound with its men aboard, outbound empty back to where it came from. */
+export interface MapEscalationLandingRecord {
+  ship: Entity;
+  /** The targeted seat whose landing points it sails. */
+  seat: number;
+  leg: 'inbound' | 'outbound';
+}
+
+/**
+ * What a targeted seat's attack is aimed at: its headquarters, which the raider's own Attack task
+ * marches on; once that falls, another of the seat's buildings; once none stands, one of its people.
+ */
+export interface MapEscalationFocusRecord {
+  seat: number;
+  kind: 'headquarters' | 'building' | 'person';
+  entity: Entity;
+}
+
 /** A map escalation's progress; the schedule itself is immutable input, like the AI script. */
 export interface MapEscalationProgress {
   /** The scheduled launches that fell due so far, spawned or not. */
@@ -34,6 +52,10 @@ export interface MapEscalationProgress {
   gearedBelow: number;
   /** The remembered catapults, in entity order; null before the first turn remembers them. */
   catapults: MapEscalationCatapultRecord[] | null;
+  /** The ships under way, in launch order. */
+  landings: MapEscalationLandingRecord[];
+  /** Each targeted seat's aim, ascending by seat; a seat without a record has not been aimed at yet. */
+  focus: MapEscalationFocusRecord[];
 }
 
 /** No carrier exists until the escalation first writes, so a world before it hashes as one without it. */
@@ -43,6 +65,8 @@ const escalation = defineWorldSingleton<MapEscalationProgress>('MapEscalation', 
   gearSteps: 0,
   gearedBelow: 0,
   catapults: null,
+  landings: [],
+  focus: [],
 }));
 
 export const MapEscalationState = escalation.component;

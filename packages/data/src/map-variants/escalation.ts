@@ -17,12 +17,23 @@ export type MapEscalationJobShare = z.infer<typeof MapEscalationJobShare>;
 export const MapEscalationWaveSize = z.strictObject({ landMen: count, seaMen: count });
 export type MapEscalationWaveSize = z.infer<typeof MapEscalationWaveSize>;
 
-/** A targeted player seat, the raider seat that attacks it and the point its men march on. */
+/** Where a seat's sea landing comes from and where it puts its men ashore: a sea node the ship
+ *  appears on, and the shore node it docks at and lands them on. */
+const MapEscalationLandingPoints = z.strictObject({
+  spawnX: mapPoint,
+  spawnY: mapPoint,
+  x: mapPoint,
+  y: mapPoint,
+});
+
+/** A targeted player seat, the raider seat that attacks it and the point its men march on: the
+ *  seat's headquarters, which the attack holds to while it stands. */
 const MapEscalationTarget = z.strictObject({
   seat,
   raider: seat,
   x: mapPoint,
   y: mapPoint,
+  landing: MapEscalationLandingPoints.optional(),
 });
 
 /** A refill beat of the guard: from `fromSeconds` on, `men` every `everySeconds`. */
@@ -96,6 +107,10 @@ export const MapEscalation = z
         steps: z.array(MapEscalationGearStep).min(1),
       })
       .optional(),
+    /** The sea landings a wave with `seaMen` brings: one ship of `vehicle` (a content vehicle slug) per
+     *  targeted seat with landing points, carrying at most its seats, commander's included. `noticeKey`
+     *  names the notice the app shows when the ships set out. */
+    landings: z.strictObject({ vehicle: z.string().min(1), noticeKey: z.string().min(1) }).optional(),
     /** The fortress seat's catapults standing at the first turn come back at their spot this long
      *  after one is lost, one per guard refill beat, while the keep stands. */
     catapults: z.strictObject({ respawnSeconds: z.number().int().positive() }).optional(),

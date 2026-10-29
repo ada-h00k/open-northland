@@ -13,10 +13,13 @@ import { isBuilt, ownedBuildings, ownedSettlers, soldierCount } from '../ai-shar
 import type { System, SystemContext } from '../context.js';
 import { spawnSettler } from '../spawn/index.js';
 import { noteLostCatapults, rememberCatapults, respawnCatapult } from './catapults.js';
+import { focusTurn } from './focus.js';
 import { gearTurn } from './gear.js';
+import { landingsTurn, launchLanding } from './landings.js';
 import { apportion, attackEndsTick, guardCap, launchTick, refillMen, waveSize } from './schedule.js';
 
-/** Ticks between two checks of whether the running attack's men are all dead, and of lost catapults. */
+/** Ticks between two checks of whether the running attack's men are all dead, of its aims, of the
+ *  landing ships and of lost catapults. */
 const END_CHECK_TICKS = TICKS_PER_SECOND;
 
 /**
@@ -25,7 +28,8 @@ const END_CHECK_TICKS = TICKS_PER_SECOND;
  * raider's own `[AIData]` Attack task marches it; the garrison is never drawn in. On each refill beat
  * it tops its own soldiers up toward a cap that grows with game time and the occupied seats, and raises
  * one lost catapult whose wait ran out. Nothing spawns while no finished keep stands. The fortress side's
- * soldiers get the gear steps as they fall due.
+ * soldiers get the gear steps as they fall due. A wave with sea men also sends one ship per seat
+ * (`landings.ts`), and a seat whose headquarters fell is attacked where its aim moved (`focus.ts`).
  */
 export const mapEscalationSystem: System = (world, ctx) => {
   const config = ctx.mapEscalation;
@@ -36,6 +40,9 @@ export const mapEscalationSystem: System = (world, ctx) => {
   const progress = mapEscalationProgress(world);
   const checkBeat = ctx.tick % END_CHECK_TICKS === 0;
   if (progress.attack !== null && checkBeat) checkAttackEnd(world, ctx, config);
+  const attack = mapEscalationProgress(world).attack;
+  if (attack !== null && checkBeat) focusTurn(world, ctx, config, attack.men);
+  if (checkBeat) landingsTurn(world, ctx, config);
   if (catapults !== undefined && checkBeat) noteLostCatapults(world, ctx, config);
   if (ctx.tick >= launchTick(config, progress.launches)) launch(world, ctx, config, progress.launches);
   const refill = refillMen(config, ctx.tick);
@@ -63,12 +70,18 @@ function launch(world: World, ctx: SystemContext, config: MapEscalation, index: 
     progress.launches = wave;
   });
   if (!keepStands(world, config)) return;
-  const jobs = apportion(config.jobMix, waveSize(config, index).landMen);
+  const size = waveSize(config, index);
+  const jobs = apportion(config.jobMix, size.landMen);
+  const seaJobs = apportion(config.jobMix, size.seaMen);
   const seats: number[] = [];
+  const landed: number[] = [];
   const men: Entity[] = [];
   for (const target of occupiedTargets(world, config)) {
     seats.push(target.seat);
     men.push(...spawnAtKeep(world, ctx, config, jobs, target.raider));
+    const aboard = launchLanding(world, ctx, config, target, seaJobs);
+    if (aboard.length > 0) landed.push(target.seat);
+    men.push(...aboard);
   }
   if (men.length === 0) return;
   // A schedule that launches before the last attack ran out ends that one first.
@@ -77,6 +90,9 @@ function launch(world: World, ctx: SystemContext, config: MapEscalation, index: 
     progress.attack = { wave, launchedTick: ctx.tick, men: men.sort((a, b) => a - b) };
   });
   ctx.events.emit({ kind: 'mapEscalationAttackLaunched', wave, seats });
+  const noticeKey = config.landings?.noticeKey;
+  if (landed.length > 0 && noticeKey !== undefined)
+    ctx.events.emit({ kind: 'mapEscalationLanding', wave, seats: landed, noticeKey });
 }
 
 function checkAttackEnd(world: World, ctx: SystemContext, config: MapEscalation): void {

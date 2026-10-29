@@ -13,14 +13,64 @@ const SWORD_SHORT = 34;
 const BOW_LONG = 41;
 
 /** Each player seat, the raider camp the map sends against it, and that camp's authored Attack task:
- *  the seat's headquarters, the reach and the rally point. */
+ *  the seat's headquarters, the reach and the rally point. `landing` is the seat's sea landing: a sea
+ *  node in the map's edge band the ship appears on, and the shore node nearest the headquarters that a
+ *  small ship can dock at from the open sea and that is on the headquarters' own land. */
 const RAIDS = [
-  { seat: 0, raider: 7, x: 407, y: 263, rallyX: 289, rallyY: 254 },
-  { seat: 1, raider: 8, x: 129, y: 203, rallyX: 209, rallyY: 220 },
-  { seat: 2, raider: 9, x: 348, y: 159, rallyX: 286, rallyY: 204 },
-  { seat: 3, raider: 10, x: 138, y: 385, rallyX: 206, rallyY: 282 },
-  { seat: 4, raider: 11, x: 248, y: 120, rallyX: 240, rallyY: 191 },
-  { seat: 5, raider: 12, x: 310, y: 375, rallyX: 289, rallyY: 254 },
+  {
+    seat: 0,
+    raider: 7,
+    x: 407,
+    y: 263,
+    rallyX: 289,
+    rallyY: 254,
+    landing: { spawnX: 490, spawnY: 219, x: 481, y: 263 },
+  },
+  {
+    seat: 1,
+    raider: 8,
+    x: 129,
+    y: 203,
+    rallyX: 209,
+    rallyY: 220,
+    landing: { spawnX: 9, spawnY: 169, x: 65, y: 169 },
+  },
+  {
+    seat: 2,
+    raider: 9,
+    x: 348,
+    y: 159,
+    rallyX: 286,
+    rallyY: 204,
+    landing: { spawnX: 351, spawnY: 9, x: 386, y: 84 },
+  },
+  {
+    seat: 3,
+    raider: 10,
+    x: 138,
+    y: 385,
+    rallyX: 206,
+    rallyY: 282,
+    landing: { spawnX: 85, spawnY: 490, x: 108, y: 443 },
+  },
+  {
+    seat: 4,
+    raider: 11,
+    x: 248,
+    y: 120,
+    rallyX: 240,
+    rallyY: 191,
+    landing: { spawnX: 213, spawnY: 9, x: 256, y: 103 },
+  },
+  {
+    seat: 5,
+    raider: 12,
+    x: 310,
+    y: 375,
+    rallyX: 289,
+    rallyY: 254,
+    landing: { spawnX: 271, spawnY: 490, x: 294, y: 437 },
+  },
 ];
 const RAIDER_SEATS = RAIDS.map((raid) => raid.raider);
 const RAID_RANGE = 120;
@@ -184,7 +234,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         ],
       },
       endAfterSeconds: 12 * MINUTE,
-      targets: RAIDS.map(({ seat, raider, x, y }) => ({ seat, raider, x, y })),
+      targets: RAIDS.map(({ seat, raider, x, y, landing }) => ({ seat, raider, x, y, landing })),
     },
     guard: {
       base: 140,
@@ -218,6 +268,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         },
       ],
     },
+    landings: { vehicle: 'ship_small', noticeKey: 'ragnarok.landing' },
     catapults: { respawnSeconds: CATAPULT_RESPAWN_MINUTES * MINUTE },
   },
 };

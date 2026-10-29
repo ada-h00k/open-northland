@@ -610,6 +610,14 @@ export type SimEvent =
       /** The step's number, from 1. */
       readonly step: number;
       readonly noticeKey: string;
+    }
+  | {
+      /** The landing ships of attack `wave` set out, one for each of `seats`; `noticeKey` names the
+       *  notice the app shows. */
+      readonly kind: 'mapEscalationLanding';
+      readonly wave: number;
+      readonly seats: readonly number[];
+      readonly noticeKey: string;
     };
 
 /** A pass's pending map change: into a campaign's sub map, or back to the parent from mission `mission`. */
