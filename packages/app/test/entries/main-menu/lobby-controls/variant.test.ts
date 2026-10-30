@@ -21,4 +21,8 @@ describe('mapVariantToggles', () => {
   it('shows nothing for a map without variants', () => {
     expect(mapVariantToggles('zatoka', TEXT, null, () => undefined)).toEqual([]);
   });
+
+  it('shows nothing outside a dev server', () => {
+    expect(mapVariantToggles('specjalna_forteca', TEXT, null, () => undefined, false)).toEqual([]);
+  });
 });

@@ -1,4 +1,5 @@
 import { type MapVariantKind, mapVariantsOf } from '@open-northland/data';
+import { mapVariantsSelectable } from '../../../game/map/variant.js';
 import { switchRow } from './switch-row.js';
 
 export interface MapVariantToggleText {
@@ -8,13 +9,15 @@ export interface MapVariantToggleText {
 }
 
 /** One on/off row per variant the map ships, at most one on; all off plays the map as authored. Empty
- *  for a map that ships none. */
+ *  for a map that ships none, and where variants are not selectable. */
 export function mapVariantToggles(
   mapId: string,
   text: MapVariantToggleText,
   current: MapVariantKind | null,
   change: (variant: MapVariantKind | null) => void,
+  selectable: boolean = mapVariantsSelectable(),
 ): HTMLElement[] {
+  if (!selectable) return [];
   let chosen = current;
   const rows = mapVariantsOf(mapId).map(({ kind }) => {
     const toggle = switchRow(text.names[kind], () => {

@@ -24,6 +24,22 @@ export function mapVariantParam(params: URLSearchParams, mapId: string | null): 
   return findMapVariant(mapId, kind)?.kind ?? null;
 }
 
+/** Map variants are a developer preview: only a dev server lets a person choose one. A variant that a
+ *  room, a peer or a save names still plays, so every peer assembles the same world. */
+export function mapVariantsSelectable(devServer: boolean = import.meta.env.DEV): boolean {
+  return devServer;
+}
+
+/** The variant a person's launch search chooses: {@link mapVariantParam} where variants are selectable,
+ *  else none. */
+export function chosenMapVariantParam(
+  params: URLSearchParams,
+  mapId: string | null,
+  selectable: boolean = mapVariantsSelectable(),
+): MapVariantKind | null {
+  return selectable ? mapVariantParam(params, mapId) : null;
+}
+
 /** The variant a session's world is built under. Throws on a variant this build does not ship, because a
  *  peer or save naming it describes a world this client cannot assemble. */
 export function sessionMapVariant(world: SessionWorld): MapVariant | null {
