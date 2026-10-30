@@ -143,7 +143,8 @@ Planner commands name their decision source so disabling a controller and diagno
 not depend on guessing its origin from command kind. Map AI, computer player, and common unit rules
 must remain distinct in names, state, tests and debug output. `systems/map-escalation` spawns, equips and
 ships: an attack's men belong to a raider seat but stand off its scripted handler's list, and the
-escalation alone orders them, as that seat's map-AI orders: an attack-move onto their seat's aim. The guard it refills and the catapults it raises again are posted and crewed by the
+escalation alone orders them, as that seat's map-AI orders: an attack-move onto their seat's aim.
+The guard it refills and the catapults it raises again are posted and crewed by the
 fortress seat's own program, and the builders and porters it keeps work through that seat's map-AI
 town pass and the settlers' planner. Its one touch of a computer seat is the start's optional retraining of
 that seat's soldiers as civilians; from then on the computer player employs them.
