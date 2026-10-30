@@ -104,6 +104,7 @@ describe('map escalation - an attack', () => {
       attackRunning: false,
       attackEndsByTick: null,
       nextAttackTick: 400 * TICKS_PER_SECOND,
+      scheduleLive: true,
     });
   });
 
@@ -140,14 +141,15 @@ describe('map escalation - an attack', () => {
     for (const e of other) expect(sim.world.isAlive(e)).toBe(true);
   });
 
-  it('launches nothing while no finished keep stands', () => {
+  it('launches nothing while no finished keep stands, and reports the schedule dead', () => {
     const { sim } = keepWorld();
+    expect(sim.mapEscalationView()?.scheduleLive).toBe(true);
     for (const e of [...sim.world.query(Building, Owner)]) {
       if (sim.world.get(e, Owner).player === FORTRESS) sim.world.destroy(e);
     }
     expect(eventsUntil(sim, FIRST_LAUNCH_SECONDS + 1)).toEqual([]);
     expect(ownedFighters(sim, RAIDER)).toEqual([]);
-    expect(sim.mapEscalationView()?.wave).toBe(1);
+    expect(sim.mapEscalationView()).toMatchObject({ wave: 1, scheduleLive: false });
   });
 });
 

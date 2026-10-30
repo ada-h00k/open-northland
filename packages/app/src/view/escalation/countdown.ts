@@ -22,17 +22,20 @@ export function formatCountdown(seconds: number): string {
 }
 
 /** The goal panel's siege lines at `tick`, on game time so they follow the speed and the pause: the
- *  countdown to the next launch, under the running-attack line while an attack runs; null on a map
- *  without a siege. */
+ *  countdown to the next launch while the schedule is live, under the running-attack line while an
+ *  attack runs; null on a map without a siege. */
 export function siegeCountdownLines(
   view: MapEscalationView | null,
   tick: number,
   copy: CountdownCopy,
 ): readonly string[] | null {
   if (view === null) return null;
-  const time = formatCountdown((view.nextAttackTick - tick) / TICKS_PER_SECOND);
-  const next = formatMessage(copy.nextAttack, { time });
-  return view.attackRunning ? [copy.attackRunning, next] : [next];
+  const lines = view.attackRunning ? [copy.attackRunning] : [];
+  if (view.scheduleLive) {
+    const time = formatCountdown((view.nextAttackTick - tick) / TICKS_PER_SECOND);
+    lines.push(formatMessage(copy.nextAttack, { time }));
+  }
+  return lines;
 }
 
 /** `rows` led by the siege lines, keeping the last answer while neither input changed so the goal

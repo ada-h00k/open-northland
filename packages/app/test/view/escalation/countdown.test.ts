@@ -9,7 +9,7 @@ import {
 
 const COPY = { nextAttack: 'Next attack in {time}', attackRunning: 'Attack under way' };
 const between = (nextAttackTick: number) =>
-  ({ wave: 1, attackRunning: false, attackEndsByTick: null, nextAttackTick }) as const;
+  ({ wave: 1, attackRunning: false, attackEndsByTick: null, nextAttackTick, scheduleLive: true }) as const;
 
 describe('formatCountdown', () => {
   it('prints minutes and seconds, rounding a part second up, and hours past an hour', () => {
@@ -30,6 +30,15 @@ describe('siegeCountdownLines', () => {
       ['Attack under way', 'Next attack in 01:30'],
     );
     expect(siegeCountdownLines(null, tick, COPY)).toBeNull();
+  });
+
+  it('drops the next-attack line once the schedule is dead, keeping a running attack’s line', () => {
+    const tick = 100 * TICKS_PER_SECOND;
+    const dead = { ...between(tick + 90 * TICKS_PER_SECOND), scheduleLive: false };
+    expect(siegeCountdownLines(dead, tick, COPY)).toEqual([]);
+    expect(siegeCountdownLines({ ...dead, attackRunning: true, attackEndsByTick: tick }, tick, COPY)).toEqual(
+      ['Attack under way'],
+    );
   });
 });
 
