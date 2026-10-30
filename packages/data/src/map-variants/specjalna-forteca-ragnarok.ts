@@ -416,7 +416,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
       },
     ],
     // Owner ruling: nothing falls from the fortress side's men.
-    withheldDeathDrops: { seats: [FORTRESS_SEAT, ...RAIDER_SEATS], goods: 'all' },
+    withheldDeathDrops: { seats: [FORTRESS_SEAT, ...RAIDER_SEATS] },
     landings: {
       vehicle: 'ship_small',
       menPerShip: SHIP_MEN,

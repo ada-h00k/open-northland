@@ -268,10 +268,7 @@ describe('a fallen character drops its gear beside the bones', () => {
 describe("a map escalation's withheld death drops", () => {
   const FORTRESS_SIDE = 6;
   const PLAYER = 0;
-  const ruled = (goods: string[] | 'all') =>
-    MapEscalation.parse({ ...ESCALATION, withheldDeathDrops: { seats: [FORTRESS_SIDE], goods } });
-  const LISTED = ruled(['shoes', 'amulet_strength', 'potion_heal_small']);
-  const ALL = ruled('all');
+  const RULE = MapEscalation.parse({ ...ESCALATION, withheldDeathDrops: { seats: [FORTRESS_SIDE] } });
   const FULL_KIT: Gear = {
     weapon: worn(SWORD),
     armor: worn(MAIL),
@@ -279,31 +276,21 @@ describe("a map escalation's withheld death drops", () => {
     misc: misc(worn(STRENGTH_AMULET), worn(HEAL_DRAUGHT)),
   };
 
-  function dropsOf(seat: number, rule = LISTED): Map<number, number> {
+  function dropsOf(seat: number): Map<number, number> {
     const sim = mappedSim();
     const soldier = doomedWearing(sim, FULL_KIT);
     sim.world.add(soldier, Owner, { player: seat });
     sim.world.add(soldier, Carrying, { goodType: STONE, amount: 1 });
-    cleanupSystem(sim.world, { ...ctxOf(sim), mapEscalation: rule });
+    cleanupSystem(sim.world, { ...ctxOf(sim), mapEscalation: RULE });
     return droppedUnits(sim);
   }
 
-  it("leaves a ruled seat's listed goods with the bones and drops its weapon, armor and load", () => {
-    expect(dropsOf(FORTRESS_SIDE)).toEqual(
-      new Map([
-        [STONE, 1],
-        [SWORD, 1],
-        [MAIL, 1],
-      ]),
-    );
-  });
-
-  it('drops nothing of a seat whose rule withholds everything', () => {
-    expect(dropsOf(FORTRESS_SIDE, ALL)).toEqual(new Map());
+  it('drops nothing of a ruled seat', () => {
+    expect(dropsOf(FORTRESS_SIDE)).toEqual(new Map());
   });
 
   it("drops another seat's whole kit", () => {
-    expect(dropsOf(PLAYER, ALL)).toEqual(
+    expect(dropsOf(PLAYER)).toEqual(
       new Map([
         [STONE, 1],
         [SHOES, 1],

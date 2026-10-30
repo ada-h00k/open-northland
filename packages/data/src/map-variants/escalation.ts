@@ -188,15 +188,9 @@ export const MapEscalation = z
     towerGarrison: z.strictObject({ slots: z.array(MapEscalationTowerSlot).min(1) }).optional(),
     /** The defenders placed once, at match start. None comes back. */
     heroes: z.array(MapEscalationHero).default([]),
-    /** A fallen character of one of `seats` leaves `goods` (content good slugs) with its bones instead
-     *  of dropping them, its other gear and load dropping as usual; `all` leaves everything it wore and
-     *  carried. */
-    withheldDeathDrops: z
-      .strictObject({
-        seats: z.array(seat).min(1),
-        goods: z.union([z.literal('all'), z.array(z.string().min(1)).min(1)]),
-      })
-      .optional(),
+    /** A fallen character of one of `seats` drops nothing: everything it wore and carried stays with
+     *  its bones. */
+    withheldDeathDrops: z.strictObject({ seats: z.array(seat).min(1) }).optional(),
     /** At match start every soldier of a seat the computer player runs becomes a civilian, so the
      *  seat builds up with them; human, idle and map-scripted seats keep theirs. */
     demobilizeComputerSeats: z.boolean().default(false),

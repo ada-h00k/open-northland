@@ -25,7 +25,6 @@ import { removeWorkFlag } from '../economy/work-flag.js';
 import { isMinor } from '../family/households.js';
 import { releaseWidowedParentsOf, settleWidowhood } from '../family/widowhood.js';
 import { setLandscape } from '../landscape/edits.js';
-import { withheldDeathDropsOf } from '../map-escalation/death-drops.js';
 import { animalRecord, firstLandscapeGfxOf, isSoldierJob, MEAT_LANDSCAPE_SLUG } from '../readviews/index.js';
 import { abandonCargoRun } from '../vehicles/cargo.js';
 import { abandonHaulingCart, releaseHaulingCart } from '../vehicles/hauling-cart.js';
@@ -56,8 +55,9 @@ export function reap(world: World, ctx: SystemContext, e: Entity): void {
   if (animal && pos !== undefined && settler !== undefined)
     layAnimalRemains(world, ctx, e, settler.tribe, pos);
   releaseHaulingCart(world, ctx, e); // the cart stands where its carrier fell, the load in its hold
-  const withheld = withheldDeathDropsOf(ctx, owner?.player);
-  const loot = withheld === 'all' ? null : droppedOnDeathOf(world, ctx.content, e, withheld);
+  const dropsNothing =
+    owner !== undefined && ctx.mapEscalation?.withheldDeathDrops?.seats.includes(owner.player);
+  const loot = dropsNothing === true ? null : droppedOnDeathOf(world, ctx.content, e);
   removeSettlerSilently(world, e);
   scatterSpilledStock(world, ctx, loot);
 }
