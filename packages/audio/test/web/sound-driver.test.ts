@@ -3,8 +3,21 @@ import { type Camera, tileToScreen } from '@open-northland/render/data';
 import { type Entity, ONE, type SimEvent, type WorldSnapshot } from '@open-northland/sim';
 import { describe, expect, it } from 'vitest';
 import type { SoundIndex } from '../../src/index.js';
-import { defaultBindings, SELECT_COOLDOWN_S, SoundDriver, TENSE_ENTER_THREAT } from '../../src/index.js';
-import { FakeContext, type FakeSource, flush, servingSoundBanks } from '../support/fake-audio.js';
+import {
+  defaultBindings,
+  INTERLUDE_FADE_IN_S,
+  MUSIC_SWITCH_TIMING,
+  SELECT_COOLDOWN_S,
+  SoundDriver,
+  TENSE_ENTER_THREAT,
+} from '../../src/index.js';
+import {
+  FakeContext,
+  type FakeGain,
+  type FakeSource,
+  flush,
+  servingSoundBanks,
+} from '../support/fake-audio.js';
 import { musicTrack } from '../support/music-manifest.js';
 
 /**
@@ -394,5 +407,112 @@ describe('SoundDriver', () => {
     await flush();
     expect(fetched).not.toContain('/music/mission_midgard1_standard.ogg');
     expect(fetched).toContain('/music/attack_viking.ogg');
+  });
+});
+
+describe('SoundDriver interlude', () => {
+  const MISSION_ARABS1 = 17;
+  const STANDARD = '/music/mission_arabs1_standard.ogg';
+  const DANGER = '/music/mission_arabs1_danger.ogg';
+  /** An app asset: an absolute path, fetched as it stands rather than under the music base. */
+  const INTERLUDE = musicTrack('battle', { file: '/audio/battle.ogg', loopStartS: 0 });
+  const owned: WorldSnapshot = {
+    tick: 1,
+    entities: [{ id: 7, components: { Owner: { player: 1 }, Building: {} } }],
+    events: [],
+  };
+  const ours = { ...baseInput, snapshot: owned, localPlayer: 1, events: [] } as const;
+
+  async function mapMusic(): Promise<Harness> {
+    const harness = makeDriver();
+    await harness.driver.resume();
+    harness.driver.setMusicMap({
+      musicType: MISSION_ARABS1,
+      manifest: {
+        tracks: {
+          mission_arabs1_standard: musicTrack('mission_arabs1_standard'),
+          mission_arabs1_danger: musicTrack('mission_arabs1_danger'),
+        },
+      },
+    });
+    harness.driver.update(ours);
+    await flush();
+    return harness;
+  }
+
+  /** The source made last. */
+  const latest = (ctx: FakeContext): FakeSource => {
+    const source = ctx.sources.at(-1);
+    if (source === undefined) throw new Error('no source');
+    return source;
+  };
+
+  it('crossfades into the track, plays it once and then resumes the map music', async () => {
+    const { driver, ctx, fetched } = await mapMusic();
+    const map = latest(ctx);
+    driver.playInterlude(INTERLUDE);
+    await flush();
+    expect(fetched.at(-1)).toBe('/audio/battle.ogg');
+    const interlude = latest(ctx);
+    // Opens now, under the map stem's fade, rising over its own fade-in; one pass, no loop.
+    expect(interlude.startedAt).toBe(0);
+    expect(map.stoppedAt).toBe(MUSIC_SWITCH_TIMING.fadeS);
+    expect((interlude.connectedTo[0] as FakeGain).gain.ramps[0]).toEqual({
+      value: 1,
+      time: INTERLUDE_FADE_IN_S,
+    });
+    expect(interlude.loop).toBe(false);
+    expect(interlude.playsForS).toBe(FAKE_CLIP_S);
+
+    interlude.onended?.();
+    await flush();
+    expect(latest(ctx)).not.toBe(interlude);
+    expect(latest(ctx).buffer).not.toBeNull();
+    expect(fetched.filter((url) => url === '/audio/battle.ogg')).toHaveLength(1);
+    expect(fetched).toContain(STANDARD);
+  });
+
+  it('does not restart the track while it plays, nor let a fight cut it short', async () => {
+    const { driver, ctx, fetched } = await mapMusic();
+    driver.playInterlude(INTERLUDE);
+    await flush();
+    const interlude = latest(ctx);
+    const sources = ctx.sources.length;
+    driver.playInterlude(INTERLUDE);
+    const struck: readonly SimEvent[] = Array.from({ length: TENSE_ENTER_THREAT }, () => ({
+      kind: 'combatHit',
+      damage: 250,
+      targetMaxHealth: 1000,
+      attacker: 9 as Entity,
+      attackerPlayer: 2,
+      target: 7 as Entity,
+      at: { hx: 5, hy: 5 },
+    }));
+    driver.update({ ...ours, events: struck });
+    await flush();
+    expect(ctx.sources).toHaveLength(sources);
+    expect(interlude.stoppedAt).toBeNull();
+
+    // The fight the playlist followed meanwhile is what resumes, and a later launch plays it again.
+    interlude.onended?.();
+    await flush();
+    expect(fetched.at(-1)).toBe(DANGER);
+    driver.playInterlude(INTERLUDE);
+    await flush();
+    expect(latest(ctx).startedAt).toBe(0);
+    expect(ctx.sources).toHaveLength(sources + 2);
+  });
+
+  it('queues nothing while sound is off', async () => {
+    const { driver, ctx } = await mapMusic();
+    driver.setEnabled(false);
+    const sources = ctx.sources.length;
+    driver.playInterlude(INTERLUDE);
+    driver.setEnabled(true);
+    await flush();
+    // Unmuting re-asserts the map music, not a launch made while muted.
+    expect(
+      ctx.sources.slice(sources).some((source) => source.playsForS === FAKE_CLIP_S && !source.loop),
+    ).toBe(false);
   });
 });

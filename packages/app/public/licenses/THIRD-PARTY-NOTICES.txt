@@ -45,4 +45,11 @@ MIT license, as granted by each copyright holder above:
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 
+Colossal Boss Battle Theme (the music of a siege attack, audio/colossal-boss-battle.ogg)
+  "Colossal Boss Battle Theme" ("Blackmoor Colossus") by Matthew Pablo,
+  http://www.matthewpablo.com/services, licensed under Creative Commons Attribution 3.0 Unported
+  (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/.
+  Source: https://opengameart.org/node/20947
+  Modified: converted from the author's MP3 to Ogg Vorbis and lowered by 3 dB.
+
 The bundled fonts carry their own licenses beside them, under /fonts/ in the same bundle.

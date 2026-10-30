@@ -121,9 +121,9 @@ export class MusicPlayer {
     private readonly schedule: MusicScheduler = wallClockScheduler,
   ) {}
 
-  /** Play `sequence` from its next cue, fading out whatever else plays; re-asserting the running
-   *  sequence keeps it going. Null stops. */
-  play(sequence: MusicSequence | null): void {
+  /** Play `sequence` from its next cue, fading out whatever else plays, its first cue opening under
+   *  that fade when `crossfade`; re-asserting the running sequence keeps it going. Null stops. */
+  play(sequence: MusicSequence | null, crossfade = false): void {
     if (sequence === null) {
       if (this.sequence !== null || this.current !== null) this.stop();
       return;
@@ -131,7 +131,7 @@ export class MusicPlayer {
     if (sequence === this.sequence && (this.current !== null || this.loading || this.unplayable)) return;
     this.sequence = sequence;
     this.unplayable = false;
-    this.switchNow(false);
+    this.switchNow(crossfade);
   }
 
   /** Cut over to the sequence's next cue now, opening it under the running one's fade. */
@@ -273,7 +273,9 @@ export class MusicPlayer {
   private async fetchAndDecode(file: string): Promise<AudioBuffer | null> {
     let buffer: AudioBuffer;
     try {
-      buffer = await this.ctx.decodeAudioData(await this.fetchBytes(this.baseUrl + file));
+      // A file naming an absolute path is an app asset rather than a rendered track under the base.
+      const url = file.startsWith('/') ? file : this.baseUrl + file;
+      buffer = await this.ctx.decodeAudioData(await this.fetchBytes(url));
     } catch (err) {
       this.failed.add(file); // remember the failure - a re-play must not re-fetch
       // Silence is what a missing track sounds like either way, so say which file went missing.

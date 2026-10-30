@@ -385,10 +385,11 @@ export class WebAudioEngine {
     }, CLOSE_GRACE_S * 1000);
   }
 
-  /** Which music should be playing (null = none); takes effect once playback is live. */
-  setMusic(sequence: MusicSequence | null): void {
+  /** Which music should be playing (null = none); takes effect once playback is live. With `crossfade`
+   *  its first cue opens under the outgoing music's fade instead of after it. */
+  setMusic(sequence: MusicSequence | null, crossfade = false): void {
     this.desiredMusic = sequence;
-    if (this.canPlay()) this.music?.play(sequence);
+    if (this.canPlay()) this.music?.play(sequence, crossfade);
   }
 
   /** Act on a mood change of the playing sequence (see {@link MusicTransition}). */

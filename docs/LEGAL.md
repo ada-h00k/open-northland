@@ -25,6 +25,12 @@ The multiplayer menu shows each player's chosen flag from the `flag-icons` npm p
 2013 Panayiotis Lipiridis, under the MIT license; its notice is in
 `packages/app/public/licenses/THIRD-PARTY-NOTICES.txt`.
 
+A siege attack plays "Colossal Boss Battle Theme" ("Blackmoor Colossus") by Matthew Pablo
+(http://www.matthewpablo.com/services), under Creative Commons Attribution 3.0
+(https://creativecommons.org/licenses/by/3.0/), from https://opengameart.org/node/20947. The app
+ships it as `packages/app/public/audio/colossal-boss-battle.ogg`, converted from the author's MP3 to
+Ogg Vorbis and lowered by 3 dB; its notice is in `packages/app/public/licenses/THIRD-PARTY-NOTICES.txt`.
+
 Text imported from game or mod tables is also generated content, including UI labels. Keep table/id
 bindings in code and load the wording through the pipeline. Project-authored UI text, intentional
 label overrides and independently written fallbacks may stay in the repository; a fallback must not

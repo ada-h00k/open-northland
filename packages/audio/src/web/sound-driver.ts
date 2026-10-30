@@ -22,12 +22,14 @@ import {
   culturePools,
   DEFAULT_MUSIC_SOURCE,
   type MusicCulture,
+  MusicInterlude,
   type MusicManifest,
   type MusicMoodState,
   MusicPlaylist,
   type MusicSequence,
   type MusicSource,
   type MusicStanding,
+  type MusicTrack,
   mapVariantsFor,
   musicIntensity,
   nextMusicMood,
@@ -120,6 +122,8 @@ export class SoundDriver {
   private readonly random: RandomFn;
   private readonly arbiter: OneShotArbiter;
   private playlist: MusicPlaylist | null = null;
+  /** A track played once in front of the {@link playlist}, which resumes after it. */
+  private interlude: MusicInterlude | null = null;
   private mood: MusicMoodState = CALM_MOOD;
   /** What picks the playlist: the map's music, the player's choice of source and the local nation. */
   private musicMap: MusicMap | null = null;
@@ -170,6 +174,7 @@ export class SoundDriver {
 
   close(): void {
     this.playlist = null;
+    this.interlude = null;
     this.musicMap = null;
     this.engine.close();
   }
@@ -241,6 +246,7 @@ export class SoundDriver {
    *  mood. Null stops the music. */
   setMusicMap(map: MusicMap | null): void {
     this.musicMap = map;
+    if (map === null) this.interlude = null;
     this.mood = CALM_MOOD;
     this.playlistMood = null;
     this.playlistKey = null;
@@ -268,7 +274,20 @@ export class SoundDriver {
     this.playlist =
       map === null || music === null ? null : new MusicPlaylist(music, map.manifest, this.random);
     if (this.playlistMood !== null) this.playlist?.update(this.playlistMood);
+    if (this.interlude?.playing === true && map !== null) {
+      this.interlude.follow(this.playlist);
+      return;
+    }
+    this.interlude = null;
     this.engine.setMusic(this.playlist);
+  }
+
+  /** Play `track` once, crossfading from the running music, which carries on after it. While sound is
+   *  off nothing is queued, and a call while the last interlude still plays leaves it running. */
+  playInterlude(track: MusicTrack): void {
+    if (!this.engine.audible || this.interlude?.playing === true) return;
+    this.interlude = new MusicInterlude(track, this.playlist);
+    this.engine.setMusic(this.interlude, true);
   }
 
   /** Set the mixer's slider positions. */
@@ -287,6 +306,7 @@ export class SoundDriver {
   /** The `?sounds` gallery's music: play `sequence` in place of any map's, or stop for null. */
   auditionMusic(sequence: MusicSequence | null): void {
     this.musicMap = null;
+    this.interlude = null;
     this.playlist = null;
     this.playlistKey = null;
     this.engine.setMusic(sequence);
@@ -486,7 +506,8 @@ export class SoundDriver {
       stance: standing.stance,
       wealthy: this.mood.wealthy,
     };
+    // An interlude holds the player; the playlist follows the mood meanwhile and resumes on it.
     const transition = playlist.update(this.playlistMood);
-    if (transition !== 'none') this.engine.transitionMusic(transition);
+    if (transition !== 'none' && this.interlude?.playing !== true) this.engine.transitionMusic(transition);
   }
 }

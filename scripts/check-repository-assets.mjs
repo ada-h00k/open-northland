@@ -77,6 +77,10 @@ const reviewedBinaryAssets = new Set([
   // subset and SIL OFL text in LICENSE-NotoSansSC.txt.
   'packages/app/public/fonts/notosanssc-han-400.woff2',
   'packages/app/public/fonts/notosanssc-han-700.woff2',
+  // A siege attack's music: "Colossal Boss Battle Theme" by Matthew Pablo, CC-BY 3.0, from
+  // https://opengameart.org/node/20947, converted from the author's MP3; notice in
+  // packages/app/public/licenses/THIRD-PARTY-NOTICES.txt.
+  'packages/app/public/audio/colossal-boss-battle.ogg',
   // Original OpenNorthland branding (commissioned art, no original-game material). The masters live
   // in tools/brand/source; `npm run brand` derives the rest, including the README logo above. The
   // Open Graph image and the manifest screenshot also use docs/images/settlement.webp, a capture of

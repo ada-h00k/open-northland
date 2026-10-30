@@ -114,6 +114,7 @@ import {
 } from '../camera/index.js';
 import { clearCanvasCursors } from '../cursors/element.js';
 import { createDiplomacyActions } from '../diplomacy-actions.js';
+import { ATTACK_MUSIC } from '../escalation/attack-music.js';
 import { mountSiegePresentation } from '../escalation/index.js';
 import {
   applyGameSpeed,
@@ -877,6 +878,7 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
       plane: hudDom.element,
       setAttackNight: (on) => renderer.setAttackNight(on),
       setModeMark: (text) => toolPanel.controller.setModeMark(text),
+      playAttackMusic: () => soundDriver?.playInterlude(ATTACK_MUSIC),
       now: () => performance.now(),
     });
     cleanup.push(() => siege.dispose());

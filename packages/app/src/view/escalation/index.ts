@@ -18,11 +18,13 @@ export interface SiegePresentationDeps {
   readonly setAttackNight: (on: boolean) => void;
   /** The goal slip's mode mark. */
   readonly setModeMark: (text: string | null) => void;
+  /** Plays the attack's music once, unless it is still playing. */
+  readonly playAttackMusic: () => void;
   readonly now: () => number;
 }
 
-/** How a map variant's siege shows: the mode mark on the goal slip, its centre-screen notices, the night that falls while an attack
- *  runs, and the countdown lines at the head of the goal panel's rows. */
+/** How a map variant's siege shows: the mode mark on the goal slip, its centre-screen notices, the music and the night of an
+ *  attack, and the countdown lines at the head of the goal panel's rows. */
 export interface SiegePresentation {
   onEvents(events: readonly SimEvent[]): void;
   /** Once a frame. */
@@ -41,6 +43,7 @@ export function mountSiegePresentation(deps: SiegePresentationDeps): SiegePresen
   return {
     onEvents(events) {
       for (const id of siegeNoticesOf(events, warnUnknown)) queue.push(id);
+      if (events.some((event) => event.kind === 'mapEscalationAttackLaunched')) deps.playAttackMusic();
     },
     frame() {
       const view = deps.host.mapEscalation();

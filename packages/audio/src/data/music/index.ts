@@ -4,6 +4,7 @@ export {
   type MusicVariants,
   type ThemeMood,
 } from './catalog.js';
+export { INTERLUDE_FADE_IN_S, INTERLUDE_FADE_S, MusicInterlude } from './interlude.js';
 export {
   type MusicManifest,
   type MusicManifestRead,

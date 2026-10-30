@@ -6552,9 +6552,25 @@ body.on-drag-scroll.on-drag-scroll-free * {
   text-transform: uppercase;
   white-space: nowrap;
 }
+/* Inside the open sheet the plate is a lighter vellum in the parchment's own family, rimmed and lettered
+   in the solemn red, so it reads as part of the page rather than a hole in it. */
 .on-hud .on-slip__content > .on-slip__mode {
+  --mode-ink: #6a1a0e;
   width: fit-content;
   margin: 0 auto 9px;
+  border-color: #8a5a3a;
+  background:
+    radial-gradient(ellipse 70% 120% at 50% 50%, #b8402a2e, #0000 75%),
+    linear-gradient(var(--parchment-hi), #dccaa0);
+  box-shadow:
+    inset 0 0 0 1px #f6ecd2aa,
+    inset 0 -1px #6a1a0e22,
+    0 1px 3px #3a24124d;
+  color: var(--mode-ink);
+  text-shadow: 0 1px 0 #f6ecd2b3;
+}
+.on-hud .on-slip__content > .on-slip__mode .on-slip__mode-ornament {
+  color: var(--mode-ink);
 }
 .on-hud .on-slip__mode-ornament {
   flex: none;
