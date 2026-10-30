@@ -157,6 +157,11 @@ export const MapEscalation = z
     porters: z
       .strictObject({ count, vehicle: z.string().min(1), x: mapPoint, y: mapPoint, radius: count })
       .optional(),
+    /** A fallen character of one of `seats` leaves `goods` (content good slugs) with its bones instead
+     *  of dropping them; its other gear drops as usual. */
+    withheldDeathDrops: z
+      .strictObject({ seats: z.array(seat).min(1), goods: z.array(z.string().min(1)).min(1) })
+      .optional(),
     /** At match start every soldier of a seat the computer player runs becomes a civilian, so the
      *  seat builds up with them; human, idle and map-scripted seats keep theirs. */
     demobilizeComputerSeats: z.boolean().default(false),

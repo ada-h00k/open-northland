@@ -120,6 +120,20 @@ const LIGHT_ARMOR = ['armor_wool', 'armor_leather'];
 const HEAVY_ARMOR = ['armor_chain', 'armor_plate'];
 const COMBAT_AMULETS = ['amulet_strength', 'amulet_defense', 'amulet_speed', 'amulet_crithit'];
 const SECOND_AMULET_CHANCE_PCT = 30;
+/** What a fallen fortress-side soldier keeps with his bones (owner ruling): shoes, every amulet and every
+ *  draught. His weapon and armor still drop. */
+const WITHHELD_DEATH_DROPS = [
+  'shoes',
+  'amulet_food',
+  'amulet_stamina',
+  ...COMBAT_AMULETS,
+  'potion_food_small',
+  'potion_food_big',
+  'potion_stamina_small',
+  'potion_stamina_big',
+  'potion_heal_small',
+  'potion_heal_big',
+];
 /** How long a lost fortress catapult stays gone. */
 const CATAPULT_RESPAWN_MINUTES = 10;
 
@@ -144,21 +158,31 @@ const BUILDING_YIELD = 2;
 const HIGHLAND_MEN = { tribe: 'viking', role: 'civilist', hx: 318, hy: 388, count: 6 };
 
 /** The plain's headquarters (250, 112) has five clay nodes and a few trees in reach, where every other
- *  seat has dozens: a clay pit south-east of it and a cedar grove north-west by the lake, each 15-23 map
- *  points out, on open ground off the fire circle (254-258, 103-107). */
+ *  seat has dozens: a clay pit beside those five on the brown shore south of the lake, packed node to
+ *  node like the map's own pits and following the shoreline, off the fire circle (254-258, 103-107); a
+ *  cedar grove north-west by the lake, 15-23 map points out; and more cedars east of the map's own
+ *  stand on the meadow north of the lake. */
 const PLAIN_CLAY_PIT = [
-  [260, 124],
-  [262, 124],
-  [264, 124],
-  [261, 125],
-  [263, 125],
-  [265, 125],
-  [260, 126],
-  [262, 126],
-  [264, 126],
-  [261, 127],
-  [263, 127],
-  [265, 127],
+  [264, 104],
+  [265, 104],
+  [262, 105],
+  [263, 105],
+  [264, 105],
+  [265, 105],
+  [266, 105],
+  [262, 106],
+  [263, 106],
+  [264, 106],
+  [265, 106],
+  [266, 106],
+  [267, 106],
+  [263, 107],
+  [264, 107],
+  [265, 107],
+  [266, 107],
+  [263, 108],
+  [264, 108],
+  [265, 108],
 ] as const;
 const PLAIN_GROVE = [
   [240, 89],
@@ -182,7 +206,23 @@ const PLAIN_GROVE = [
   [244, 99],
   [247, 99],
 ] as const;
-/** The map's own looks for the two, alternated. */
+const NORTH_CEDARS = [
+  [276, 62],
+  [279, 60],
+  [282, 63],
+  [285, 61],
+  [275, 65],
+  [278, 66],
+  [281, 67],
+  [284, 65],
+  [287, 64],
+  [272, 70],
+  [276, 69],
+  [279, 72],
+  [282, 71],
+  [274, 72],
+] as const;
+/** The map's own looks for clay and cedars, alternated. */
 const CLAY_OBJECTS = ['clay mine 01', 'clay mine 02'];
 const CEDAR_OBJECTS = ['cedar 01', 'cedar 02'];
 const placed = (points: readonly (readonly [number, number])[], objects: readonly string[]) =>
@@ -275,8 +315,13 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
     mushroom: RARE_YIELD,
     wood: BUILDING_YIELD,
     stone: BUILDING_YIELD,
+    mud: BUILDING_YIELD,
   },
-  landscapeObjects: [...placed(PLAIN_CLAY_PIT, CLAY_OBJECTS), ...placed(PLAIN_GROVE, CEDAR_OBJECTS)],
+  landscapeObjects: [
+    ...placed(PLAIN_CLAY_PIT, CLAY_OBJECTS),
+    ...placed(PLAIN_GROVE, CEDAR_OBJECTS),
+    ...placed(NORTH_CEDARS, CEDAR_OBJECTS),
+  ],
   briefingPages: SPECJALNA_FORTECA_RAGNAROK_BRIEFING,
   // The owner's numbers.
   escalation: {
@@ -334,6 +379,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         },
       ],
     },
+    withheldDeathDrops: { seats: [FORTRESS_SEAT, ...RAIDER_SEATS], goods: WITHHELD_DEATH_DROPS },
     landings: {
       vehicle: 'ship_small',
       menPerShip: SHIP_MEN,

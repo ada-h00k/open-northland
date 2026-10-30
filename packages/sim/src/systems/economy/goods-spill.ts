@@ -122,16 +122,23 @@ function addTo(held: Map<number, number>, goodType: number, amount: number): voi
 /**
  * What a fallen character leaves beside its bones: its carried load, shoes and a tool still at least 90%
  * whole, and every other slot holding an unused good, one unit each. Original behavior: only a soldier
- * drops his weapon, so a hero's class weapon dies with him. Call it before the destroy.
+ * drops his weapon, so a hero's class weapon dies with him. A good in `withheld` stays with the bones.
+ * Call it before the destroy.
  *
  * Approximation: `misc.ini` `[tribelandscapeLinkData]` leaves a human death only the `skeleton` decal
  * and keeps the goods-bearing cadaver for the animal tribes.
  */
-export function droppedOnDeathOf(world: World, content: ContentSet, character: Entity): SpilledStock | null {
+export function droppedOnDeathOf(
+  world: World,
+  content: ContentSet,
+  character: Entity,
+  withheld: ReadonlySet<number> = KEEPS_NOTHING,
+): SpilledStock | null {
   const pos = world.tryGet(character, Position);
   if (pos === undefined) return null;
   const held = new Map<number, number>();
   const add = (goodType: number, amount: number): void => {
+    if (withheld.has(goodType)) return;
     held.set(goodType, (held.get(goodType) ?? 0) + amount);
   };
   const load = world.tryGet(character, Carrying);
@@ -149,6 +156,8 @@ export function droppedOnDeathOf(world: World, content: ContentSet, character: E
   }
   return spillOf(pos, held);
 }
+
+const KEEPS_NOTHING: ReadonlySet<number> = new Set();
 
 /** Original behavior: shoes or a tool worn by at most a tenth of its condition drops as a new good. */
 const DROPS_AS_NEW_WEAR_DIVISOR = 10;

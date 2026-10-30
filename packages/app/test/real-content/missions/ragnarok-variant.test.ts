@@ -79,14 +79,22 @@ describe.runIf(hasRealIr())('Ragnarök on specjalna_forteca', () => {
     const gathered = new Set(GATHERERS.map((g) => g.id));
     expect(Object.keys(variant?.depositYield ?? {}).filter((good) => !gathered.has(good))).toEqual([]);
   });
+
+  it('withholds only content goods from a fallen fortress-side soldier', () => {
+    const withheld = findMapVariant(MAP_ID, 'ragnarok')?.escalation?.withheldDeathDrops;
+    const goods = new Set((rawIrUnderTest() as ContentIr).goods?.map((good) => good.id));
+    expect(withheld?.goods.length).toBeGreaterThan(0);
+    expect(withheld?.goods.filter((good) => !goods.has(good))).toEqual([]);
+  });
 });
 
 describe.runIf(hasRealIr())('a Ragnarök world on specjalna_forteca', () => {
   const SEARCH = 'map=specjalna_forteca&player=4&missions=off&seed=7';
   const PLAIN_SEAT = 4;
   const PLAIN_HEADQUARTERS = { x: 250, y: 112 };
-  /** How far from the plain's headquarters its placed clay and trees stand at the most, in map points. */
-  const PLAIN_REACH = 25;
+  /** How far from the plain's headquarters its placed clay and trees stand at the most, in map points:
+   *  the north cedars stand across the lake. */
+  const PLAIN_REACH = 65;
   /** How near a placed object no building of the seat's may stand, in map points: its houses' bodies. */
   const BUILDING_CLEARANCE = 6;
 
@@ -115,10 +123,10 @@ describe.runIf(hasRealIr())('a Ragnarök world on specjalna_forteca', () => {
     return good.typeId;
   }
 
-  it('starts every map-placed node of a boosted good, trees and stone included, at the variant factor', async () => {
+  it('starts every map-placed node of a boosted good, trees, stone and clay included, at the variant factor', async () => {
     const yields = findMapVariant(MAP_ID, 'ragnarok')?.depositYield ?? {};
     const [authored, ragnarok] = await worlds();
-    expect(Object.keys(yields)).toEqual(expect.arrayContaining(['gold', 'wood', 'stone']));
+    expect(Object.keys(yields)).toEqual(expect.arrayContaining(['gold', 'wood', 'stone', 'mud']));
 
     for (const [good, factor] of Object.entries(yields)) {
       const type = goodType(authored, good);

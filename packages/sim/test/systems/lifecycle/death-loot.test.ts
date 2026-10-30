@@ -1,3 +1,4 @@
+import { MapEscalation } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
 import {
   Building,
@@ -6,6 +7,7 @@ import {
   type EquipmentSlot,
   Health,
   MISC_EQUIP_SLOTS,
+  Owner,
   Position,
   Stockpile,
   Vehicle,
@@ -17,6 +19,7 @@ import type { NodeId } from '../../../src/nav/terrain/index.js';
 import { cleanupSystem } from '../../../src/systems/index.js';
 import { testContent } from '../../fixtures/content.js';
 import { ctxOf } from '../../fixtures/context.js';
+import { ESCALATION } from '../../fixtures/map-escalation/keep.js';
 import { settlerAt } from '../../fixtures/settler.js';
 import { grassCellMap } from '../../fixtures/terrain.js';
 
@@ -31,6 +34,8 @@ const MAIL = 18;
 const SHOES = 8;
 const TOOL = 11;
 const DRAUGHT = 13;
+const HEAL_DRAUGHT = 16;
+const STRENGTH_AMULET = 25;
 const STONE = 4;
 const SOLDIER = 31;
 const HERO = 45;
@@ -257,5 +262,49 @@ describe('a fallen character drops its gear beside the bones', () => {
       return sim.hashState();
     };
     expect(hashOf(true)).toBe(hashOf(false));
+  });
+});
+
+describe("a map escalation's withheld death drops", () => {
+  const FORTRESS_SIDE = 6;
+  const PLAYER = 0;
+  const RULE = MapEscalation.parse({
+    ...ESCALATION,
+    withheldDeathDrops: { seats: [FORTRESS_SIDE], goods: ['shoes', 'amulet_strength', 'potion_heal_small'] },
+  });
+  const FULL_KIT: Gear = {
+    weapon: worn(SWORD),
+    armor: worn(MAIL),
+    boots: worn(SHOES),
+    misc: misc(worn(STRENGTH_AMULET), worn(HEAL_DRAUGHT)),
+  };
+
+  function dropsOf(seat: number): Map<number, number> {
+    const sim = mappedSim();
+    const soldier = doomedWearing(sim, FULL_KIT);
+    sim.world.add(soldier, Owner, { player: seat });
+    cleanupSystem(sim.world, { ...ctxOf(sim), mapEscalation: RULE });
+    return droppedUnits(sim);
+  }
+
+  it("leaves a ruled seat's shoes, amulet and draught with the bones and drops its weapon and armor", () => {
+    expect(dropsOf(FORTRESS_SIDE)).toEqual(
+      new Map([
+        [SWORD, 1],
+        [MAIL, 1],
+      ]),
+    );
+  });
+
+  it("drops another seat's whole kit", () => {
+    expect(dropsOf(PLAYER)).toEqual(
+      new Map([
+        [SHOES, 1],
+        [SWORD, 1],
+        [MAIL, 1],
+        [STRENGTH_AMULET, 1],
+        [HEAL_DRAUGHT, 1],
+      ]),
+    );
   });
 });
