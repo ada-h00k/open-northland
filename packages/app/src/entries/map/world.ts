@@ -3,6 +3,7 @@ import type {
   MapDiplomacy,
   MapScript,
   MapSpecialItem,
+  MapVariantLandscapeObject,
   TerrainMapFile,
 } from '@open-northland/data';
 import {
@@ -33,6 +34,7 @@ import {
   spawnMapFields,
   spawnMapGroundGoods,
   spawnMapResources,
+  spawnVariantLandscapeObjects,
   type WorldContentOptions,
 } from '../../game/sandbox/index.js';
 import {
@@ -93,6 +95,8 @@ export interface MapWorldOptions extends SimSessionRules {
   readonly berryBushes?: boolean;
   /** The map variant's deposit yield factors by content good id; a good it leaves out keeps its yield. */
   readonly depositYield?: Readonly<Record<string, number>>;
+  /** The map variant's own harvestable objects, placed after the map's. */
+  readonly landscapeObjects?: readonly MapVariantLandscapeObject[];
 }
 
 export interface MapWorld {
@@ -327,6 +331,7 @@ function spawnHarvestables(
     new Set(options.absentSeats),
   );
   const bushes = options.berryBushes === false ? null : spawnMapBerryBushes(sim, map.objects, ir);
+  spawnVariantLandscapeObjects(sim, ir, options.landscapeObjects ?? [], options.depositYield);
   return {
     harvestablePlacements: [...resources.placementByEntity, ...(bushes?.placementByEntity ?? [])],
     pooledPlacements: [

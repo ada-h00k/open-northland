@@ -6,8 +6,8 @@ import {
   Engagement,
   hasMissionBehaviour,
   isPlayerDead,
-  MISSION_BEHAVIOUR,
   type MapEscalationFocusRecord,
+  MISSION_BEHAVIOUR,
   mapEscalationProgress,
   Owner,
   Person,
@@ -20,12 +20,7 @@ import {
 } from '../../components/index.js';
 import { aiCommand, type PlayerCommand } from '../../core/commands/index.js';
 import type { DeepReadonly, Entity, World } from '../../ecs/world.js';
-import {
-  type HalfCellNode,
-  hexDistanceBetween,
-  nodeManhattan,
-  nodeOfPosition,
-} from '../../nav/halfcell.js';
+import { type HalfCellNode, hexDistanceBetween, nodeManhattan, nodeOfPosition } from '../../nav/halfcell.js';
 import type { NodeId, TerrainGraph } from '../../nav/terrain/index.js';
 import { isBuilt, ownedBuildings, ownedSettlers } from '../ai-shared/seat-roster.js';
 import type { SystemContext } from '../context.js';

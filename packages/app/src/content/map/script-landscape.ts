@@ -86,16 +86,7 @@ export function scriptLandscapeTypes(ir: ContentIr): ScriptLandscapeType[] {
     const counterpartGfxIndex = counterpartName === undefined ? undefined : gfxByName.get(counterpartName);
     let resource: ScriptLandscapeType['resource'];
     if (gatherer !== undefined && ref !== undefined) {
-      const {
-        x: _x,
-        y: _y,
-        ...spec
-      } = withRecordDeposit(resourceSpecFor(gatherer, 0, 0), {
-        ...ref,
-        hx: 0,
-        hy: 0,
-        placement: 0,
-      });
+      const { x: _x, y: _y, ...spec } = withRecordDeposit(resourceSpecFor(gatherer, 0, 0), ref);
       resource = { ...spec, gfxIndex: g.index };
     }
     return {

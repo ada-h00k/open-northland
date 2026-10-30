@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import type { ContentIr } from '../../../src/content/ir/rows.js';
 import { buildMapWorld } from '../../../src/entries/map/world.js';
 import { mapSessionWorld, variantMap, variantMapScript } from '../../../src/game/map/variant.js';
-import { GATHERERS, GOOD_GOLD } from '../../../src/game/sandbox/ids/index.js';
+import { GATHERERS } from '../../../src/game/sandbox/ids/index.js';
 import { mapScriptWorld, resolveMissionScript } from '../../../src/game/world/mission-script.js';
 import { hasRealIr, loadContentUnderTest, rawIrUnderTest } from '../helpers.js';
 import { realMapPath, realMapScript, realMapSessionWorld } from '../real-map-world.js';
@@ -83,25 +83,92 @@ describe.runIf(hasRealIr())('Ragnarök on specjalna_forteca', () => {
 
 describe.runIf(hasRealIr())('a Ragnarök world on specjalna_forteca', () => {
   const SEARCH = 'map=specjalna_forteca&player=4&missions=off&seed=7';
-  const GOLD = 'gold';
+  const PLAIN_SEAT = 4;
+  const PLAIN_HEADQUARTERS = { x: 250, y: 112 };
+  /** How far from the plain's headquarters its placed clay and trees stand at the most, in map points. */
+  const PLAIN_REACH = 25;
+  /** How near a placed object no building of the seat's may stand, in map points: its houses' bodies. */
+  const BUILDING_CLEARANCE = 6;
 
-  function goldStock(sim: Simulation): number {
+  /** The map as authored and as Ragnarök starts it. */
+  const worlds = () =>
+    Promise.all([realMapSessionWorld(`?${SEARCH}`), realMapSessionWorld(`?${SEARCH}&variant=ragnarok`)]);
+
+  function nodeOf(sim: Simulation, e: Entity) {
+    const at = sim.world.get(e, components.Position);
+    return nodeOfPosition(at.x, at.y);
+  }
+
+  /** The stock of the good's nodes the map itself places, by their placement join. */
+  function placedStock(sim: Simulation, goodType: number): number {
     let total = 0;
-    for (const e of sim.world.query(components.Resource)) {
+    for (const e of sim.world.query(components.Resource, components.LandscapeResource)) {
       const resource = sim.world.get(e, components.Resource);
-      if (resource.goodType === GOOD_GOLD) total += resource.remaining;
+      if (resource.goodType === goodType) total += resource.remaining;
     }
     return total;
   }
 
-  it('starts every gold deposit at the variant factor times its authored stock', async () => {
-    const factor = findMapVariant(MAP_ID, 'ragnarok')?.depositYield[GOLD];
-    const authored = await realMapSessionWorld(`?${SEARCH}`);
-    const ragnarok = await realMapSessionWorld(`?${SEARCH}&variant=ragnarok`);
-    if (factor === undefined) throw new Error('no gold yield to compare');
+  function goodType(sim: Simulation, id: string): number {
+    const good = sim.content.goods.find((g) => g.id === id);
+    if (good === undefined) throw new Error(`no good ${id}`);
+    return good.typeId;
+  }
 
-    expect(goldStock(authored)).toBeGreaterThan(0);
-    expect(goldStock(ragnarok)).toBe(goldStock(authored) * factor);
+  it('starts every map-placed node of a boosted good, trees and stone included, at the variant factor', async () => {
+    const yields = findMapVariant(MAP_ID, 'ragnarok')?.depositYield ?? {};
+    const [authored, ragnarok] = await worlds();
+    expect(Object.keys(yields)).toEqual(expect.arrayContaining(['gold', 'wood', 'stone']));
+
+    for (const [good, factor] of Object.entries(yields)) {
+      const type = goodType(authored, good);
+      expect(placedStock(authored, type), good).toBeGreaterThan(0);
+      expect(placedStock(ragnarok, type), good).toBe(placedStock(authored, type) * factor);
+    }
+  });
+
+  it('gives the plain clay and a grove near its headquarters, on free ground its people reach', async () => {
+    const placed = findMapVariant(MAP_ID, 'ragnarok')?.landscapeObjects ?? [];
+    const [authored, ragnarok] = await worlds();
+    const terrain = ragnarok.terrain;
+    if (terrain === undefined) throw new Error('no terrain');
+    const mud = goodType(ragnarok, 'mud');
+    const wood = goodType(ragnarok, 'wood');
+    const at = (sim: Simulation, hx: number, hy: number) =>
+      [...sim.world.query(components.Resource, components.Position)].filter((e) => {
+        const node = nodeOf(sim, e);
+        return node.hx === hx && node.hy === hy;
+      });
+    const home = [...ragnarok.world.query(components.Person, components.Owner)].find(
+      (e) => ragnarok.world.get(e, components.Owner).player === PLAIN_SEAT,
+    );
+    if (home === undefined) throw new Error('the plain has no people');
+    const homeNode = nodeOf(ragnarok, home);
+    const land = terrain.componentOf(terrain.nodeAt(homeNode.hx, homeNode.hy));
+    const buildings = [...ragnarok.world.query(components.Building, components.Position)].map((e) =>
+      nodeOf(ragnarok, e),
+    );
+
+    const kinds = new Map<number, number>();
+    for (const { object, hx, hy } of placed) {
+      const label = `${object} at ${hx},${hy}`;
+      expect(
+        hexDistanceBetween(hx, hy, PLAIN_HEADQUARTERS.x, PLAIN_HEADQUARTERS.y),
+        label,
+      ).toBeLessThanOrEqual(PLAIN_REACH);
+      // Open land the map left empty, off every house, with a walkable neighbour on the plain's land.
+      expect(at(authored, hx, hy), label).toEqual([]);
+      const node = terrain.nodeAt(hx, hy);
+      expect(terrain.isWalkable(node) && terrain.isBuildable(node), label).toBe(true);
+      for (const b of buildings)
+        expect(hexDistanceBetween(hx, hy, b.hx, b.hy), label).toBeGreaterThanOrEqual(BUILDING_CLEARANCE);
+      expect(terrain.componentOf(terrain.nodeAt(hx + 1, hy)), label).toBe(land);
+      const [node0, ...more] = at(ragnarok, hx, hy);
+      expect(more, label).toEqual([]);
+      const kind = node0 === undefined ? -1 : ragnarok.world.get(node0, components.Resource).goodType;
+      kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
+    }
+    expect([...kinds.keys()].sort()).toEqual([mud, wood].sort());
   });
 });
 
@@ -242,6 +309,63 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     for (const e of garrison) expect(sim.world.tryGet(e, components.Owner)?.player).toBe(FORTRESS);
     expect(meanDistance(sim, standing, keep)).toBeLessThan(GARRISON_REACH);
   }, 300_000);
+
+  it('brings every band to its seat’s headquarters within minutes, no man left standing idle', async () => {
+    const sim = await earlyAttackWorld();
+    const { targets } = ragnarok().attacks;
+    /** A band is at its target once every living man stands this near the headquarters, in map points. */
+    const ARRIVED = 25;
+    const WATCH_SECONDS = 300;
+    /** The longest a man may stand on one node with nothing to fight or strike while his seat still has
+     *  an aim: a seat razed and emptied leaves its band standing. */
+    const IDLE_SECONDS = 10;
+    sim.run(EARLY_LAUNCH_SECONDS * TICKS_PER_SECOND + 1 - sim.tick);
+    const bands = targets
+      .map((target) => ({ target, men: owned(sim, target.raider) }))
+      .filter((band) => band.men.length > 0);
+    expect(bands.length).toBeGreaterThan(0);
+    // An attack-move out of the keep, not a strike across the map: no man walks in the readied fight gait.
+    sim.run(TICKS_PER_SECOND);
+    for (const { men } of bands)
+      for (const e of men) {
+        expect(sim.world.get(e, components.PlayerOrder).attackMove).toBeDefined();
+        expect(sim.world.has(e, components.Engagement)).toBe(false);
+      }
+    const nodeOf = (e: Entity) => {
+      const at = sim.world.get(e, components.Position);
+      return nodeOfPosition(at.x, at.y);
+    };
+    const busy = (e: Entity) =>
+      sim.world.has(e, components.Engagement) ||
+      sim.world.has(e, components.AttackOrder) ||
+      sim.world.has(e, components.CurrentAtomic);
+    const idle = new Map<Entity, { hx: number; hy: number; seconds: number }>();
+    let longestIdle = 0;
+    const arrived = new Set<number>();
+    for (let second = 0; second < WATCH_SECONDS; second++) {
+      sim.run(TICKS_PER_SECOND);
+      for (const { target, men } of bands) {
+        const living = men.filter((e) => sim.world.isAlive(e) && sim.world.has(e, components.Position));
+        if (
+          living.every((e) => hexDistanceBetween(nodeOf(e).hx, nodeOf(e).hy, target.x, target.y) <= ARRIVED)
+        )
+          arrived.add(target.seat);
+        const aimed = components.mapEscalationProgress(sim.world).focus.some((f) => f.seat === target.seat);
+        for (const e of living) {
+          const at = nodeOf(e);
+          const last = idle.get(e);
+          const seconds =
+            aimed && !busy(e) && last !== undefined && last.hx === at.hx && last.hy === at.hy
+              ? last.seconds + 1
+              : 0;
+          idle.set(e, { ...at, seconds });
+          longestIdle = Math.max(longestIdle, seconds);
+        }
+      }
+    }
+    expect([...arrived].sort()).toEqual(bands.map((band) => band.target.seat).sort());
+    expect(longestIdle).toBeLessThan(IDLE_SECONDS);
+  }, 600_000);
 
   it('gears the fortress side’s soldiers, existing and new, and raises a lost catapult again', async () => {
     const early = earlyAttack();

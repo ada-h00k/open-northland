@@ -17,6 +17,7 @@ export {
   MapVariantBriefingPages,
   type MapVariantInput,
   MapVariantKind,
+  MapVariantLandscapeObject,
   MapVariantMissionResults,
   MapVariantScriptPatch,
 } from './schema.js';

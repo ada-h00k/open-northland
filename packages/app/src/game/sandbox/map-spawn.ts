@@ -1,8 +1,9 @@
-import type { ContentSet, TerrainObjects } from '@open-northland/data';
+import type { ContentSet, MapVariantLandscapeObject, TerrainObjects } from '@open-northland/data';
 import { type Entity, type ResourceNodeSpec, type Simulation, systems } from '@open-northland/sim';
 import type { ContentIr } from '../../content/ir/rows.js';
 import { mapPalisadeSpawns } from '../../content/map/palisades.js';
 import {
+  harvestGoodByObjectName,
   type MapResourceSpawn,
   mapBerryBushSpawns,
   mapChestSpawns,
@@ -43,7 +44,10 @@ export function authoredDepositUnits(units: number, level: number, states: numbe
  * Every mined record does (`maxValency === frames.length` across all 32), which
  * `test/real-content/catalog/ir-invariants.test.ts` pins over real content.
  */
-export function withRecordDeposit(spec: ResourceNodeSpec, spawn: MapResourceSpawn): ResourceNodeSpec {
+export function withRecordDeposit(
+  spec: ResourceNodeSpec,
+  spawn: Pick<MapResourceSpawn, 'maxValency' | 'growth'>,
+): ResourceNodeSpec {
   const { deposit } = spec;
   if (deposit === undefined) return spec; // a felled tree or a pluck-whole node has no valency ladder
   const { maxValency, growth } = spawn;
@@ -148,6 +152,38 @@ export function spawnMapResources(
     );
   }
   return { spawned, placementByEntity };
+}
+
+/**
+ * Direct scene assembly, valid pre-tick-0 only: a map variant's own harvestable objects, after every
+ * authored one, sized like a map placement of the same object. They join no static sprite, so the live
+ * pool draws them. Throws on an object no gatherer works, a variant written against other content.
+ */
+export function spawnVariantLandscapeObjects(
+  sim: Simulation,
+  ir: ContentIr,
+  objects: readonly MapVariantLandscapeObject[],
+  depositYield: Readonly<Record<string, number>> = {},
+): Entity[] {
+  const goodByName = harvestGoodByObjectName(ir);
+  const spawned: Entity[] = [];
+  for (const { object, hx, hy, level } of objects) {
+    const ref = goodByName.get(object);
+    const g = ref === undefined ? undefined : GATHERER_BY_GOOD_ID.get(ref.goodId);
+    if (ref === undefined || g === undefined)
+      throw new Error(`a map variant places ${object}, which no gatherer works`);
+    const growth = level !== undefined && level <= ref.states ? { level, states: ref.states } : undefined;
+    const sized = withRecordDeposit(resourceSpecFor(g, hx, hy), {
+      ...(growth !== undefined ? { growth } : {}),
+      ...(ref.maxValency !== undefined ? { maxValency: ref.maxValency } : {}),
+    });
+    const e = systems.createResourceNode(sim.world, sim.content, {
+      ...withDepositYield(sized, depositYield[ref.goodId] ?? 1),
+      gfxIndex: ref.gfxIndex,
+    });
+    if (e !== null) spawned.push(e);
+  }
+  return spawned;
 }
 
 /**

@@ -41,6 +41,17 @@ export const MapVariantScriptPatch = z.strictObject({
 });
 export type MapVariantScriptPatch = z.infer<typeof MapVariantScriptPatch>;
 
+/** A harvestable landscape object the variant places after the map's own: a `[GfxLandscape]` EditName a
+ *  gatherer works (a tree, a deposit), anchored at a half-cell node, at its 1-based growth level; absent,
+ *  full-grown. */
+export const MapVariantLandscapeObject = z.strictObject({
+  object: z.string().min(1),
+  hx: z.number().int().nonnegative(),
+  hy: z.number().int().nonnegative(),
+  level: z.number().int().min(1).optional(),
+});
+export type MapVariantLandscapeObject = z.infer<typeof MapVariantLandscapeObject>;
+
 /** Briefing pages the variant tells in its own words, by `PlayCutscene` id, each per map text language;
  *  a page in a language the variant lacks takes the language a reader of it falls back to. */
 export const MapVariantBriefingPages = z.record(
@@ -59,9 +70,12 @@ export const MapVariant = z.strictObject({
   script: MapVariantScriptPatch,
   /** Settlers placed after the map's own as if it authored them, so an absent seat's stay out too. */
   startHumans: z.array(AuthoredHuman).default([]),
-  /** Each spawned deposit node of the named good (a content good id) starts with its authored amount
-   *  times this factor. */
+  /** Each map-placed node of the named good (a content good id) starts with its authored amount times
+   *  this factor: a deposit's stock, a tree's felled trunk, a picked plant's yield. */
   depositYield: z.record(z.string().min(1), z.number().int().min(1)).default({}),
+  /** Placed at world assembly after every authored object, so authored nodes keep their entity ids; their
+   *  stock takes the variant's yield like the map's own. */
+  landscapeObjects: z.array(MapVariantLandscapeObject).default([]),
   /** The briefing pages the variant replaces, to tell what it changes. */
   briefingPages: MapVariantBriefingPages.optional(),
   /** The siege the simulation runs over the map; absent for a variant that only patches the map. */

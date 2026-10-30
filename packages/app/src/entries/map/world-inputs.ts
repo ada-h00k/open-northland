@@ -69,10 +69,12 @@ export function buildMapWorldFromInputs(inputs: MapWorldInputs): BuiltWorld<MapW
     demoOwner: localPlayerOf(session),
   };
   if (save !== null) return { sim: restoreMapWorld(worldOptions, save).sim, extras: NO_PLACEMENTS };
+  const variant = sessionMapVariant(session.world);
   const world = buildMapWorld({
     ...worldOptions,
     ...sessionWorldOptions(session, script, missionWorld),
-    depositYield: sessionMapVariant(session.world)?.depositYield ?? {},
+    depositYield: variant?.depositYield ?? {},
+    landscapeObjects: variant?.landscapeObjects ?? [],
     seed: session.seed,
     missions: inputs.missions,
     seatTribes: seated.remap,

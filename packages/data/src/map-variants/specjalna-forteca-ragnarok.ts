@@ -134,11 +134,59 @@ const HALF_HOUR = 30 * MINUTE;
 const HOUR = 60 * MINUTE;
 /** The house mission object id the plain's headquarters is placed with, which its trade rows name. */
 const PLAIN_HEADQUARTERS = 1;
-const RAGNAROK_DEPOSIT_YIELD = 3;
+/** How many times its authored stock each map-placed node starts with: the rare goods tripled, the
+ *  building goods (a tree's trunk, a stone deposit) doubled. */
+const RARE_YIELD = 3;
+const BUILDING_YIELD = 2;
 
 /** The highlanders start with one woman, so the match would count their seat out at once. They get
  *  the plain's six men, placed off their headquarters (315, 378) as the plain's stand off its own. */
 const HIGHLAND_MEN = { tribe: 'viking', role: 'civilist', hx: 318, hy: 388, count: 6 };
+
+/** The plain's headquarters (250, 112) has five clay nodes and a few trees in reach, where every other
+ *  seat has dozens: a clay pit south-east of it and a cedar grove north-west by the lake, each 15-23 map
+ *  points out, on open ground off the fire circle (254-258, 103-107). */
+const PLAIN_CLAY_PIT = [
+  [260, 124],
+  [262, 124],
+  [264, 124],
+  [261, 125],
+  [263, 125],
+  [265, 125],
+  [260, 126],
+  [262, 126],
+  [264, 126],
+  [261, 127],
+  [263, 127],
+  [265, 127],
+] as const;
+const PLAIN_GROVE = [
+  [240, 89],
+  [243, 89],
+  [246, 89],
+  [239, 91],
+  [242, 91],
+  [245, 91],
+  [248, 91],
+  [240, 93],
+  [243, 93],
+  [246, 93],
+  [239, 95],
+  [242, 95],
+  [245, 95],
+  [248, 95],
+  [240, 97],
+  [243, 97],
+  [246, 97],
+  [241, 99],
+  [244, 99],
+  [247, 99],
+] as const;
+/** The map's own looks for the two, alternated. */
+const CLAY_OBJECTS = ['clay mine 01', 'clay mine 02'];
+const CEDAR_OBJECTS = ['cedar 01', 'cedar 02'];
+const placed = (points: readonly (readonly [number, number])[], objects: readonly string[]) =>
+  points.map(([hx, hy], i) => ({ object: objects[i % objects.length] ?? '', hx, hy }));
 
 /** The authored map's seat 0-3 lobby offer, which Ragnarök extends to the two villages. */
 const PLAYER_SEAT_OFFER = ['human', 'ai', 'none'] as const;
@@ -222,10 +270,13 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
     hy: HIGHLAND_MEN.hy,
   })),
   depositYield: {
-    gold: RAGNAROK_DEPOSIT_YIELD,
-    iron: RAGNAROK_DEPOSIT_YIELD,
-    mushroom: RAGNAROK_DEPOSIT_YIELD,
+    gold: RARE_YIELD,
+    iron: RARE_YIELD,
+    mushroom: RARE_YIELD,
+    wood: BUILDING_YIELD,
+    stone: BUILDING_YIELD,
   },
+  landscapeObjects: [...placed(PLAIN_CLAY_PIT, CLAY_OBJECTS), ...placed(PLAIN_GROVE, CEDAR_OBJECTS)],
   briefingPages: SPECJALNA_FORTECA_RAGNAROK_BRIEFING,
   // The owner's numbers.
   escalation: {
