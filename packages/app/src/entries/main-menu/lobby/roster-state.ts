@@ -16,7 +16,7 @@ export type VacantMode = 'map-ai' | 'idle' | 'computer' | 'absent';
 
 export { OBSERVER_SEAT, OVERSEER_SEAT } from '@open-northland/lockstep';
 
-/** How hard a seat the lobby hands to the computer plays until the person picks another level. */
+/** How hard a seat a network room hands to the computer plays until someone picks another level. */
 export const DEFAULT_COMPUTER_DIFFICULTY: ComputerDifficulty = 'medium';
 
 /** How hard a saved world's computer seat plays when the save names no level: `setAiControl`'s own. */
@@ -26,9 +26,18 @@ export const SAVED_COMPUTER_DIFFICULTY: ComputerDifficulty = 'hard';
  *  played before the lobby offered one. */
 export const MAP_COMPUTER_DIFFICULTY: ComputerDifficulty = 'hard';
 
+/** How hard a seat the single-player lobby hands to the computer plays until the person picks a level. */
+export const LOCAL_COMPUTER_DIFFICULTY: ComputerDifficulty = 'hard';
+
 /** The level `slot` starts at in a fresh lobby or room. */
 export function startingDifficulty(slot: MapPlayerSlot): ComputerDifficulty {
   return isReservedMapAiSeat(slot) ? MAP_COMPUTER_DIFFICULTY : DEFAULT_COMPUTER_DIFFICULTY;
+}
+
+/** The single-player lobby fills every open seat the map lets the computer take with the computer. */
+function localVacantMode(slot: MapPlayerSlot): VacantMode {
+  const authored = authoredVacantMode(slot);
+  return authored === 'idle' && slot.claimable && slot.aiAllowed ? 'computer' : authored;
 }
 
 /** What the lobby lets a person claim, which is what the session then plays. */
@@ -93,7 +102,7 @@ export function initialRosterState(players: readonly MapPlayerSlot[]): RosterSta
     seat: null,
     colors: new Map(players.map((p) => [p.player, p.colorId])),
     tribes: new Map(players.map((p) => [p.player, p.tribeId])),
-    vacantModes: new Map(players.map((p) => [p.player, authoredVacantMode(p)])),
+    vacantModes: new Map(players.map((p) => [p.player, localVacantMode(p)])),
     difficulties: new Map(),
   };
 }
@@ -127,7 +136,8 @@ export function setSlotDifficulty(
 
 /** How hard `slot` plays should the computer take it. */
 export function slotDifficulty(state: RosterState, slot: MapPlayerSlot): ComputerDifficulty {
-  return state.difficulties.get(slot.player) ?? startingDifficulty(slot);
+  const unpicked = isReservedMapAiSeat(slot) ? MAP_COMPUTER_DIFFICULTY : LOCAL_COMPUTER_DIFFICULTY;
+  return state.difficulties.get(slot.player) ?? unpicked;
 }
 
 /** The first slot other than `slot` that wears `colorId`, if any. Real maps author duplicate colours

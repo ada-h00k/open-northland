@@ -165,12 +165,10 @@ describe('lobbySession', () => {
   });
 
   it('plays the claimed seat as the person and never lists it as AI', () => {
-    let state = setVacantMode(initialRosterState(players), 1, 'computer');
-    state = setVacantMode(state, 1, 'idle'); // back to the authored idle default
-    state = claimSeat(state, 1);
+    const state = claimSeat(initialRosterState(players), 1);
     const session = lobbySession('zatoka', state, players, OPTIONS, SEED);
     expect(session.localSeat).toBe(1);
-    expect(session.seats.map((seat) => seat.mode)).toEqual(['idle', 'human', 'map-ai']);
+    expect(session.seats.map((seat) => seat.mode)).toEqual(['computer', 'human', 'map-ai']);
   });
 
   it('keeps every slot eligible for AI behind a spectator seat', () => {
@@ -223,7 +221,7 @@ describe('lobbySession', () => {
     const lobby = [...players, slot(3, { type: 'none' })];
     const state = claimSeat(initialRosterState(lobby), 0);
     const session = lobbySession('zatoka', state, lobby, OPTIONS, SEED);
-    expect(session.seats.map((seat) => seat.mode)).toEqual(['human', 'idle', 'map-ai', 'absent']);
+    expect(session.seats.map((seat) => seat.mode)).toEqual(['human', 'computer', 'map-ai', 'absent']);
     const entry = new URLSearchParams(lobbyStartEntry('zatoka', state, lobby, OPTIONS, SEED));
     expect(mapSession(entry, lobby)).toEqual(session);
     expect(lobbySession('zatoka', claimSeat(state, 3), lobby, OPTIONS, SEED).seats[3]?.mode).toBe('absent');
@@ -284,17 +282,17 @@ describe('lobby computer levels', () => {
     slot(5, { claimable: true, hasComputerControl: false }),
   ];
 
-  it("offers a level on a free seat handed to the computer, medium until picked, and on the map's own computer seat, hard until picked, never on a scripted camp", () => {
+  it("offers a level on a free seat handed to the computer and on the map's own computer seat, hard until picked, never on a scripted camp", () => {
     const state = initialLobbyState(players);
     // Seat 1 plays as computer, seat 2 is a monster tribe, seat 3 is the map's own computer seat, and
     // Seat 4 is a reserved camp; selectable seat 5 defaults to Computer despite its authored disable.
     expect(lobbySlotRows(players, state).map((row) => row.difficulty)).toEqual([
       null,
-      'medium',
+      'hard',
       null,
       'hard',
       null,
-      'medium',
+      'hard',
     ]);
     expect(lobbySlotRows(players, setVacantMode(state, 1, 'idle'))[1]?.difficulty).toBeNull();
   });
@@ -308,10 +306,10 @@ describe('lobby computer levels', () => {
       undefined,
       'medium',
       undefined,
-      'medium',
+      'hard',
     ]);
     const entry = new URLSearchParams(lobbyStartEntry('zatoka', state, players, OPTIONS, SEED));
-    expect(entry.get('difficulty')).toBe('1:easy,3:medium,5:medium');
+    expect(entry.get('difficulty')).toBe('1:easy,3:medium,5:hard');
     expect(mapSession(entry, players)).toEqual(session);
   });
 });

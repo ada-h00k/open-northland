@@ -47,11 +47,11 @@ describe('roster state', () => {
     },
   ] as const;
 
-  it('lists no AI seat until a slot is toggled to it', () => {
+  it('hands every free seat the map allows to the computer until it is toggled to idle', () => {
     let state = claimSeat(initialRosterState(players), 0);
-    expect(computerSeats(state, players)).toEqual([]);
-    state = setVacantMode(state, 1, 'computer');
     expect(computerSeats(state, players)).toEqual([1]);
+    state = setVacantMode(state, 1, 'idle');
+    expect(computerSeats(state, players)).toEqual([]);
   });
 
   it('rejects a colour another slot wears and accepts re-picking your own', () => {
