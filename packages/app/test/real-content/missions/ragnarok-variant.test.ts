@@ -173,26 +173,129 @@ describe.runIf(hasRealIr())('a Ragnarök world on specjalna_forteca', () => {
   });
 });
 
-describe.runIf(hasRealIr())('the highlanders’ seat in a Ragnarök world', () => {
-  const HIGHLAND_SEAT = 5;
-  const HIGHLAND_MEN = 6;
+describe.runIf(hasRealIr())('every player seat of a Ragnarök world', () => {
+  const PLAYER_SEATS = [...AUTHORED_PLAYER_SEATS, ...VILLAGE_SEATS];
+  const FORTRESS_SIDE = [6, 7, 8, 9, 10, 11, 12];
+  /** Idle seats keep their soldiers, which a computer seat would demobilize at the first turn. */
+  const SEARCH = `?map=${MAP_ID}&player=0&idle=1,2,3,4,5&seed=7&variant=ragnarok`;
+  /** The most map points any of seat 0's people stands from its headquarters. */
+  const START_REACH = 20;
+  /** How near its headquarters no one stands, in map points: the house's body. */
+  const HOUSE_CLEARANCE = 6;
 
-  it('starts with men of its own and is still in the match after the first death check', async () => {
-    const sim = await realMapSessionWorld(
-      '?map=specjalna_forteca&player=0&missions=off&seed=7&variant=ragnarok',
+  function headquartersOf(sim: Simulation, seat: number): Entity {
+    const house = [...sim.world.query(components.Building, components.Owner)].find(
+      (e) => sim.world.get(e, components.Owner).player === seat,
     );
-    const men = () =>
-      [...sim.world.query(components.Person, components.Owner)].filter(
-        (e) =>
-          sim.world.get(e, components.Owner).player === HIGHLAND_SEAT && !sim.world.has(e, components.Female),
-      );
-    expect(men()).toHaveLength(HIGHLAND_MEN);
-    expect(components.isMatchParticipant(sim.world, HIGHLAND_SEAT)).toBe(true);
+    if (house === undefined) throw new Error(`seat ${seat} has no house`);
+    return house;
+  }
 
-    sim.run(systems.MATCH_DEATH_GRACE_TICKS + systems.MATCH_DEATH_CHECK_INTERVAL_TICKS - sim.tick);
-    expect(components.isPlayerDead(sim.world, HIGHLAND_SEAT)).toBe(false);
-    expect(men()).toHaveLength(HIGHLAND_MEN);
-  }, 300_000);
+  function peopleOf(sim: Simulation, seat: number): Entity[] {
+    return [...sim.world.query(components.Person, components.Owner)].filter(
+      (e) => sim.world.get(e, components.Owner).player === seat,
+    );
+  }
+
+  /** What a seat starts with, in names and counts only: its people with their trades and gear, its
+   *  house's stock, its papers, its diplomacy locks with the fortress side and its discoveries. */
+  function startOf(sim: Simulation, seat: number) {
+    const w = sim.world;
+    const job = new Map(sim.content.jobs.map((j) => [j.typeId, j.id]));
+    const good = new Map(sim.content.goods.map((g) => [g.typeId, g.id]));
+    const people = peopleOf(sim, seat)
+      .map((e) => {
+        const eq = w.tryGet(e, components.Equipment);
+        const gear = eq === undefined ? [] : [eq.weapon, eq.armor, eq.tool, ...eq.misc];
+        const carried = w.tryGet(e, components.Carrying);
+        return [
+          job.get(w.get(e, components.Settler).jobType ?? -1),
+          w.has(e, components.Female) ? 'female' : 'male',
+          ...gear.flatMap((slot) => (slot === null ? [] : [good.get(slot.goodType)])),
+          ...(carried === undefined ? [] : [`${good.get(carried.goodType)} x${carried.amount}`]),
+        ].join(' ');
+      })
+      .sort();
+    const house = headquartersOf(sim, seat);
+    const stock = [...(w.tryGet(house, components.Stockpile)?.amounts ?? [])]
+      .map(([type, amount]) => `${good.get(type)} ${amount}`)
+      .sort();
+    const papers = components
+      .playerPaperSlots(w, seat)
+      .flatMap((paper) => (paper === null ? [] : [`${paper.kind} ${paper.param}`]))
+      .sort();
+    const discoveries = w.lowestEntityWith(components.TechnologyDiscoveries);
+    const discovered =
+      discoveries === null
+        ? []
+        : w
+            .get(discoveries, components.TechnologyDiscoveries)
+            .rows.filter((row) => row.player === seat)
+            .map((row) => `${row.kind} ${row.typeId}`)
+            .sort();
+    const locks = FORTRESS_SIDE.filter((other) => components.diplomacyLocked(w, seat, other));
+    return { house: w.get(house, components.Building).buildingType, people, stock, papers, locks, discovered };
+  }
+
+  it('starts each seat with what seat 0 starts with', async () => {
+    const sim = await realMapSessionWorld(SEARCH);
+    sim.run(2);
+    const seat0 = startOf(sim, 0);
+    expect(seat0.people.length).toBeGreaterThan(0);
+    expect(seat0.papers.length).toBeGreaterThan(0);
+    expect(seat0.locks).toEqual(FORTRESS_SIDE);
+    for (const seat of PLAYER_SEATS) expect(startOf(sim, seat), `seat ${seat}`).toEqual(seat0);
+
+    // The gatherers' authored picks, which the counters above do not show.
+    const map = variantMap(
+      TerrainMapFile.parse(JSON.parse(readFileSync(realMapPath(MAP_ID), 'utf8'))),
+      mapSessionWorld(MAP_ID, 'ragnarok'),
+    );
+    const picks = (seat: number) =>
+      (map?.entities?.humans ?? [])
+        .filter((h) => h.player === seat)
+        .map((h) => `${h.role} ${h.producedGood ?? ''}`)
+        .sort();
+    for (const seat of PLAYER_SEATS) expect(picks(seat), `seat ${seat}`).toEqual(picks(0));
+  });
+
+  it('shows each seat the fortress at the start', () => {
+    const reveals = scripts()
+      .ragnarok.missions.flatMap((m) => m.results)
+      .filter((line) => line.values[0] === 'ExploreArea' && line.values.slice(2).join() === '245,246,40')
+      .map((line) => Number(line.values[1]));
+    expect([...new Set(reveals)].sort()).toEqual(PLAYER_SEATS);
+  });
+
+  it('stands each seat’s people near its headquarters on open ground of its land', async () => {
+    const sim = await realMapSessionWorld(SEARCH);
+    const terrain = sim.terrain;
+    if (terrain === undefined) throw new Error('no terrain');
+    const node = (e: Entity) => {
+      const at = sim.world.get(e, components.Position);
+      return nodeOfPosition(at.x, at.y);
+    };
+    const resources = new Set(
+      [...sim.world.query(components.Resource, components.Position)].map((e) => {
+        const at = node(e);
+        return `${at.hx},${at.hy}`;
+      }),
+    );
+    for (const seat of PLAYER_SEATS) {
+      const people = peopleOf(sim, seat).map(node);
+      const home = node(headquartersOf(sim, seat));
+      const land = terrain.componentOf(terrain.nodeAt(people[0]?.hx ?? 0, people[0]?.hy ?? 0));
+      for (const at of people) {
+        const label = `seat ${seat} at ${at.hx},${at.hy}`;
+        const n = terrain.nodeAt(at.hx, at.hy);
+        expect(terrain.isWalkable(n) && terrain.componentOf(n) === land, label).toBe(true);
+        expect(resources.has(`${at.hx},${at.hy}`), label).toBe(false);
+        const away = hexDistanceBetween(at.hx, at.hy, home.hx, home.hy);
+        expect(away, label).toBeGreaterThanOrEqual(HOUSE_CLEARANCE);
+        expect(away, label).toBeLessThanOrEqual(START_REACH);
+      }
+    }
+  });
 });
 
 describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
@@ -301,9 +404,11 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
 
     sim.run(MARCH_TICKS);
     for (const [target, band] of bands) {
-      if (band.length === 0) continue;
+      // An idle seat's own soldiers may already have felled a few.
+      const living = band.filter((e) => sim.world.has(e, components.Position));
+      if (living.length === 0) continue;
       const from = hexDistanceBetween(keep.x, keep.y, target.x, target.y);
-      expect(meanDistance(sim, band, target), `raider ${target.raider}`).toBeLessThan(from - MARCHED);
+      expect(meanDistance(sim, living, target), `raider ${target.raider}`).toBeLessThan(from - MARCHED);
     }
     // The garrison is the fortress's own still, standing in the fortress; catapult crews stand nowhere.
     const standing = garrison.filter((e) => sim.world.has(e, components.Position));

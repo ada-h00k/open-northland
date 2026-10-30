@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyMapVariantBriefing,
+  applyMapVariantEntities,
   applyMapVariantScript,
   applyMapVariantSlots,
   MAP_VARIANTS,
@@ -9,6 +10,7 @@ import {
   MapScript,
   MapVariant,
   mapLobbySlots,
+  TerrainEntities,
 } from '../../src/index.js';
 
 const OPEN_SEAT = 0;
@@ -130,6 +132,79 @@ describe('applyMapVariantScript', () => {
       script: { ...VARIANT.script, neutralizedMissions: ['Won'], appendedResults: [] },
     };
     expect(() => applyMapVariantScript(SCRIPT, dangling)).toThrow(/Later still activates neutralised 0/);
+  });
+});
+
+describe('a start seat', () => {
+  const FORTRESS = 6;
+  const PLACE_ANY = 2;
+  const PLACE_HOUSE = 3;
+  const HOUSE = 41;
+  const started = MapVariant.parse({
+    ...VARIANT,
+    startSeats: [{ player: VILLAGE_SEAT, from: OPEN_SEAT, dx: 10, dy: -2 }],
+  });
+
+  it('takes the source seat’s settlers shifted, without its object ids, and drops its own', () => {
+    const entities = TerrainEntities.parse({
+      humans: [
+        { tribe: 'viking', role: 'woman', player: OPEN_SEAT, hx: 4, hy: 5, missionId: 3 },
+        { tribe: 'viking', role: 'civilist', player: VILLAGE_SEAT, hx: 40, hy: 40 },
+        { tribe: 'viking', role: 'collector', player: OPEN_SEAT, hx: 6, hy: 7, producedGood: 'wood' },
+        { tribe: 'viking', role: 'soldier', player: FORTRESS, hx: 50, hy: 50 },
+      ],
+    });
+    const humans = applyMapVariantEntities(entities, started).humans;
+
+    expect(humans.map((h) => [h.player, h.role, h.hx, h.hy, h.missionId])).toEqual([
+      [OPEN_SEAT, 'woman', 4, 5, 3],
+      [OPEN_SEAT, 'collector', 6, 7, undefined],
+      [FORTRESS, 'soldier', 50, 50, undefined],
+      [VILLAGE_SEAT, 'woman', 14, 3, undefined],
+      [VILLAGE_SEAT, 'collector', 16, 5, undefined],
+    ]);
+    expect(humans.at(-1)?.producedGood).toBe('wood');
+    const offMap = { ...started, startSeats: [{ player: VILLAGE_SEAT, from: OPEN_SEAT, dx: -5, dy: 0 }] };
+    expect(() => applyMapVariantEntities(entities, offMap)).toThrow(/leaves the map/);
+  });
+
+  it('takes the source seat’s papers and diplomacy locks in place of its own', () => {
+    const script = MapScript.parse({
+      ...SCRIPT,
+      specialItems: [
+        { player: OPEN_SEAT, kind: PLACE_HOUSE, param: HOUSE },
+        { player: VILLAGE_SEAT, kind: PLACE_ANY, param: 0 },
+        { player: OPEN_SEAT, kind: PLACE_ANY, param: 0 },
+      ],
+      relationFlags: [
+        { kind: 'notChangeable', a: OPEN_SEAT, b: FORTRESS },
+        { kind: 'hide', a: FORTRESS, b: OPEN_SEAT },
+        { kind: 'notChangeable', a: OPEN_SEAT, b: VILLAGE_SEAT },
+        { kind: 'hide', a: VILLAGE_SEAT, b: FORTRESS },
+      ],
+    });
+    const patched = applyMapVariantScript(script, started);
+
+    expect(patched.specialItems).toEqual([
+      { player: OPEN_SEAT, kind: PLACE_HOUSE, param: HOUSE },
+      { player: OPEN_SEAT, kind: PLACE_ANY, param: 0 },
+      { player: VILLAGE_SEAT, kind: PLACE_HOUSE, param: HOUSE },
+      { player: VILLAGE_SEAT, kind: PLACE_ANY, param: 0 },
+    ]);
+    expect(patched.relationFlags).toEqual([
+      { kind: 'notChangeable', a: OPEN_SEAT, b: FORTRESS },
+      { kind: 'hide', a: FORTRESS, b: OPEN_SEAT },
+      { kind: 'notChangeable', a: VILLAGE_SEAT, b: FORTRESS },
+      { kind: 'hide', a: FORTRESS, b: VILLAGE_SEAT },
+    ]);
+  });
+
+  it('refuses a seat started twice or from another start seat', () => {
+    const row = { player: VILLAGE_SEAT, from: OPEN_SEAT, dx: 0, dy: 0 };
+    const twice = { ...started, startSeats: [row, row] };
+    expect(() => applyMapVariantScript(SCRIPT, twice)).toThrow(/starts seat 1 twice/);
+    const chained = { ...started, startSeats: [row, { player: 2, from: VILLAGE_SEAT, dx: 0, dy: 0 }] };
+    expect(() => applyMapVariantScript(SCRIPT, chained)).toThrow(/from start seat 1/);
   });
 });
 

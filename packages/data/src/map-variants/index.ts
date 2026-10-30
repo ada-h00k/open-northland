@@ -20,4 +20,5 @@ export {
   MapVariantLandscapeObject,
   MapVariantMissionResults,
   MapVariantScriptPatch,
+  MapVariantStartSeat,
 } from './schema.js';

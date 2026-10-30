@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { LANGUAGES } from '../languages.js';
 import { HypertextBlock } from '../schema/gui/hypertext.js';
-import { AuthoredHuman } from '../schema/maps/entities.js';
 import { MapAiTask, MapMultiplayerSlot, MapScriptLine } from '../schema/maps/script.js';
 import { MapEscalation } from './escalation.js';
 
@@ -52,6 +51,18 @@ export const MapVariantLandscapeObject = z.strictObject({
 });
 export type MapVariantLandscapeObject = z.infer<typeof MapVariantLandscapeObject>;
 
+/** A seat that starts as another one does: `from`'s authored settlers in place of its own, each shifted by
+ *  (`dx`, `dy`) half-cell nodes, and `from`'s starting papers and diplomacy locks in place of its own. */
+export const MapVariantStartSeat = z
+  .strictObject({
+    player: z.number().int().nonnegative(),
+    from: z.number().int().nonnegative(),
+    dx: z.number().int(),
+    dy: z.number().int(),
+  })
+  .refine((row) => row.player !== row.from, 'a seat starts as itself');
+export type MapVariantStartSeat = z.infer<typeof MapVariantStartSeat>;
+
 /** Briefing pages the variant tells in its own words, by `PlayCutscene` id, each per map text language;
  *  a page in a language the variant lacks takes the language a reader of it falls back to. */
 export const MapVariantBriefingPages = z.record(
@@ -68,8 +79,9 @@ export const MapVariant = z.strictObject({
   mapId: z.string().min(1),
   kind: MapVariantKind,
   script: MapVariantScriptPatch,
-  /** Settlers placed after the map's own as if it authored them, so an absent seat's stay out too. */
-  startHumans: z.array(AuthoredHuman).default([]),
+  /** The seats whose start the variant copies from another seat's. A copied settler is placed as if the
+   *  map authored it, so an absent seat's stay out too. */
+  startSeats: z.array(MapVariantStartSeat).default([]),
   /** Each map-placed node of the named good (a content good id) starts with its authored amount times
    *  this factor: a deposit's stock, a tree's felled trunk, a picked plant's yield. */
   depositYield: z.record(z.string().min(1), z.number().int().min(1)).default({}),

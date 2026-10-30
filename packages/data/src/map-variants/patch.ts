@@ -3,8 +3,8 @@ import { mapSlotEligibility } from '../map-lobby.js';
 import type { MapBriefing } from '../schema/maps/briefing.js';
 import type { TerrainEntities } from '../schema/maps/entities.js';
 import type { MapsIndexPlayerSlot } from '../schema/maps/listing.js';
-import type { MapMission, MapScript } from '../schema/maps/script.js';
-import type { MapVariant } from './schema.js';
+import type { MapMission, MapRelationFlag, MapScript } from '../schema/maps/script.js';
+import type { MapVariant, MapVariantStartSeat } from './schema.js';
 
 const ACTIVATE_MISSION = 'ActivateMission';
 
@@ -41,6 +41,8 @@ export function applyMapVariantScript(script: MapScript, variant: MapVariant): M
   const dropped = new Set(patch.droppedTradeHouses);
   return {
     ...script,
+    specialItems: copiedSeatRows(script.specialItems, variant, (row, player) => ({ ...row, player })),
+    relationFlags: copiedRelationFlags(script.relationFlags, variant),
     ai: patchedAi(script.ai, variant),
     ...(script.multiplayer === undefined && patch.slotOptions.length === 0
       ? {}
@@ -50,11 +52,19 @@ export function applyMapVariantScript(script: MapScript, variant: MapVariant): M
   };
 }
 
-/** The map's placements as the variant starts them: its settlers after the authored ones, so every
- *  authored placement keeps its place in the order entity ids are minted in. */
+/** The map's placements as the variant starts them: each start seat's copied settlers after the
+ *  authored ones, its own left out. A copy carries no mission object id, house or vehicle attachment,
+ *  which name the source seat's own objects. Throws when a shift moves a settler off the map. */
 export function applyMapVariantEntities(entities: TerrainEntities, variant: MapVariant): TerrainEntities {
-  if (variant.startHumans.length === 0) return entities;
-  return { ...entities, humans: [...entities.humans, ...variant.startHumans] };
+  if (variant.startSeats.length === 0) return entities;
+  const humans = copiedSeatRows(entities.humans, variant, (human, player, seat) => {
+    const { missionId: _id, attach: _attach, boardVehicleAt: _vehicle, ...copy } = human;
+    const hx = human.hx + seat.dx;
+    const hy = human.hy + seat.dy;
+    if (hx < 0 || hy < 0) throw new Error(`${label(variant)}: seat ${player}'s start leaves the map`);
+    return { ...copy, player, hx, hy };
+  });
+  return { ...entities, humans };
 }
 
 /** The map's briefing as the variant tells it: each page the variant writes replaces that page in every
@@ -89,6 +99,51 @@ export function applyMapVariantSlots(
     const allowed = options.get(slot.player);
     return allowed === undefined ? slot : { ...slot, ...mapSlotEligibility(slot.type, allowed) };
   });
+}
+
+/** `rows` with each start seat's own rows left out and copies of its source seat's appended, in the
+ *  start seats' order. Throws on a seat started twice or started from another start seat. */
+function copiedSeatRows<T extends { readonly player: number }>(
+  rows: readonly T[],
+  variant: MapVariant,
+  copy: (row: T, player: number, seat: MapVariantStartSeat) => T,
+): T[] {
+  const seats = startSeatsOf(variant);
+  if (seats.size === 0) return [...rows];
+  const kept = rows.filter((row) => !seats.has(row.player));
+  const copies = variant.startSeats.flatMap((seat) =>
+    rows.filter((row) => row.player === seat.from).map((row) => copy(row, seat.player, seat)),
+  );
+  return [...kept, ...copies];
+}
+
+/** The relation flags with each start seat's own rows replaced by its source seat's, the source's seat
+ *  number swapped for the start seat's. */
+function copiedRelationFlags(rows: readonly MapRelationFlag[], variant: MapVariant): MapRelationFlag[] {
+  const seats = startSeatsOf(variant);
+  if (seats.size === 0) return [...rows];
+  const kept = rows.filter((row) => !seats.has(row.a) && !seats.has(row.b));
+  const copies = variant.startSeats.flatMap(({ player, from }) =>
+    rows.flatMap((row) => {
+      if (row.a !== from && row.b !== from) return [];
+      const other = row.a === from ? row.b : row.a;
+      if (other === player || seats.has(other)) return [];
+      return [row.a === from ? { ...row, a: player } : { ...row, b: player }];
+    }),
+  );
+  return [...kept, ...copies];
+}
+
+function startSeatsOf(variant: MapVariant): ReadonlySet<number> {
+  const seats = new Set<number>();
+  for (const { player } of variant.startSeats) {
+    if (seats.has(player)) throw new Error(`${label(variant)}: starts seat ${player} twice`);
+    seats.add(player);
+  }
+  for (const { from } of variant.startSeats) {
+    if (seats.has(from)) throw new Error(`${label(variant)}: starts a seat from start seat ${from}`);
+  }
+  return seats;
 }
 
 function missionIndexes(missions: readonly MapMission[], variant: MapVariant): (name: string) => number {

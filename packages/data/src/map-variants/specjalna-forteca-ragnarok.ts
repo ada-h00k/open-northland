@@ -139,9 +139,27 @@ const PLAIN_HEADQUARTERS = 1;
 const RARE_YIELD = 3;
 const BUILDING_YIELD = 2;
 
-/** The highlanders start with one woman, so the match would count their seat out at once. They get
- *  the plain's six men, placed off their headquarters (315, 378) as the plain's stand off its own. */
-const HIGHLAND_MEN = { tribe: 'viking', role: 'civilist', hx: 318, hy: 388, count: 6 };
+/** Owner ruling: every player seat starts as seat 0 does, with its people, papers and diplomacy locks.
+ *  The map hands the villages a few civilians and seats 1-3 a girl where seat 0 has a second boy. */
+const START_SEAT = 0;
+const START_HEADQUARTERS = { x: 428, y: 264 };
+/** The point each other seat's people stand around as seat 0's stand around its headquarters: the seat's
+ *  own headquarters, one row up for seats 2-4, where a tree or stone would stand under one of them. */
+const START_POINTS = [
+  { seat: 1, x: 125, y: 194 },
+  { seat: 2, x: 352, y: 155 },
+  { seat: 3, x: 133, y: 389 },
+  { seat: PLAIN_SEAT, x: 250, y: 111 },
+  { seat: HIGHLAND_SEAT, x: 315, y: 378 },
+];
+const START_SEATS = START_POINTS.map((point) => ({
+  player: point.seat,
+  from: START_SEAT,
+  dx: point.x - START_HEADQUARTERS.x,
+  dy: point.y - START_HEADQUARTERS.y,
+}));
+/** The seat the map leaves without the fortress in view at the start, which the others see (`ExploreArea`). */
+const UNREVEALED_SEAT = 3;
 
 /** The plain's headquarters (250, 112) has five clay nodes and a few trees in reach, where every other
  *  seat has dozens: a clay pit beside those five on the brown shore south of the lake, packed node to
@@ -263,6 +281,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         mission: 'Alle AI´s sichtbar',
         results: [
           ...revealToNewSeats(245, 246, 40),
+          reveal(UNREVEALED_SEAT, 245, 246, 40),
           reveal(PLAIN_SEAT, 308, 377, 25),
           reveal(HIGHLAND_SEAT, 250, 112, 25),
         ],
@@ -288,13 +307,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
       },
     ],
   },
-  startHumans: Array.from({ length: HIGHLAND_MEN.count }, () => ({
-    tribe: HIGHLAND_MEN.tribe,
-    role: HIGHLAND_MEN.role,
-    player: HIGHLAND_SEAT,
-    hx: HIGHLAND_MEN.hx,
-    hy: HIGHLAND_MEN.hy,
-  })),
+  startSeats: START_SEATS,
   depositYield: {
     gold: RARE_YIELD,
     iron: RARE_YIELD,
