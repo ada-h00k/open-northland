@@ -751,7 +751,7 @@ export const deSurfaces = {
       'Rosa',
       'Weinrot',
       'Marineblau',
-      'Oliv',
+      'Khaki',
       'Braun',
       'Waldgrün',
       'Pflaume',

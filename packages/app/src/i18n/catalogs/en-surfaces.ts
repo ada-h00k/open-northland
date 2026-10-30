@@ -711,7 +711,7 @@ export const enSurfaces = {
       'Pink',
       'Maroon',
       'Navy',
-      'Olive',
+      'Khaki',
       'Brown',
       'Forest green',
       'Plum',

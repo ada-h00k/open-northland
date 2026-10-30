@@ -708,7 +708,7 @@ export const plSurfaces = {
       'Różowy',
       'Bordowy',
       'Granatowy',
-      'Oliwkowy',
+      'Khaki',
       'Brązowy',
       'Ciemnozielony',
       'Śliwkowy',
