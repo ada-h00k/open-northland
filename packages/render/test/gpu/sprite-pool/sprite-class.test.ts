@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, TextureSource } from 'pixi.js';
+import { Container, Rectangle, Sprite, Texture, TextureSource } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
 import type { Camera, Viewport } from '../../../src/data/projection/index.js';
 import type { ElevationField } from '../../../src/data/terrain/index.js';
@@ -499,5 +499,44 @@ describe("LayerBinder - a hero glow binds under the body on its owner's team row
     binder.bind(pe, armored, [glow, body], bindFrame, 1);
 
     expect(pe.sprites.filter((s) => s.visible)).toHaveLength(1);
+  });
+});
+
+describe('LayerBinder - a fog ghost casts no shadow', () => {
+  const bodyLayer: ResolvedLayer = {
+    source,
+    frame: { x: 0, y: 0, width: 16, height: 32, offsetX: -8, offsetY: -32 },
+    scale: 1,
+  };
+  const shadowLayer: ResolvedLayer = {
+    source,
+    frame: { x: 16, y: 0, width: 24, height: 8, offsetX: -12, offsetY: -6 },
+    scale: 1,
+    boundsExempt: true,
+    shadow: true,
+  };
+  /** The shade that sinks the foot into the ground, which the cache grounds to its own texture. */
+  const footShade: ResolvedLayer = { ...shadowLayer, groundFoot: 'shade' };
+  const SHADE_WIDTH = 12;
+  class GroundingCache extends TextureCache {
+    override groundedPart(): Texture {
+      return new Texture({ source, frame: new Rectangle(0, 0, SHADE_WIDTH, 4) });
+    }
+  }
+  const house: DrawItem = { kind: 'building', ref: 1, x: 0, y: 0, depth: 0 };
+  const bindFrame: BindFrame = { camera: CAMERA, screenW: 800, screenH: 600 };
+  const drawnWidths = (pe: ReturnType<typeof createPooled>): number[] =>
+    pe.sprites.filter((s) => s.alpha > 0).map((s) => s.width);
+
+  it('drops the silhouette of a remembered building and draws it again once the house is watched', () => {
+    const binder = new LayerBinder(new GroundingCache(), sheet);
+    const pe = createPooled('building', undefined);
+    const layers = [shadowLayer, footShade, bodyLayer];
+
+    binder.bind(pe, { ...house, ghost: true }, layers, bindFrame, 1);
+    expect(drawnWidths(pe)).toEqual([SHADE_WIDTH, 16]); // the foot stays in the ground
+
+    binder.bind(pe, house, layers, bindFrame, 1);
+    expect(drawnWidths(pe)).toEqual([24, SHADE_WIDTH, 16]);
   });
 });

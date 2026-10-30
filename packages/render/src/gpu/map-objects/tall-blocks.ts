@@ -230,6 +230,7 @@ export class TallObjectLayer {
     motionTime: number,
     sway: number,
     wind: WindSway | undefined,
+    watched: boolean,
   ): boolean {
     const obj = po.obj;
     const frameIndex = objectFrameIndexAt(obj, clock);
@@ -247,8 +248,10 @@ export class TallObjectLayer {
     this.bindGrounded(po, sprite, frame, sprite.position.x, sprite.position.y);
     if (po.shadowSprite !== null && obj.shadow !== undefined) {
       const shadowFrame = obj.shadow.frames[frameIndex];
-      po.shadowSprite.visible = shadowFrame !== undefined; // a pose with no silhouette just hides it
-      if (shadowFrame !== undefined) {
+      // A pose with no silhouette hides it, and a ghost casts none: a memory has no sun on it.
+      const casts = watched && shadowFrame !== undefined;
+      po.shadowSprite.visible = casts;
+      if (casts) {
         po.shadowSprite.texture = this.textures.getShadow(obj.shadow.source, shadowFrame);
         const shadowShear = castShadowShear(shear, frame.offsetY, shadowFrame.offsetY);
         setVegetationShear(po.shadowSprite, obj.scale, shadowShear);
@@ -328,6 +331,7 @@ export class TallObjectLayer {
             watched ? motionTime : 0,
             sway ?? 0,
             watched ? wind : undefined,
+            watched,
           )
         ) {
           continue;

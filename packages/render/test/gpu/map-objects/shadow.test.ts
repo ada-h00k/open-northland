@@ -1,3 +1,4 @@
+import { FOG_STATE } from '@open-northland/sim';
 import { Container, Texture } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
 import type { AtlasFrame } from '../../../src/data/sprites/index.js';
@@ -52,6 +53,18 @@ describe('MapObjectLayer cast shadows (tall objects)', () => {
     const shadow = tallSprites(spriteLayer)[1];
     expect(shadow?.visible).toBe(true);
     expect(shadow?.frameX).toBe(SHADOW_0.x);
+  });
+
+  it('casts no shadow on explored ground and casts it again once the cell is watched', () => {
+    const spriteLayer = new Container();
+    const layer = new MapObjectLayer(spriteLayer, new TextureCache());
+    layer.set([shadowedTree()]);
+
+    layer.update(WIDE, 0, () => FOG_STATE.EXPLORED);
+    expect(tallSprites(spriteLayer)[1]?.visible).toBe(false);
+
+    layer.update(WIDE, 0, () => FOG_STATE.VISIBLE);
+    expect(tallSprites(spriteLayer)[1]?.visible).toBe(true);
   });
 
   it('mints no shadow sprite for an object without a shadow twin', () => {
