@@ -3,6 +3,7 @@ import { systems, TICKS_PER_SECOND } from '@open-northland/sim';
 import {
   JOB_BABY_FEMALE,
   JOB_BABY_MALE,
+  JOB_BUILDER,
   JOB_CHILD_FEMALE,
   JOB_CHILD_MALE,
   JOB_HERO_UNARMED,
@@ -102,6 +103,8 @@ export interface SummaryPopulation {
   /** The men in a soldier or hero job; `workers` is every other man, idle ones included. */
   readonly soldiers: number;
   readonly workers: number;
+  /** The men in the builder job, counted within `workers`. */
+  readonly builders: number;
   /** Everyone not yet grown, baby or child, split by sex; disjoint from the adults. */
   readonly children: number;
   readonly girls: number;
@@ -121,6 +124,7 @@ export function summaryPopulation(model: HudModel): SummaryPopulation {
   let women = 0;
   let men = 0;
   let soldiers = 0;
+  let builders = 0;
   let girls = 0;
   let boys = 0;
   for (const { jobType, count, female } of model.jobs) {
@@ -130,6 +134,7 @@ export function summaryPopulation(model: HudModel): SummaryPopulation {
       women += female;
       men += count - female;
       if (isMilitaryJob(jobType)) soldiers += count - female;
+      else if (jobType === JOB_BUILDER) builders += count - female;
     }
   }
   return {
@@ -137,6 +142,7 @@ export function summaryPopulation(model: HudModel): SummaryPopulation {
     men,
     soldiers,
     workers: men - soldiers,
+    builders,
     children: girls + boys,
     girls,
     boys,

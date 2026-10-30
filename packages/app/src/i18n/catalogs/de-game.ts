@@ -1337,6 +1337,7 @@ export const deGame = {
       women: 'Frauen',
       men: 'Männer',
       workers: 'Arbeiter',
+      builders: 'Bauarbeiter',
       soldiers: 'Soldaten',
       children: 'Kinder',
       girls: 'Mädchen',

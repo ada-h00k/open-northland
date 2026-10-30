@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   JOB_BABY_FEMALE,
   JOB_BABY_MALE,
+  JOB_BUILDER,
   JOB_CHILD_FEMALE,
   JOB_CHILD_MALE,
   JOB_CIVILIST,
@@ -64,7 +65,7 @@ function model(jobs: readonly JobCount[], stocks: readonly StockCount[] = [], ti
 }
 
 describe('summaryPopulation', () => {
-  it('splits adults by the Female tally, men by the army band, and children by sex', () => {
+  it('splits adults by the Female tally, men by the army band and builders, and children by sex', () => {
     const out = summaryPopulation(
       model([
         { jobType: JOB_BABY_FEMALE, count: 1, female: 1 },
@@ -75,20 +76,22 @@ describe('summaryPopulation', () => {
         { jobType: JOB_CIVILIST, count: 2, female: 0 },
         { jobType: WOODCUTTER, count: 4, female: 1 }, // a woman in a trade stays a woman
         { jobType: JOB_IDLE, count: 1, female: 0 }, // an idle man is a worker without work
+        { jobType: JOB_BUILDER, count: 3, female: 1 }, // the men among the builders are workers
         { jobType: JOB_SOLDIER_SWORD, count: 2, female: 0 },
         { jobType: JOB_HERO_SWORD, count: 1, female: 0 },
         { jobType: JOB_HEROINE_BOW, count: 1, female: 1 }, // a heroine is a woman, not a soldier
       ]),
     );
     expect(out).toEqual({
-      women: 5,
-      men: 9,
+      women: 6,
+      men: 11,
       soldiers: 3,
-      workers: 6,
+      workers: 8,
+      builders: 2,
       children: 5,
       girls: 3,
       boys: 2,
-      total: 19,
+      total: 22,
     });
   });
 
@@ -98,6 +101,7 @@ describe('summaryPopulation', () => {
       men: 0,
       soldiers: 0,
       workers: 0,
+      builders: 0,
       children: 0,
       girls: 0,
       boys: 0,

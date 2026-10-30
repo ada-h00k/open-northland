@@ -1219,6 +1219,7 @@ export const chtGame = {
       women: '婦女',
       men: '男人',
       workers: '工人',
+      builders: '建築工',
       soldiers: '士兵',
       children: '兒童',
       girls: '女孩',

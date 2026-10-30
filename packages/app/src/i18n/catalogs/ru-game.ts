@@ -1331,6 +1331,7 @@ export const ruGame = {
       women: 'Женщины',
       men: 'Мужчины',
       workers: 'рабочие',
+      builders: 'строители',
       soldiers: 'солдаты',
       children: 'Дети',
       girls: 'девочки',
