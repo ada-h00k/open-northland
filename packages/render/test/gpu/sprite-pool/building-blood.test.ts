@@ -11,7 +11,7 @@ import type { SpriteSheet } from '../../../src/gpu/textures/sprite-sheet.js';
 import { TextureCache } from '../../../src/gpu/textures/texture-cache.js';
 
 it.each([false, true])(
-  'keeps wall blood and pending impacts when upgrade scaffolds shift its slot (time mask: %s)',
+  'keeps wall blood and pending impacts through an upgrade raising scaffolds (time mask: %s)',
   (withTimes) => {
     const source = new TextureSource({ width: 128, height: 64 });
     const atlas = {
@@ -90,9 +90,7 @@ it.each([false, true])(
       expect(stain[0]).toBeGreaterThan(0);
 
       const upgraded = bind({ ...item, upgradePct: 50, upgradeTypeId: 14 });
-      expect(upgraded.slot).not.toBe(before.slot);
       expect(upgraded.surface.packed).toEqual(new Float32Array(stain));
-      expect(surfaceOf(before.sprite ?? null)).toBeUndefined(); // The old slot now draws a shade.
 
       surfaces.stamp({ ...contact, x: 0.05, y: 0.5, radius: 2 }, 12);
       surfaces.draw(13);

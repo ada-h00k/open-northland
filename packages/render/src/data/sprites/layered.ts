@@ -137,26 +137,30 @@ export function resolveConstructionDraws(
 }
 
 /**
- * The stage stack of an upgrading building its tribe's upgrade rows cannot show, or `null`: the target
- * tier's from-scratch construction stack at the upgrade progress, raised around the old body. The mod
- * authors upgrade rows almost only for the viking skin, and only for the next tier, so this is nearly every
- * other civilization's upgrade site and every site skipping tiers; raising the target as a fresh build is
- * a named approximation.
+ * The target tier's from-scratch construction stack at an upgrading building's progress, or `null` when it
+ * is not upgrading or the target has no stack. Its foundation and timber stages rise in front of the old
+ * body, so an upgrade reads as building work; its body stage stands in for the next tier's body only where
+ * {@link resolveUpgradeDraws} has no row. Raising the target's stages over the old body is a named
+ * approximation, as the original's upgrade-pass compositing is unknown.
  */
-export function resolveUpgradeRebuildDraws(
+export function resolveUpgradeConstructionDraws(
   binding: number | BuildingTypeBinding,
   item: DrawItem,
 ): ConstructionDraw[] | null {
   if (typeof binding === 'number' || item.upgradePct === undefined || item.upgradeTypeId === undefined)
     return null;
-  if (raisesUpgradeRows(binding, item)) return null;
   return constructionStack(binding, item, item.upgradeTypeId, item.upgradePct);
 }
 
 /** Whether the drawing tribe's upgrade rows show this upgrade: they hold only the next tier's body, so
  *  a site skipping tiers rises as its target's construction stack instead. */
-function raisesUpgradeRows(binding: BuildingTypeBinding, item: DrawItem): boolean {
-  if (item.typeId === undefined || tablesFor(binding, item).upgradeByType?.[item.typeId] === undefined)
+export function raisesUpgradeRows(binding: number | BuildingTypeBinding, item: DrawItem): boolean {
+  if (
+    typeof binding === 'number' ||
+    item.upgradePct === undefined ||
+    item.typeId === undefined ||
+    tablesFor(binding, item).upgradeByType?.[item.typeId] === undefined
+  )
     return false;
   return item.upgradeTypeId === binding.upgradeTargetByType?.[item.typeId];
 }
@@ -197,9 +201,9 @@ function stageDraw(l: ConstructionLayerRef): ConstructionDraw {
  * `upgrade === 1` rows, revealed across their window like a construction stage. Unlike
  * {@link resolveConstructionDraws} there is no lowest-stage fallback, since outside every window the
  * old body alone is the correct draw. The rows are the drawing tribe's own and never the base tribe's,
- * since each row is that tribe's next-tier body; a tribe without them takes
- * {@link resolveUpgradeRebuildDraws}. The rows are extracted; composing them over the old
- * body is a named approximation, as the original's upgrade-pass compositing is unknown.
+ * since each row is that tribe's next-tier body. The mod authors them almost only for the viking skin and
+ * only for the next tier; every other upgrade takes its body from {@link resolveUpgradeConstructionDraws}.
+ * The rows are extracted; composing them over the old body is a named approximation.
  */
 export function resolveUpgradeDraws(
   binding: number | BuildingTypeBinding,

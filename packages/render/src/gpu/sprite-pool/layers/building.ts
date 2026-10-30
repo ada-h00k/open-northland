@@ -4,11 +4,12 @@ import {
   bobKey,
   type ConstructionDraw,
   finishedBuildingBobKeys,
+  raisesUpgradeRows,
   resolveBuildingDraw,
   resolveBuildingOverlayDraw,
   resolveConstructionDraws,
+  resolveUpgradeConstructionDraws,
   resolveUpgradeDraws,
-  resolveUpgradeRebuildDraws,
 } from '../../../data/sprites/index.js';
 import { buildingLandscapeOverlays } from '../../../data/sprites/layered.js';
 import type { BuildingLandscapeOverlayRef } from '../../../data/sprites/layered-bindings.js';
@@ -20,11 +21,11 @@ import type { LayerBuffer, ResolvedLayer } from './resolved-layer.js';
 const landscapeLayers = new WeakMap<BuildingLandscapeOverlayRef, Map<number, ResolvedLayer>>();
 /** A state overlay's bounds-exempt twin of its memoized record (see {@link layeredLayerFor}). */
 const overlayRecords = new WeakMap<ResolvedLayer, ResolvedLayer>();
-/** An old body part's fading twin, for an upgrade site that rebuilds its next tier. */
+/** An old body part's fading twin, for an upgrade site whose next-tier body is a construction stage. */
 const fadingRecords = new WeakMap<ResolvedLayer, ResolvedLayer>();
 
 /**
- * Where a rebuilt upgrade's old body starts fading, so the parts of it the next tier does not cover are
+ * Where such an upgrade's old body starts fading, so the parts of it the next tier does not cover are
  * gone by completion instead of snapping away. A named approximation, picked by eye.
  */
 const OLD_BODY_FADE_FROM_PCT = 85;
@@ -78,21 +79,17 @@ export function pushBuildingLayers(
   // An unloaded family falls through to the default building layer - deliberately unlike the
   // construction path, which drops the stage instead.
   if (!hasLoadedFamily(sheet, draw)) return draw.bob;
-  // A rebuilt upgrade's scaffolds stand behind the old body, which hides their back walls; its finished
-  // body stage rises in front as a pushBuildingExtras layer, since that art holds only the front faces.
-  const rebuild = resolveUpgradeRebuildDraws(sheet.bindings.building, item);
-  if (rebuild !== null) pushRevealingStages(out, sheet, rebuild, item.upgradePct, 'work');
+  const fade = risesConstructionBody(sheet, item) ? fadingLayerFor : undefined;
   // A broken body never draws floating extras.
-  if (!pushGroundedBody(out, sheet, 'building', draw, rebuild !== null ? fadingLayerFor : undefined))
-    return false;
+  if (!pushGroundedBody(out, sheet, 'building', draw, fade)) return false;
   pushBuildingExtras(out, sheet, item, tick);
   return true;
 }
 
 /**
  * The layers above a finished building's body: its animated state overlay (the mill's rotor) and, for an
- * upgrading building that keeps its old-tier body, the target tier's revealing stack (its upgrade rows,
- * or its construction stack when the rows cannot show it).
+ * upgrading building that keeps its old-tier body, the target tier's foundation and timber stages, then
+ * its next-tier body from the upgrade rows or else from the construction stack's body stage.
  */
 export function pushBuildingExtras(out: LayerBuffer, sheet: SpriteSheet, item: DrawItem, tick: number): void {
   const overlayDraw = resolveBuildingOverlayDraw(sheet.bindings.building, item, tick);
@@ -120,13 +117,24 @@ export function pushBuildingExtras(out: LayerBuffer, sheet: SpriteSheet, item: D
     }
     out.push(layer);
   }
-  const upgradeStack = resolveUpgradeDraws(sheet.bindings.building, item);
-  if (upgradeStack !== null) {
-    pushRevealingStages(out, sheet, upgradeStack, item.upgradePct, 'all');
-    return;
+  // The target's foundation and timber rise in front of the old body, then the next-tier body over them.
+  const construction = resolveUpgradeConstructionDraws(sheet.bindings.building, item);
+  if (construction !== null) pushRevealingStages(out, sheet, construction, item.upgradePct, 'work');
+  if (raisesUpgradeRows(sheet.bindings.building, item)) {
+    const rows = resolveUpgradeDraws(sheet.bindings.building, item);
+    if (rows !== null) pushRevealingStages(out, sheet, rows, item.upgradePct, 'all');
+  } else if (construction !== null) {
+    pushRevealingStages(out, sheet, construction, item.upgradePct, 'body');
   }
-  const rebuild = resolveUpgradeRebuildDraws(sheet.bindings.building, item);
-  if (rebuild !== null) pushRevealingStages(out, sheet, rebuild, item.upgradePct, 'body');
+}
+
+/** Whether an upgrading building's next-tier body comes from its target's construction stack rather than
+ *  its upgrade rows; that body does not cover the old one exactly, so the old body fades out. */
+function risesConstructionBody(sheet: SpriteSheet, item: DrawItem): boolean {
+  return (
+    !raisesUpgradeRows(sheet.bindings.building, item) &&
+    resolveUpgradeConstructionDraws(sheet.bindings.building, item) !== null
+  );
 }
 
 function fadingLayerFor(of: ResolvedLayer): ResolvedLayer {

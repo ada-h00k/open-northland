@@ -16,6 +16,7 @@ export {
   type ConstructionDraw,
   finishedBuildingBobKeys,
   type ResourceDraw,
+  raisesUpgradeRows,
   resolveBuildingDraw,
   resolveBuildingOverlayDraw,
   resolveConstructionDraws,
@@ -24,8 +25,8 @@ export {
   resolveResourceDraw,
   resolveSignpostDraw,
   resolveStockpileDraw,
+  resolveUpgradeConstructionDraws,
   resolveUpgradeDraws,
-  resolveUpgradeRebuildDraws,
 } from './layered.js';
 export type {
   BuildingBobRef,

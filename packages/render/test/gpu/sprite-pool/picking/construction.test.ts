@@ -97,7 +97,7 @@ describe('construction pixel picking', () => {
         frame: { ...FRAME, width: 2, height: 2, offsetX: -6, offsetY: -2 },
       };
       const layers =
-        mode === 'rebuild stack' ? [shadow, work, oldBody, nextBody] : [shadow, oldBody, nextBody];
+        mode === 'rebuild stack' ? [shadow, oldBody, work, nextBody] : [shadow, oldBody, nextBody];
       pe.reveal = 0.5;
       binder.bind(pe, drawItem('building', { upgradePct: 90 }), layers, VIEW, 1);
       expect(pixelHit(pe, 1, 101, 187)).toBe(true); // isolated revealed roof pixel

@@ -1,4 +1,4 @@
-import type { TextureSource } from 'pixi.js';
+import type { Texture, TextureSource } from 'pixi.js';
 import { Container } from 'pixi.js';
 import { describe, expect, it, vi } from 'vitest';
 import type { Camera, Viewport } from '../../../src/data/projection/index.js';
@@ -179,9 +179,46 @@ describe('SpritePool - an upgrade site reveals the next tier from its upgradePct
     for (let f = 0; f < 60; f++) pool.reconcile(poolFrame(snapshotOf([upgradeSite(90)])));
     expect(visibleStages(layer)).toBe(2); // old body plus the risen next-tier overlay
   });
+
+  it("raises the target's scaffold over the old body, under the next-tier overlay", () => {
+    const NEXT_TIER = 14;
+    const scaffoldSheet: SpriteSheet = {
+      ...sheet,
+      bindings: {
+        ...sheet.bindings,
+        building: {
+          byType: { 13: { layer: 'houses', bob: 70 }, [NEXT_TIER]: { layer: 'houses', bob: 90 } },
+          default: 70,
+          upgradeByType: { 13: [{ layer: 'houses', bob: 90, fromPct: 0, toPct: 100 }] },
+          upgradeTargetByType: { 13: NEXT_TIER },
+          constructionByType: {
+            [NEXT_TIER]: [
+              { layer: 'houses', bob: 85, fromPct: 0, toPct: SCAFFOLD_TO_PCT },
+              { layer: 'houses', bob: 90, fromPct: 20, toPct: 100 },
+            ],
+          },
+        },
+      },
+    };
+    const layer = new Container();
+    const pool = new SpritePool(layer, new TextureCache(), scaffoldSheet);
+    const upgrade = entity(1, 0, 0, {
+      Building: { buildingType: 13, built: Math.round((50 * SIM_ONE) / 100) },
+      UnderConstruction: {},
+      Upgrading: { target: NEXT_TIER },
+    });
+    for (let f = 0; f < 60; f++) pool.reconcile(poolFrame(snapshotOf([upgrade])));
+    // Old body, the target's scaffold, then the next-tier row; the target's own body stage is not doubled.
+    // A fixture frame's atlas x is its bob, so the drawn order reads off the textures.
+    const container = layer.children[0] as Container;
+    const drawn = (container.children as { visible: boolean; alpha: number; texture?: Texture }[])
+      .filter((s) => s.visible && s.alpha > 0)
+      .map((s) => s.texture?.frame.x);
+    expect(drawn).toEqual([70, 85, 90]);
+  });
 });
 
-describe('SpritePool - a tribe without upgrade rows rebuilds its next tier around the old body', () => {
+describe('SpritePool - a tribe without upgrade rows rebuilds its next tier over the old body', () => {
   const FRANK = 2;
   const NEXT_TIER = 14;
   // The frank skin carries no upgrade rows, so type 13 rises as type 14's construction stack: a scaffold
@@ -229,15 +266,14 @@ describe('SpritePool - a tribe without upgrade rows rebuilds its next tier aroun
       .map((s) => s.alpha);
   }
 
-  it('draws the scaffold under the old body and the next-tier body over it, fading the old body at the end', () => {
+  it('draws the scaffold and then the next-tier body over the old body, fading the old body at the end', () => {
     const layer = new Container();
     const pool = new SpritePool(layer, new TextureCache(), rebuildSheet);
     for (let f = 0; f < 60; f++) pool.reconcile(poolFrame(snapshotOf([frankUpgrade(50)])));
-    // Scaffold, old body, next-tier body: back walls hide behind the kept body, front faces rise over it.
     expect(visibleAlphas(layer)).toEqual([1, 1, 1]);
 
     for (let f = 0; f < 120; f++) pool.reconcile(poolFrame(snapshotOf([frankUpgrade(99)])));
-    const [scaffold, oldBody, nextBody] = visibleAlphas(layer);
+    const [oldBody, scaffold, nextBody] = visibleAlphas(layer);
     expect(scaffold).toBe(1);
     expect(oldBody).toBeLessThan(0.5);
     expect(nextBody).toBe(1);
