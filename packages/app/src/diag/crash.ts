@@ -7,8 +7,14 @@ import { messages } from '../i18n/index.js';
 import { isBrave } from '../view/platform/browser-support.js';
 import { servedByBrowser } from '../view/platform/host.js';
 import { downloadDiagnosticsBundle } from './bundle.js';
-import { type IgnoredError, ignoredWindowError, thrownElsewhere } from './capture/foreign-error.js';
-import { reportError } from './capture/report-error.js';
+import {
+  DEV_SERVER_FAULT_NOTE,
+  devServerModuleFault,
+  type IgnoredError,
+  ignoredWindowError,
+  thrownElsewhere,
+} from './capture/foreign-error.js';
+import { reportError, reportErrorOf } from './capture/report-error.js';
 import { errorText } from './error-text.js';
 import { diag } from './log.js';
 
@@ -114,8 +120,21 @@ function noteIgnored(why: IgnoredError, message: string, source?: string): void 
   if (ignoredLogged.has(message) || ignoredLogged.size >= IGNORED_MESSAGES_LOGGED) return;
   ignoredLogged.add(message);
   const data = source === undefined ? undefined : { source };
-  if (why === 'resize-observer') diag.debug('crash', `ignored: ${message}`, data);
-  else diag.info('crash', `ignored an error from another origin: ${message}`, data);
+  switch (why) {
+    case 'resize-observer':
+      diag.debug('crash', `ignored: ${message}`, data);
+      return;
+    case 'foreign':
+      diag.info('crash', `ignored an error from another origin: ${message}`, data);
+      return;
+    case 'dev-server':
+      diag.info('crash', `${DEV_SERVER_FAULT_NOTE}: ${message}`, data);
+      return;
+  }
+}
+
+function devServerFault(error: unknown): boolean {
+  return import.meta.env.DEV && devServerModuleFault(reportErrorOf('main', error));
 }
 
 let installed = false;
@@ -136,11 +155,19 @@ export function installCrashCapture(): void {
     }
     // An error event may carry no error object, only its message.
     const error: unknown = event.error ?? { name: 'Error', message };
+    if (devServerFault(error)) {
+      noteIgnored('dev-server', message, source);
+      return;
+    }
     reportError('main', error, { source });
   });
   window.addEventListener('unhandledrejection', (event) => {
     if (thrownElsewhere(event.reason, window.location.origin)) {
       noteIgnored('foreign', errorText(event.reason));
+      return;
+    }
+    if (devServerFault(event.reason)) {
+      noteIgnored('dev-server', errorText(event.reason));
       return;
     }
     reportError('main', event.reason, { facts: { unhandledRejection: true } });

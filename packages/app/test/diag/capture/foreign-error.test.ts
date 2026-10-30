@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ignoredWindowError } from '../../../src/diag/capture/foreign-error.js';
+import { devServerModuleFault, ignoredWindowError } from '../../../src/diag/capture/foreign-error.js';
 
 const ORIGIN = 'https://game.example';
 
@@ -71,5 +71,33 @@ describe('ignoredWindowError', () => {
       'ResizeObserver loop limit exceeded',
     ].map((message) => ignoredWindowError({ message, filename: '', error: null }, ORIGIN));
     expect(notices).toEqual(['resize-observer', 'resize-observer']);
+  });
+});
+
+describe('devServerModuleFault', () => {
+  it('names a module that failed to load or to link, in each engine', () => {
+    const faults = [
+      { name: 'LoadError', message: 'a script failed to load' },
+      {
+        name: 'TypeError',
+        message: 'Failed to fetch dynamically imported module: http://127.0.0.1:5188/src/x.ts',
+      },
+      {
+        name: 'SyntaxError',
+        message: "The requested module '/src/x.ts' does not provide an export named 'X'",
+      },
+      { name: 'SyntaxError', message: 'import not found: X' },
+      { name: 'SyntaxError', message: "Importing binding name 'X' is not found." },
+    ];
+    expect(faults.map(devServerModuleFault)).toEqual([true, true, true, true, true]);
+  });
+
+  it("leaves the game's own errors to the report", () => {
+    expect(
+      devServerModuleFault({
+        name: 'TypeError',
+        message: "Cannot read properties of undefined (reading 'x')",
+      }),
+    ).toBe(false);
   });
 });

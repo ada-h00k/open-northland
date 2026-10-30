@@ -1,7 +1,8 @@
 /**
- * Window errors that are no fault of the game, so no crash report. The pre-boot recorder inline in
- * `index.html` applies the same rules before this module loads.
+ * Errors that are no fault of the game, so no crash report. The pre-boot recorder inline in
+ * `index.html` applies the window error rules before this module loads.
  */
+import { isStaleCodeError } from '../../update/model.js';
 
 /** A ResizeObserver whose callback resized what it observes leaves the rest for the next frame and
  *  says so as an error event with no error: "loop completed with undelivered notifications", or
@@ -15,7 +16,7 @@ const MUTED_ERROR_MESSAGE = 'Script error.';
 /** A URL in a stack frame: `at f (https://host/a.js:1:2)` or `f@moz-extension://id/a.js:1:2`. */
 const STACK_URL = /\b[a-z][a-z\d+.-]*:\/\/[^\s)]+/gi;
 
-export type IgnoredError = 'resize-observer' | 'foreign';
+export type IgnoredError = 'resize-observer' | 'foreign' | 'dev-server';
 
 /** What an `ErrorEvent` says of its error. */
 export interface WindowErrorFacts {
@@ -61,4 +62,28 @@ export function ignoredWindowError(event: WindowErrorFacts, pageOrigin: string):
   if (event.error == null && event.message === MUTED_ERROR_MESSAGE) return 'foreign';
   if (topFrameUrl(event.error) !== null) return thrownElsewhere(event.error, pageOrigin) ? 'foreign' : null;
   return event.filename !== '' && !fromOrigin(event.filename, pageOrigin) ? 'foreign' : null;
+}
+
+/** The name given to a script that failed to load: by the pre-boot recorder in `index.html` and by a
+ *  worker whose module graph never came up. */
+export const SCRIPT_LOAD_FAILURE = 'LoadError';
+
+export const DEV_SERVER_FAULT_NOTE = 'ignored a module the dev server did not serve whole';
+
+/** How Chromium, Firefox and Safari word an import its module does not export. */
+const MISSING_EXPORT: readonly RegExp[] = [
+  /does not provide an export named/i,
+  /import not found/i,
+  /Importing binding name .* is not found/i,
+];
+
+/** On the dev server a module that fails to load or to link is the server going away or serving a
+ *  tree mid-edit, as when a worktree preview stops or rebases under an open tab. A production build
+ *  links at build time, so there the same failure is the host's and stays a report. */
+export function devServerModuleFault(error: { readonly name: string; readonly message: string }): boolean {
+  return (
+    error.name === SCRIPT_LOAD_FAILURE ||
+    isStaleCodeError(error.message) ||
+    MISSING_EXPORT.some((pattern) => pattern.test(error.message))
+  );
 }

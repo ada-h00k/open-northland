@@ -1,3 +1,5 @@
+import { SCRIPT_LOAD_FAILURE } from '../../diag/capture/foreign-error.js';
+
 /**
  * One end of the channel between the runtime and the sim's worker. A browser `Worker`, a worker's own
  * global scope and Node's `worker_threads` ports all fit behind it: each posts structured clones,
@@ -34,8 +36,9 @@ export function endpointPort(endpoint: MessageEndpoint, close: () => void): Sess
       }),
     listenFailure: (fail) => {
       endpoint.addEventListener('error', (event) => {
-        // A worker script that fails to load dispatches a bare `Event`, with no message to show.
-        fail(new Error(event instanceof ErrorEvent ? event.message : 'the sim worker failed to load'));
+        // A worker whose module graph fails to load or link dispatches a bare `Event`, with no message.
+        if (event instanceof ErrorEvent) fail(new Error(event.message));
+        else fail(Object.assign(new Error('the sim worker failed to load'), { name: SCRIPT_LOAD_FAILURE }));
       });
       endpoint.addEventListener('messageerror', () =>
         fail(new Error('a sim worker message could not be read')),

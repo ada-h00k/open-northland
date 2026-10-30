@@ -90,6 +90,35 @@ describe('boot faults', () => {
     expect(reported).toMatchObject([{ trigger: 'error', earlier: { previousSession: true } }]);
   });
 
+  describe.each([
+    { build: 'the dev server', devServer: true, reports: 0 },
+    { build: 'a production build', devServer: false, reports: 1 },
+  ])('a script that failed to load from $build', ({ devServer, reports }) => {
+    const failToLoad = (): void => {
+      const script = document.createElement('script');
+      script.src = OWN_FRAME;
+      document.head.append(script);
+      script.dispatchEvent(new Event('error'));
+      script.remove();
+    };
+    const loadErrors = (): Problem[] => reported.filter((problem) => problem.error?.name === 'LoadError');
+
+    it(`is reported ${reports} time(s) for an earlier page`, () => {
+      page();
+      failToLoad();
+      page();
+      takeBootFaults(devServer);
+      expect(loadErrors()).toHaveLength(reports);
+    });
+
+    it(`is reported ${reports} time(s) for this page`, () => {
+      page();
+      failToLoad();
+      takeBootFaults(devServer);
+      expect(loadErrors()).toHaveLength(reports);
+    });
+  });
+
   it('leaves a fault to the tab that kept it when that tab came up meanwhile', () => {
     const first = page();
     reject(errorWithStack('booting', OWN_FRAME));

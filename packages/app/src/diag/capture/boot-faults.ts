@@ -1,6 +1,7 @@
 import { REPORT_ID } from '@open-northland/data';
 import { diag } from '../log.js';
 import { reportProblem } from '../report/problem.js';
+import { DEV_SERVER_FAULT_NOTE, devServerModuleFault } from './foreign-error.js';
 import { reportErrorOf } from './report-error.js';
 
 /** What the recorder inline in `index.html` keeps until the app takes over. */
@@ -47,14 +48,22 @@ function parseFaults(value: unknown): BootFault[] {
   return faults;
 }
 
+/** A fault the dev server caused is logged and never reported; see {@link devServerModuleFault}. */
+function droppedAsDevServerFault(fault: BootFault, devServer: boolean): boolean {
+  if (!devServer || !devServerModuleFault(fault)) return false;
+  diag.info('crash', `before boot, ${DEV_SERVER_FAULT_NOTE}: ${fault.message}`, { source: fault.source });
+  return true;
+}
+
 /** Take over from the inline recorder: this page's early faults are reported as this page's, and an
  *  earlier page's as that page's, with its time and id. Call once the app's own capture listens. */
-export function takeBootFaults(): void {
+export function takeBootFaults(devServer: boolean = import.meta.env.DEV): void {
   const recorder = window.__onBootFaults;
   if (recorder === undefined) return;
   const stored = recorder.stop();
   delete window.__onBootFaults;
   for (const fault of parseFaults(stored)) {
+    if (droppedAsDevServerFault(fault, devServer)) continue;
     reportProblem({
       trigger: 'error',
       error: reportErrorOf('main', fault, fault.source),
@@ -62,6 +71,7 @@ export function takeBootFaults(): void {
     });
   }
   for (const fault of parseFaults(recorder.faults)) {
+    if (droppedAsDevServerFault(fault, devServer)) continue;
     const error = reportErrorOf('main', fault, fault.source);
     diag.error('crash', `before boot: ${error.message}`, error);
     reportProblem({ trigger: 'error', error });
