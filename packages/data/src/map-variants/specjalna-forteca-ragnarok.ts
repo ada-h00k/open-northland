@@ -12,6 +12,7 @@ const FORTRESS_TRIBE = 2;
 const SWORD_LONG = 35;
 const SWORD_SHORT = 34;
 const BOW_LONG = 41;
+const BOW_SHORT = 40;
 const SPEAR_WOODEN = 32;
 const SPEAR_IRON = 33;
 
@@ -122,6 +123,24 @@ const COMBAT_AMULETS = ['amulet_strength', 'amulet_defense', 'amulet_speed', 'am
 const SECOND_AMULET_CHANCE_PCT = 30;
 /** How long a lost fortress catapult stays gone. */
 const CATAPULT_RESPAWN_MINUTES = 10;
+
+/** Owner ruling: every fortress tower holds four short and four long bows, a tower with fewer posts as
+ *  many as it has. */
+const TOWER_ARCHERS_PER_BOW = 4;
+
+/** Lord Uzurpator, the keep's one-time defender: a long-sword Frank in plate with three combat amulets.
+ *  His name goes into the map's string table under an id past the map's own. */
+const LORD_HITPOINTS = 30000;
+const LORD_NAME_STRING_ID = 90001;
+const LORD_EQUIPMENT = ['sword_long', 'armor_plate', 'amulet_strength', 'amulet_defense', 'amulet_crithit'];
+const LORD_NAME = {
+  pol: 'Lord Uzurpator',
+  eng: 'Lord Usurper',
+  ger: 'Lord Usurpator',
+  rus: 'Лорд Узурпатор',
+  chs: '篡位领主',
+  cht: '篡位領主',
+};
 
 /** A small ship's crew: its nineteen passenger seats and the commander's. */
 const SHIP_MEN = 20;
@@ -378,6 +397,24 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         },
       ],
     },
+    towerGarrison: {
+      slots: [
+        { job: BOW_SHORT, count: TOWER_ARCHERS_PER_BOW },
+        { job: BOW_LONG, count: TOWER_ARCHERS_PER_BOW },
+      ],
+    },
+    heroes: [
+      {
+        seat: FORTRESS_SEAT,
+        job: SWORD_LONG,
+        x: KEEP.x,
+        y: KEEP.y,
+        hitpoints: LORD_HITPOINTS,
+        equipment: LORD_EQUIPMENT,
+        nameStringId: LORD_NAME_STRING_ID,
+        name: LORD_NAME,
+      },
+    ],
     // Owner ruling: nothing falls from the fortress side's men.
     withheldDeathDrops: { seats: [FORTRESS_SEAT, ...RAIDER_SEATS], goods: 'all' },
     landings: {

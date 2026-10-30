@@ -64,6 +64,8 @@ export interface MapEscalationProgress {
   focus: MapEscalationFocusRecord[];
   /** Whether the start's computer seats were looked at for soldiers to turn civilian. */
   demobilized: boolean;
+  /** The defenders placed at match start, in the variant's order, a dead one kept; null before. */
+  heroes: Entity[] | null;
 }
 
 /** No carrier exists until the escalation first writes, so a world before it hashes as one without it. */
@@ -76,6 +78,7 @@ const escalation = defineWorldSingleton<MapEscalationProgress>('MapEscalation', 
   landings: [],
   focus: [],
   demobilized: false,
+  heroes: null,
 }));
 
 export const MapEscalationState = escalation.component;

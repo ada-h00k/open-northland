@@ -4,6 +4,7 @@ import {
   applyMapVariantEntities,
   applyMapVariantScript,
   applyMapVariantSlots,
+  applyMapVariantStrings,
   MAP_VARIANTS,
   MapBriefing,
   MapEscalation,
@@ -246,6 +247,19 @@ describe('applyMapVariantBriefing', () => {
     expect(patched.texts.eng?.[WON]).toBeUndefined();
     expect(patched.texts.chs?.[OPENING]).toEqual([text('mode')]);
     expect(applyMapVariantBriefing(BRIEFING, VARIANT)).toBe(BRIEFING);
+  });
+});
+
+describe('applyMapVariantStrings', () => {
+  it('adds each escalation hero’s name under its string id and refuses an id the map uses', () => {
+    const committed = MAP_VARIANTS.find((row) => (row.escalation?.heroes.length ?? 0) > 0);
+    const hero = committed?.escalation?.heroes[0];
+    if (committed === undefined || hero === undefined) throw new Error('no committed hero');
+    const id = String(hero.nameStringId);
+    const strings = applyMapVariantStrings({ pol: { '1': 'Mapa' } }, committed);
+    expect(strings?.pol).toEqual({ '1': 'Mapa', [id]: hero.name.pol });
+    expect(strings?.eng?.[id]).toBe(hero.name.eng);
+    expect(() => applyMapVariantStrings({ eng: { [id]: 'taken' } }, committed)).toThrow(id);
   });
 });
 

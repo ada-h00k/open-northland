@@ -1,5 +1,6 @@
 export {
   MapEscalation,
+  type MapEscalationHero,
   type MapEscalationInput,
   MapEscalationJobShare,
   MapEscalationWaveSize,
@@ -9,6 +10,7 @@ export {
   applyMapVariantEntities,
   applyMapVariantScript,
   applyMapVariantSlots,
+  applyMapVariantStrings,
 } from './patch.js';
 export { findMapVariant, MAP_VARIANTS, mapVariantsOf } from './registry.js';
 export {

@@ -1,5 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { findMapVariant, type MapEscalation, mapLobbySlots, TerrainMapFile } from '@open-northland/data';
+import {
+  applyMapVariantStrings,
+  findMapVariant,
+  type MapEscalation,
+  type MapVariant,
+  mapLobbySlots,
+  TerrainMapFile,
+} from '@open-northland/data';
 import {
   components,
   type Entity,
@@ -234,7 +241,14 @@ describe.runIf(hasRealIr())('every player seat of a Ragnarök world', () => {
             .map((row) => `${row.kind} ${row.typeId}`)
             .sort();
     const locks = FORTRESS_SIDE.filter((other) => components.diplomacyLocked(w, seat, other));
-    return { house: w.get(house, components.Building).buildingType, people, stock, papers, locks, discovered };
+    return {
+      house: w.get(house, components.Building).buildingType,
+      people,
+      stock,
+      papers,
+      locks,
+      discovered,
+    };
   }
 
   it('starts each seat with what seat 0 starts with', async () => {
@@ -524,7 +538,13 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     expect(catapults.length).toBeGreaterThan(0);
 
     sim.run((FIRST_STEP_SECONDS + gear.steps.length) * TICKS_PER_SECOND - sim.tick);
-    const garrison = owned(sim, FORTRESS).filter((e) => sim.world.has(e, components.Equipment));
+    // Lord Usurper keeps what he was placed with, and a tower's archers keep their bows.
+    const garrison = owned(sim, FORTRESS).filter(
+      (e) =>
+        sim.world.has(e, components.Equipment) &&
+        !sim.world.has(e, components.ScriptedName) &&
+        !sim.world.has(e, components.JobAssignment),
+    );
     expect(garrison.length).toBeGreaterThan(gear.steps.length);
     const misc = (e: Entity) =>
       (sim.world.get(e, components.Equipment).misc ?? []).flatMap((slot) =>
@@ -726,6 +746,75 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     expect(w.isAlive(pile)).toBe(false);
     expect(most).toBeGreaterThan(before);
     expect(reach).toBeLessThan(FORTRESS_REACH);
+  }, 300_000);
+
+  it('mans every fortress tower with its bows on the first beat, and stands Lord Usurper at the keep', async () => {
+    const escalation = ragnarok();
+    const { towerGarrison, keep } = escalation;
+    const [lord] = escalation.heroes;
+    if (towerGarrison === undefined || lord === undefined) throw new Error('Ragnarök mans no towers');
+    const sim = await earlyAttackWorld(escalation);
+    const w = sim.world;
+    const towers = [...w.query(components.Building, components.Owner)].filter(
+      (e) =>
+        w.get(e, components.Owner).player === FORTRESS &&
+        sim.content.buildings.find((b) => b.typeId === w.get(e, components.Building).buildingType)?.kind ===
+          'tower',
+    );
+    /** The towers the owner counted in the fortress. */
+    const FORTRESS_TOWERS = 16;
+    expect(towers).toHaveLength(FORTRESS_TOWERS);
+
+    sim.run((escalation.guard.refill.everySeconds + 1) * TICKS_PER_SECOND - sim.tick);
+    // The map AI remembers every tower for rebuilding, each on its own anchor.
+    const program = [...w.query(components.MapAiState)].find(
+      (e) => w.get(e, components.MapAiState).player === FORTRESS,
+    );
+    const houses = program === undefined ? [] : w.get(program, components.MapAiState).houses;
+    for (const e of towers) {
+      const at = nodeOfPosition(w.get(e, components.Position).x, w.get(e, components.Position).y);
+      expect(
+        houses.some((house) => hexDistanceBetween(house.hx, house.hy, at.hx, at.hy) <= 2),
+        `tower ${e}`,
+      ).toBe(true);
+    }
+    for (const tower of towers) {
+      const type = sim.content.buildings.find(
+        (b) => b.typeId === w.get(tower, components.Building).buildingType,
+      );
+      const posted = [...w.query(components.JobAssignment, components.Settler)].filter(
+        (e) => w.get(e, components.JobAssignment).workplace === tower,
+      );
+      for (const slot of towerGarrison.slots) {
+        const posts = type?.workers.find((row) => row.jobType === slot.job)?.count ?? 0;
+        const men = posted.filter((e) => w.get(e, components.Settler).jobType === slot.job);
+        expect(men, `tower ${tower} job ${slot.job}`).toHaveLength(Math.min(slot.count, posts));
+      }
+    }
+
+    const named = [...w.query(components.ScriptedName, components.Owner)].filter(
+      (e) => w.get(e, components.ScriptedName).stringId === lord.nameStringId,
+    );
+    expect(named).toHaveLength(1);
+    const hero = named[0] as Entity;
+    expect(w.get(hero, components.Owner).player).toBe(FORTRESS);
+    // A temple's aura near the keep lifts a man past his pool.
+    expect(w.get(hero, components.Health).max).toBe(lord.hitpoints);
+    expect(w.get(hero, components.Health).hitpoints).toBeGreaterThanOrEqual(lord.hitpoints);
+    const at = w.get(hero, components.Position);
+    const node = nodeOfPosition(at.x, at.y);
+    expect(hexDistanceBetween(node.hx, node.hy, keep.x, keep.y)).toBeLessThan(keep.range);
+    const goods = new Map(sim.content.goods.map((good) => [good.typeId, good.id]));
+    const eq = w.get(hero, components.Equipment);
+    expect(goods.get(eq.weapon?.goodType ?? -1)).toBe('sword_long');
+    expect(goods.get(eq.armor?.goodType ?? -1)).toBe('armor_plate');
+    const amulets = eq.misc.flatMap((slot) => (slot === null ? [] : [goods.get(slot.goodType)]));
+    expect(amulets.sort()).toEqual(['amulet_crithit', 'amulet_defense', 'amulet_strength']);
+    const strings = applyMapVariantStrings(
+      { pol: {}, eng: {} },
+      findMapVariant(MAP_ID, 'ragnarok') as MapVariant,
+    );
+    expect(strings?.pol?.[String(lord.nameStringId)]).toBe('Lord Uzurpator');
   }, 300_000);
 
   it('schedules the owner’s waves: the first at 0:30, ships from the fourth, three a wave from the seventh', () => {

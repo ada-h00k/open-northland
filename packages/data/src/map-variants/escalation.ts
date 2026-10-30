@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LANGUAGES } from '../languages.js';
 
 const count = z.number().int().nonnegative();
 const seconds = z.number().int().nonnegative();
@@ -81,6 +82,28 @@ const MapEscalationGearStep = z
   })
   .refine((step) => step.grants.length + step.weaponUpgrades.length > 0, 'a gear step gives nothing');
 
+/** One trade a fortress tower is manned with and how many of it, at most the tower's own posts for it. */
+const MapEscalationTowerSlot = z.strictObject({
+  job: z.number().int().nonnegative(),
+  count: z.number().int().positive(),
+});
+
+/** A defender placed at match start: a soldier of `job` for `seat` at the node nearest (`x`, `y`) free of
+ *  buildings, with `hitpoints` and `equipment` (content good slugs; each good's equip category names its
+ *  slot). He holds his ground there, outside every scripted task, and gets no gear step. `nameStringId`
+ *  is the map string id his `name` (per map text language) is added to the map's table under. */
+const MapEscalationHero = z.strictObject({
+  seat,
+  job: z.number().int().nonnegative(),
+  x: mapPoint,
+  y: mapPoint,
+  hitpoints: z.number().int().positive(),
+  equipment: z.array(z.string().min(1)).default([]),
+  nameStringId: z.number().int().nonnegative(),
+  name: z.partialRecord(z.enum(LANGUAGES), z.string().min(1)),
+});
+export type MapEscalationHero = z.infer<typeof MapEscalationHero>;
+
 const ascending = (values: readonly number[]) => values.every((v, i) => i === 0 || (values[i - 1] ?? v) < v);
 
 /**
@@ -157,6 +180,14 @@ export const MapEscalation = z
     porters: z
       .strictObject({ count, vehicle: z.string().min(1), x: mapPoint, y: mapPoint, radius: count })
       .optional(),
+    /** The fortress seat's towers, each of its finished buildings with a post for a slot's trade, manned
+     *  with `slots`, each capped at the building's posts for it. The missing men are made at the keep and
+     *  posted on each guard refill beat while the fortress holds, so a lost man is replaced and a tower
+     *  raised again is manned again. The seat's map-AI posting keeps them on the wall, gear steps leave
+     *  their weapons, and they stand outside the guard's count. */
+    towerGarrison: z.strictObject({ slots: z.array(MapEscalationTowerSlot).min(1) }).optional(),
+    /** The defenders placed once, at match start. None comes back. */
+    heroes: z.array(MapEscalationHero).default([]),
     /** A fallen character of one of `seats` leaves `goods` (content good slugs) with its bones instead
      *  of dropping them, its other gear and load dropping as usual; `all` leaves everything it wore and
      *  carried. */

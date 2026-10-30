@@ -5,19 +5,23 @@ import {
   mapEscalationProgress,
   Owner,
   Position,
+  Settler,
   writeMapEscalation,
 } from '../../components/index.js';
 import { TICKS_PER_SECOND } from '../../core/loop.js';
 import type { Entity, World } from '../../ecs/world.js';
 import { hexDistanceBetween, nodeOfPosition } from '../../nav/halfcell.js';
-import { isBuilt, ownedBuildings, ownedSettlers, soldierCount } from '../ai-shared/seat-roster.js';
+import { isBuilt, ownedBuildings, ownedSettlers } from '../ai-shared/seat-roster.js';
+import { towerPostFor } from '../conflict/tower-post.js';
 import type { System, SystemContext } from '../context.js';
+import { isFighterJob } from '../readviews/index.js';
 import { spawnSettler } from '../spawn/index.js';
 import { noteLostCatapults, rememberCatapults, respawnCatapult } from './catapults.js';
 import { keepBuilders, keepPorters } from './crew.js';
 import { demobilizeTurn } from './demobilize.js';
 import { enlistAttackMan, focusTurn } from './focus.js';
 import { gearTurn } from './gear.js';
+import { placeHeroes } from './heroes.js';
 import { landingsTurn, launchLandings, revealShips } from './landings.js';
 import {
   apportion,
@@ -28,6 +32,7 @@ import {
   refillMen,
   waveSize,
 } from './schedule.js';
+import { keepTowerGarrison } from './towers.js';
 
 /** Ticks between two checks of whether the running attack lost enough men, of its aims, of the
  *  landing ships and of lost catapults. */
@@ -38,7 +43,8 @@ const END_CHECK_TICKS = TICKS_PER_SECOND;
  * band at its keep for every occupied target seat, owned by the raider seat that targets it, and orders
  * it onto that seat (`focus.ts`); the garrison is never drawn in. On each refill beat
  * it tops its own soldiers up toward a cap that grows with game time and the occupied seats, raises
- * one lost catapult whose wait ran out and makes its missing builders and porters (`crew.ts`). Nothing
+ * one lost catapult whose wait ran out, makes its missing builders and porters (`crew.ts`) and mans its
+ * towers (`towers.ts`). The variant's defenders stand at the start (`heroes.ts`). Nothing
  * spawns while no finished keep stands, and the guard, catapults and crew stop for good once the match
  * counts the fortress seat out. The fortress side's
  * soldiers get the gear steps as they fall due. A wave with ships also sends them against each seat
@@ -49,6 +55,7 @@ export const mapEscalationSystem: System = (world, ctx) => {
   const config = ctx.mapEscalation;
   if (config === undefined) return;
   if (config.demobilizeComputerSeats) demobilizeTurn(world, ctx);
+  if (config.heroes.length > 0) placeHeroes(world, ctx, config);
   const catapults = config.catapults;
   if (catapults !== undefined && mapEscalationProgress(world).catapults === null)
     rememberCatapults(world, ctx, config);
@@ -68,6 +75,7 @@ export const mapEscalationSystem: System = (world, ctx) => {
     if (catapults !== undefined) respawnCatapult(world, ctx, config, catapults.respawnSeconds);
     if (config.builders !== undefined) keepBuilders(world, ctx, config, config.builders);
     if (config.porters !== undefined) keepPorters(world, ctx, config, config.porters);
+    if (config.towerGarrison !== undefined) keepTowerGarrison(world, ctx, config, config.towerGarrison);
   }
   if (config.gear !== undefined) gearTurn(world, ctx, config.gear);
 };
@@ -165,9 +173,24 @@ function refillGuard(world: World, ctx: SystemContext, config: MapEscalation, me
   if (!fortressHolds(world, config)) return;
   const seat = config.keep.seat;
   const cap = guardCap(config, ctx.tick, occupiedTargets(world, config).length);
-  const room = cap - soldierCount(world, ctx.content, seat);
+  const room = cap - fieldSoldiers(world, ctx, seat);
   if (room <= 0) return;
   spawnAtKeep(world, ctx, config, apportion(config.jobMix, Math.min(men, room)), seat);
+}
+
+/** The seat's soldiers off its towers: the guard the cap counts, the tower garrisons standing apart. */
+function fieldSoldiers(world: World, ctx: SystemContext, seat: number): number {
+  let count = 0;
+  for (const e of ownedSettlers(world, seat)) {
+    const jobType = world.get(e, Settler).jobType;
+    if (
+      jobType !== null &&
+      isFighterJob(ctx.content, jobType) &&
+      towerPostFor(world, ctx, e, jobType) === null
+    )
+      count++;
+  }
+  return count;
 }
 
 function spawnAtKeep(

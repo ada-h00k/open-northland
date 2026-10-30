@@ -2,9 +2,11 @@ import {
   applyMapVariantBriefing,
   applyMapVariantEntities,
   applyMapVariantScript,
+  applyMapVariantStrings,
   findMapVariant,
   type MapBriefing,
   type MapScript,
+  type MapStrings,
   type MapVariant,
   type MapVariantKind,
   type TerrainMapFile,
@@ -43,6 +45,12 @@ export function variantMapScript(script: MapScript | null, world: SessionWorld):
 export function variantBriefing(briefing: MapBriefing | null, world: SessionWorld): MapBriefing | null {
   const variant = sessionMapVariant(world);
   return briefing === null || variant === null ? briefing : applyMapVariantBriefing(briefing, variant);
+}
+
+/** The map's string table as the session's world names things, its escalation heroes included. */
+export function variantStrings(strings: MapStrings | null, world: SessionWorld): MapStrings | null {
+  const variant = sessionMapVariant(world);
+  return variant === null ? strings : applyMapVariantStrings(strings, variant);
 }
 
 /** The map's placements as the session's world starts them. */

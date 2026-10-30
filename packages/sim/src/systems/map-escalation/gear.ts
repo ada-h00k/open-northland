@@ -14,10 +14,12 @@ import { ZERO } from '../../core/fixed.js';
 import { TICKS_PER_SECOND } from '../../core/loop.js';
 import type { Entity, World } from '../../ecs/world.js';
 import { ownedSettlers } from '../ai-shared/seat-roster.js';
+import { towerPostFor } from '../conflict/tower-post.js';
 import type { SystemContext } from '../context.js';
 import { weaponKeepsLockedJob } from '../readviews/equip-pick.js';
 import { isSoldierJob, mayChangeEquipment } from '../readviews/index.js';
 import { takeUpWeaponGood } from '../settlers/atomics/effects/goods/weapon-class.js';
+import { isEscalationHero } from './heroes.js';
 
 type GearConfig = NonNullable<MapEscalation['gear']>;
 type GearStep = GearConfig['steps'][number];
@@ -73,20 +75,25 @@ function gearNewcomers(world: World, ctx: SystemContext, gear: GearConfig, passe
   });
 }
 
+/** A soldier of a gear seat other than a placed defender, who keeps what he was placed with. */
 function isGearedSoldier(world: World, ctx: SystemContext, e: Entity): boolean {
   const settler = world.tryGet(e, Settler);
   return (
     settler !== undefined &&
     isSoldierJob(ctx.content, settler.jobType) &&
-    mayChangeEquipment(world, ctx.content, e)
+    mayChangeEquipment(world, ctx.content, e) &&
+    !isEscalationHero(world, e)
   );
 }
 
 /** The step's weapon upgrades, then its grants: each grant draws its chance, then one of its goods, then
  *  its extra chance for a different one. The good's equip category names the slot. A misc good takes the
- *  first free misc slot and is lost when none is free; a good without one is skipped. */
+ *  first free misc slot and is lost when none is free; a good without one is skipped. A man posted to a
+ *  tower keeps his weapon, so the tower's split between its bow classes holds. */
 function grantStep(world: World, ctx: SystemContext, e: Entity, step: GearStep): void {
-  for (const upgrade of step.weaponUpgrades) upgradeWeapon(world, ctx, e, upgrade);
+  const jobType = world.get(e, Settler).jobType;
+  const posted = jobType !== null && towerPostFor(world, ctx, e, jobType) !== null;
+  if (!posted) for (const upgrade of step.weaponUpgrades) upgradeWeapon(world, ctx, e, upgrade);
   for (const grant of step.grants) {
     if (!rolls(ctx, grant.chancePct)) continue;
     const first = drawGood(ctx, grant.goods, undefined);

@@ -1,4 +1,5 @@
-import { Building, Settler } from '../../../../components/index.js';
+import type { MapEscalation } from '@open-northland/data';
+import { Building, ownerOf, Settler } from '../../../../components/index.js';
 import type { PlayerCommand } from '../../../../core/commands/index.js';
 import { contentIndex } from '../../../../core/content-index.js';
 import type { Entity, World } from '../../../../ecs/world.js';
@@ -181,7 +182,7 @@ function standingWalls(
       tower,
       door,
       want: threatened ? slots : peace,
-      keep: calm ? peace : slots,
+      keep: calm ? calmKeep(ctx, ownerOf(world, tower), slots, peace) : slots,
       open: peace,
       total: Number.POSITIVE_INFINITY,
       crew,
@@ -203,6 +204,43 @@ function peaceSlots(slots: ReadonlyMap<number, number>): ReadonlyMap<number, num
     peaceSlotMemo.set(slots, peace);
   }
   return peace;
+}
+
+const heldCrewMemo = new WeakMap<
+  MapEscalation,
+  WeakMap<ReadonlyMap<number, number>, ReadonlyMap<number, number>>
+>();
+
+/**
+ * The men of each class a calm tower of `slots` keeps under the scripted rule: its quiet crew, or for the
+ * fortress seat of a map escalation that mans its towers, that garrison where larger, so the program
+ * never sends the escalation's archers back out. Shared like the slots it derives from.
+ */
+function calmKeep(
+  ctx: SystemContext,
+  owner: number | undefined,
+  slots: ReadonlyMap<number, number>,
+  peace: ReadonlyMap<number, number>,
+): ReadonlyMap<number, number> {
+  const escalation = ctx.mapEscalation;
+  const garrison = escalation?.towerGarrison;
+  if (escalation === undefined || garrison === undefined || owner !== escalation.keep.seat) return peace;
+  let bySlots = heldCrewMemo.get(escalation);
+  if (bySlots === undefined) {
+    bySlots = new WeakMap();
+    heldCrewMemo.set(escalation, bySlots);
+  }
+  let keep = bySlots.get(slots);
+  if (keep === undefined) {
+    const held = new Map(peace);
+    for (const slot of garrison.slots) {
+      const posts = slots.get(slot.job) ?? 0;
+      held.set(slot.job, Math.max(held.get(slot.job) ?? 0, Math.min(slot.count, posts)));
+    }
+    keep = held;
+    bySlots.set(slots, keep);
+  }
+  return keep;
 }
 
 /** The men employed at `tower`, by class. */

@@ -4,6 +4,7 @@ import type { MapBriefing } from '../schema/maps/briefing.js';
 import type { TerrainEntities } from '../schema/maps/entities.js';
 import type { MapsIndexPlayerSlot } from '../schema/maps/listing.js';
 import type { MapMission, MapRelationFlag, MapScript } from '../schema/maps/script.js';
+import type { MapStrings } from '../schema/maps/strings.js';
 import type { MapVariant, MapVariantStartSeat } from './schema.js';
 
 const ACTIVATE_MISSION = 'ActivateMission';
@@ -86,6 +87,25 @@ export function applyMapVariantBriefing(briefing: MapBriefing, variant: MapVaria
     texts[lang] = patched;
   }
   return { ...briefing, texts };
+}
+
+/** The map's string table with the variant's escalation heroes' names added, each under its string id in
+ *  every language its name is written in. Throws on an id the map's table already uses in that language. */
+export function applyMapVariantStrings(strings: MapStrings | null, variant: MapVariant): MapStrings | null {
+  const heroes = variant.escalation?.heroes ?? [];
+  if (heroes.length === 0) return strings;
+  const patched: MapStrings = { ...strings };
+  for (const hero of heroes) {
+    for (const [lang, text] of Object.entries(hero.name)) {
+      if (!isLanguage(lang) || text === undefined) continue;
+      const table = { ...patched[lang] };
+      const id = String(hero.nameStringId);
+      if (table[id] !== undefined) throw new Error(`${label(variant)}: map string ${id} is taken in ${lang}`);
+      table[id] = text;
+      patched[lang] = table;
+    }
+  }
+  return patched;
 }
 
 /** The lobby rows of a map index entry as the variant offers them: only the eligibility a replaced
