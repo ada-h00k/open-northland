@@ -23,6 +23,7 @@ import {
   SPEARMAN,
   WOOL,
 } from '../../fixtures/map-escalation/keep.js';
+import { needsOf } from '../../fixtures/settler.js';
 
 const HERO_HITPOINTS = 30000;
 const NAME_STRING_ID = 90001;
@@ -31,7 +32,7 @@ const HERO_AT = { x: KEEP.x, y: KEEP.y + 8 };
 /** How far a defender standing his ground may have moved. */
 const HOLD_NODES = 4;
 
-function heroWorld(): Simulation {
+function heroWorld(hero = false): Simulation {
   const config = {
     ...GEARED,
     heroes: [
@@ -43,6 +44,7 @@ function heroWorld(): Simulation {
         equipment: ['armor_wool', 'amulet_defense'],
         nameStringId: NAME_STRING_ID,
         name: { eng: 'Lord Usurper' },
+        hero,
       },
     ],
   };
@@ -76,5 +78,22 @@ describe('map escalation - heroes', () => {
     expect(heroesOf(sim)).toEqual([hero]);
     expect(placed()).toEqual({ armor: WOOL, misc: [DEFENSE_AMULET] });
     expect(distance(sim, hero, HERO_AT)).toBeLessThanOrEqual(HOLD_NODES);
+  });
+
+  it('marks a hero with the glow and needs that never fall, and a plain defender with neither', () => {
+    const run = (hero: boolean) => {
+      const sim = heroWorld(hero);
+      const [placed] = heroesOf(sim);
+      if (placed === undefined) throw new Error('no hero');
+      const before = needsOf(sim, placed);
+      runToSecond(sim, AMULET_SECONDS + 1);
+      return {
+        glows: hasMissionBehaviour(sim.world, placed, MISSION_BEHAVIOUR.GLOWS),
+        hungerRose: needsOf(sim, placed).hunger > before.hunger,
+        fatigueRose: needsOf(sim, placed).fatigue > before.fatigue,
+      };
+    };
+    expect(run(true)).toEqual({ glows: true, hungerRose: false, fatigueRose: false });
+    expect(run(false)).toEqual({ glows: false, hungerRose: true, fatigueRose: true });
   });
 });

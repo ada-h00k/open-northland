@@ -798,6 +798,8 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     expect(named).toHaveLength(1);
     const hero = named[0] as Entity;
     expect(w.get(hero, components.Owner).player).toBe(FORTRESS);
+    const heroMarks = components.MISSION_BEHAVIOUR.GLOWS | components.MISSION_BEHAVIOUR.NEEDS_FROZEN;
+    expect(w.get(hero, components.MissionBehaviour).flags & heroMarks).toBe(heroMarks);
     // A temple's aura near the keep lifts a man past his pool.
     expect(w.get(hero, components.Health).max).toBe(lord.hitpoints);
     expect(w.get(hero, components.Health).hitpoints).toBeGreaterThanOrEqual(lord.hitpoints);

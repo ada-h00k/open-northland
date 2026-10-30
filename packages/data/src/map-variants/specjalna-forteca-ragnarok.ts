@@ -413,6 +413,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         equipment: LORD_EQUIPMENT,
         nameStringId: LORD_NAME_STRING_ID,
         name: LORD_NAME,
+        hero: true,
       },
     ],
     // Owner ruling: nothing falls from the fortress side's men.

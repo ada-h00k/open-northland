@@ -101,6 +101,8 @@ const MapEscalationHero = z.strictObject({
   equipment: z.array(z.string().min(1)).default([]),
   nameStringId: z.number().int().nonnegative(),
   name: z.partialRecord(z.enum(LANGUAGES), z.string().min(1)),
+  /** Marked the way a map marks its heroes: the owner-coloured hero glow, and needs that never fall. */
+  hero: z.boolean().default(false),
 });
 export type MapEscalationHero = z.infer<typeof MapEscalationHero>;
 
