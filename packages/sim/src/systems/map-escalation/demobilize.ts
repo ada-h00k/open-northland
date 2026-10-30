@@ -24,16 +24,20 @@ import { isSoldierJob } from '../readviews/index.js';
  */
 export function demobilizeTurn(world: World, ctx: SystemContext): void {
   if (mapEscalationProgress(world).demobilized) return;
-  const seats = Array.from({ length: MAX_PLAYERS }, (_, seat) => seat);
-  if (!seats.some((seat) => isMachinePlayer(world, seat))) return;
+  if (!anyMachineSeat(world)) return;
   writeMapEscalation(world, (progress) => {
     progress.demobilized = true;
   });
-  for (const seat of seats) {
+  for (let seat = 0; seat < MAX_PLAYERS; seat++) {
     if (!computerModuleRuns(world, seat, 'collectResources')) continue;
     for (const e of [...ownedSettlers(world, seat)]) {
       if (!isSoldierJob(ctx.content, world.get(e, Settler).jobType)) continue;
       if (mayChangeTrade(world, ctx.content, e)) takeUpTrade(world, ctx, e, CIVILIST_JOB);
     }
   }
+}
+
+function anyMachineSeat(world: World): boolean {
+  for (let seat = 0; seat < MAX_PLAYERS; seat++) if (isMachinePlayer(world, seat)) return true;
+  return false;
 }

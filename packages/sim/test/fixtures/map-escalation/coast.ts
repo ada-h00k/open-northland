@@ -63,13 +63,23 @@ function landingContent(): ContentSet {
   });
 }
 
-export function coast(): TerrainMap {
+/** Cells of an inland lake no sea route reaches, north of the houses; {@link LAKE} is its middle node. */
+const LAKE_CELLS = { col: 30, row: 2, size: 7 };
+export const LAKE = { x: 67, y: 10 };
+
+/** The coast; `lake` adds the inland lake. */
+export function coast(lake = false): TerrainMap {
   const GRASS = 0;
   const WATER = 1;
   const { width, height } = MAP_CELLS;
   const typeIds = new Array<number>(width * height).fill(GRASS);
   for (let row = 0; row < height; row++)
     for (let col = 0; col < SHORE_CELL; col++) typeIds[row * width + col] = WATER;
+  if (lake) {
+    const { col, row, size } = LAKE_CELLS;
+    for (let r = row; r < row + size; r++)
+      for (let c = col; c < col + size; c++) typeIds[r * width + c] = WATER;
+  }
   return halfCellMapFromCells({ width, height, typeIds });
 }
 
@@ -124,11 +134,11 @@ export const SCRIPT: MapAiSeat[] = [
 ];
 
 /** The coast world after its setup tick. */
-export function coastWorld(config: MapEscalationInput = ESCALATION): Simulation {
+export function coastWorld(config: MapEscalationInput = ESCALATION, map: TerrainMap = coast()): Simulation {
   const sim = new Simulation({
     seed: 5,
     content: landingContent(),
-    map: coast(),
+    map,
     mapAiScript: SCRIPT,
     mapEscalation: MapEscalation.parse(config),
   });

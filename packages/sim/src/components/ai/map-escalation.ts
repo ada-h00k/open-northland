@@ -60,7 +60,7 @@ export interface MapEscalationProgress {
   catapults: MapEscalationCatapultRecord[] | null;
   /** The ships under way, in launch order. */
   landings: MapEscalationLandingRecord[];
-  /** Each targeted seat's aim, ascending by seat; a seat without a record has not been aimed at yet. */
+  /** Each targeted seat's aim, in the variant's target order; a seat without a record has not been aimed at yet. */
   focus: MapEscalationFocusRecord[];
   /** Whether the start's computer seats were looked at for soldiers to turn civilian. */
   demobilized: boolean;

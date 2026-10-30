@@ -1,27 +1,18 @@
 import type { MapEscalation } from '@open-northland/data';
-import {
-  Building,
-  isPlayerDead,
-  mapEscalationProgress,
-  Owner,
-  Position,
-  Settler,
-  writeMapEscalation,
-} from '../../components/index.js';
+import { mapEscalationProgress, Owner, Settler, writeMapEscalation } from '../../components/index.js';
 import { TICKS_PER_SECOND } from '../../core/loop.js';
 import type { Entity, World } from '../../ecs/world.js';
-import { hexDistanceBetween, nodeOfPosition } from '../../nav/halfcell.js';
-import { isBuilt, ownedBuildings, ownedSettlers } from '../ai-shared/seat-roster.js';
+import { ownedSettlers } from '../ai-shared/seat-roster.js';
 import { towerPostFor } from '../conflict/tower-post.js';
 import type { System, SystemContext } from '../context.js';
 import { isFighterJob } from '../readviews/index.js';
-import { spawnSettler } from '../spawn/index.js';
 import { noteLostCatapults, rememberCatapults, respawnCatapult } from './catapults.js';
 import { keepBuilders, keepPorters } from './crew.js';
 import { demobilizeTurn } from './demobilize.js';
 import { enlistAttackMan, focusTurn } from './focus.js';
 import { gearTurn } from './gear.js';
 import { placeHeroes } from './heroes.js';
+import { fortressHolds, keepStands, occupiedTargets, spawnAtKeep } from './keep.js';
 import { landingsTurn, launchLandings, revealShips } from './landings.js';
 import {
   apportion,
@@ -39,17 +30,10 @@ import { keepTowerGarrison } from './towers.js';
 const END_CHECK_TICKS = TICKS_PER_SECOND;
 
 /**
- * A map's escalating siege (`ctx.mapEscalation`): on each scheduled launch the fortress spawns a fresh
- * band at its keep for every occupied target seat, owned by the raider seat that targets it, and orders
- * it onto that seat (`focus.ts`); the garrison is never drawn in. On each refill beat
- * it tops its own soldiers up toward a cap that grows with game time and the occupied seats, raises
- * one lost catapult whose wait ran out, makes its missing builders and porters (`crew.ts`) and mans its
- * towers (`towers.ts`). The variant's defenders stand at the start (`heroes.ts`). Nothing
- * spawns while no finished keep stands, and the guard, catapults and crew stop for good once the match
- * counts the fortress seat out. The fortress side's
- * soldiers get the gear steps as they fall due. A wave with ships also sends them against each seat
- * (`landings.ts`), whose men join the same aim.
- * A variant may turn the computer seats' soldiers into civilians at the start (`demobilize.ts`).
+ * A map's escalating siege (`ctx.mapEscalation`): scheduled attacks from the fortress keep against every
+ * occupied target seat, by land and by sea, and on each refill beat the guard, catapults, crew and tower
+ * archers kept up while the fortress holds, besides its gear steps, placed defenders and optional start
+ * demobilizing. Nothing spawns at the keep while no finished keep stands.
  */
 export const mapEscalationSystem: System = (world, ctx) => {
   const config = ctx.mapEscalation;
@@ -70,8 +54,8 @@ export const mapEscalationSystem: System = (world, ctx) => {
   if (catapults !== undefined && checkBeat) noteLostCatapults(world, ctx, config);
   if (ctx.tick >= launchTick(config, progress.launches)) launch(world, ctx, config, progress.launches);
   const refill = refillMen(config, ctx.tick);
-  if (refill > 0) refillGuard(world, ctx, config, refill);
   if (refill > 0 && fortressHolds(world, config)) {
+    refillGuard(world, ctx, config, refill);
     if (catapults !== undefined) respawnCatapult(world, ctx, config, catapults.respawnSeconds);
     if (config.builders !== undefined) keepBuilders(world, ctx, config, config.builders);
     if (config.porters !== undefined) keepPorters(world, ctx, config, config.porters);
@@ -79,18 +63,6 @@ export const mapEscalationSystem: System = (world, ctx) => {
   }
   if (config.gear !== undefined) gearTurn(world, ctx, config.gear);
 };
-
-/**
- * A seat is occupied while it has people and the match has not counted it out: a lobby seat left
- * empty has none, and an idle computer seat's people count like any other's.
- */
-function isOccupiedSeat(world: World, seat: number): boolean {
-  return ownedSettlers(world, seat).length > 0 && !isPlayerDead(world, seat);
-}
-
-function occupiedTargets(world: World, config: MapEscalation) {
-  return config.attacks.targets.filter((target) => isOccupiedSeat(world, target.seat));
-}
 
 function launch(world: World, ctx: SystemContext, config: MapEscalation, index: number): void {
   const wave = index + 1;
@@ -106,7 +78,7 @@ function launch(world: World, ctx: SystemContext, config: MapEscalation, index: 
   const men: Entity[] = [];
   for (const target of occupiedTargets(world, config)) {
     seats.push(target.seat);
-    const band = spawnAtKeep(world, ctx, config, jobs, target.raider);
+    const band = spawnBand(world, ctx, config, jobs, target.raider);
     for (const e of band) enlistAttackMan(world, e);
     men.push(...band);
     const aboard = launchLandings(world, ctx, config, target, size.ships, seaJobs);
@@ -170,12 +142,11 @@ function endAttack(world: World, ctx: SystemContext, cause: 'defeated' | 'expire
 }
 
 function refillGuard(world: World, ctx: SystemContext, config: MapEscalation, men: number): void {
-  if (!fortressHolds(world, config)) return;
   const seat = config.keep.seat;
   const cap = guardCap(config, ctx.tick, occupiedTargets(world, config).length);
   const room = cap - fieldSoldiers(world, ctx, seat);
   if (room <= 0) return;
-  spawnAtKeep(world, ctx, config, apportion(config.jobMix, Math.min(men, room)), seat);
+  spawnBand(world, ctx, config, apportion(config.jobMix, Math.min(men, room)), seat);
 }
 
 /** The seat's soldiers off its towers: the guard the cap counts, the tower garrisons standing apart. */
@@ -193,7 +164,7 @@ function fieldSoldiers(world: World, ctx: SystemContext, seat: number): number {
   return count;
 }
 
-function spawnAtKeep(
+function spawnBand(
   world: World,
   ctx: SystemContext,
   config: MapEscalation,
@@ -202,34 +173,8 @@ function spawnAtKeep(
 ): Entity[] {
   const spawned: Entity[] = [];
   for (const jobType of jobs) {
-    const e = spawnSettler(world, ctx, {
-      kind: 'spawnSettler',
-      jobType,
-      tribe: config.tribe,
-      x: config.keep.x,
-      y: config.keep.y,
-      owner,
-    });
+    const e = spawnAtKeep(world, ctx, config, jobType, owner);
     if (e !== null) spawned.push(e);
   }
   return spawned;
-}
-
-/** The fortress seat is still in the match and its keep stands. The raider seats launch on regardless:
- *  they never die, so a fallen fortress seat with its keep standing still sends its scheduled attacks. */
-function fortressHolds(world: World, config: MapEscalation): boolean {
-  return !isPlayerDead(world, config.keep.seat) && keepStands(world, config);
-}
-
-/** A finished keep of the fortress seat stands within its range of the keep point. */
-function keepStands(world: World, config: MapEscalation): boolean {
-  const { seat, houseType, x, y, range } = config.keep;
-  for (const e of ownedBuildings(world, seat)) {
-    if (world.get(e, Building).buildingType !== houseType || !isBuilt(world, e)) continue;
-    const at = world.tryGet(e, Position);
-    if (at === undefined) continue;
-    const node = nodeOfPosition(at.x, at.y);
-    if (hexDistanceBetween(node.hx, node.hy, x, y) < range) return true;
-  }
-  return false;
 }

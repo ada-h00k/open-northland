@@ -2,10 +2,16 @@ import { MapEscalation } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
 import { Owner, Person, Settler } from '../../../src/components/index.js';
 import { Simulation } from '../../../src/index.js';
-import { soldierCount } from '../../../src/systems/ai-shared/seat-roster.js';
 import { CIVILIST_JOB } from '../../../src/systems/lifecycle/ageclass.js';
 import { aiContent } from '../../fixtures/ai-content.js';
-import { ESCALATION, FORTRESS, MAP, SPEARMAN, VIKING } from '../../fixtures/map-escalation/keep.js';
+import {
+  ESCALATION,
+  FORTRESS,
+  MAP,
+  SPEARMAN,
+  soldiersOf,
+  VIKING,
+} from '../../fixtures/map-escalation/keep.js';
 import { grassNodeMap } from '../../fixtures/terrain.js';
 
 const HUMAN = 0;
@@ -44,7 +50,7 @@ function people(sim: Simulation, seat: number): number {
 describe('map escalation - computer seats demobilize', () => {
   it('turns a computer seat’s soldiers into civilians at the start and leaves other seats armed', () => {
     const sim = startedWorld(true);
-    const soldiers = (seat: number) => soldierCount(sim.world, sim.content, seat);
+    const soldiers = (seat: number) => soldiersOf(sim, seat);
 
     expect(soldiers(COMPUTER)).toBe(0);
     expect(people(sim, COMPUTER)).toBe(SOLDIERS_PER_SEAT);
@@ -61,11 +67,11 @@ describe('map escalation - computer seats demobilize', () => {
     const sim = startedWorld(true);
     sim.enqueueSetup({ kind: 'setAiControl', player: HUMAN, enabled: true });
     sim.step();
-    expect(soldierCount(sim.world, sim.content, HUMAN)).toBe(SOLDIERS_PER_SEAT);
+    expect(soldiersOf(sim, HUMAN)).toBe(SOLDIERS_PER_SEAT);
   });
 
   it('keeps every seat armed without the flag', () => {
     const sim = startedWorld(false);
-    expect(soldierCount(sim.world, sim.content, COMPUTER)).toBe(SOLDIERS_PER_SEAT);
+    expect(soldiersOf(sim, COMPUTER)).toBe(SOLDIERS_PER_SEAT);
   });
 });

@@ -1,12 +1,12 @@
 import type { MapEscalation } from '@open-northland/data';
-import { JobAssignment, Settler } from '../../components/index.js';
+import { Settler } from '../../components/index.js';
 import type { World } from '../../ecs/world.js';
 import { garrisonSlots } from '../ai-shared/military/defence/posts.js';
 import { anchorNodeOf } from '../ai-shared/node-geometry.js';
 import { isBuilt, ownedBuildings } from '../ai-shared/seat-roster.js';
 import type { SystemContext } from '../context.js';
-import { spawnSettler } from '../spawn/index.js';
 import { assignedWorkers } from '../stores/assigned-workers.js';
+import { spawnPostedAtKeep } from './keep.js';
 
 type TowerGarrison = NonNullable<MapEscalation['towerGarrison']>;
 
@@ -34,17 +34,8 @@ export function keepTowerGarrison(
     for (const slot of garrison.slots) {
       const missing = Math.min(slot.count, posts.get(slot.job) ?? 0) - (held.get(slot.job) ?? 0);
       for (let i = 0; i < missing; i++) {
-        const e = spawnSettler(world, ctx, {
-          kind: 'spawnSettler',
-          jobType: slot.job,
-          tribe: config.tribe,
-          x: config.keep.x,
-          y: config.keep.y,
-          owner: seat,
-          workplace: { x: anchor.hx, y: anchor.hy },
-        });
-        // A man the tower would not take joins the guard; the next beat tries again.
-        if (e === null || world.tryGet(e, JobAssignment)?.workplace !== tower) break;
+        // A tower that would not take one takes no more this beat; the next beat tries again.
+        if (spawnPostedAtKeep(world, ctx, config, slot.job, tower, anchor) === null) break;
       }
     }
   }

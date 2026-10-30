@@ -1,16 +1,18 @@
 import { MapEscalation } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
-import { FOG_MODE, mapEscalationProgress, Position, Rider } from '../../../src/components/index.js';
+import { FOG_MODE, mapEscalationProgress, Position, Rider, Vehicle } from '../../../src/components/index.js';
 import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import { exportSaveGame, parseSaveGame, restoreSimulation, serializeSaveGame } from '../../../src/index.js';
-import { nodeOfPosition } from '../../../src/nav/halfcell.js';
+import { nodeOfPosition, positionOfNode } from '../../../src/nav/halfcell.js';
+import { endDrive } from '../../../src/systems/vehicles/movement.js';
 import { FOG_STATE } from '../../../src/systems/vision/state.js';
 import {
   coast,
   coastWorld,
   distance,
   ESCALATION,
+  LAKE,
   LANDING,
   LANDINGS,
   LAUNCH_SECONDS,
@@ -24,6 +26,9 @@ import {
   SHIP_SEATS,
   TARGET,
 } from '../../fixtures/map-escalation/coast.js';
+
+/** Below the four sea men's share of the five sent, so counting them dead would end the attack. */
+const SCRAP_END_PCT = 50;
 
 describe('map escalation - a sea landing', () => {
   it('sails one full ship to the landing point, sets its men ashore in the attack and leaves the map', () => {
@@ -116,6 +121,32 @@ describe('map escalation - a sea landing', () => {
       return false;
     });
     expect(watched).toBeGreaterThan(LAUNCH_SECONDS * TICKS_PER_SECOND);
+  });
+
+  it('scraps a ship that can no longer reach its shore, its men leaving the attack instead of counting dead', () => {
+    const sim = coastWorld(
+      { ...ESCALATION, attacks: { ...ESCALATION.attacks, endDeadPct: SCRAP_END_PCT } },
+      coast(true),
+    );
+    runUntil(sim, LAUNCH_SECONDS + 1, () => raiderShips(sim).length > 0);
+    const [ship] = raiderShips(sim);
+    if (ship === undefined) throw new Error('no ship');
+    const ashore = raiderMen(sim).filter((e) => !sim.world.has(e, Rider));
+    expect(ashore).toHaveLength(1);
+    // Lifted onto the inland lake mid-voyage, the ship finds no way to its shore.
+    const at = positionOfNode(LAKE.x, LAKE.y);
+    Object.assign(sim.world.mut(ship, Position), at);
+    endDrive(sim.world, ship);
+    Object.assign(sim.world.mut(ship, Vehicle), { task: 'none', moored: false, mooring: null });
+    const ended: string[] = [];
+    runUntil(sim, 3, () => {
+      for (const ev of sim.events.current()) if (ev.kind === 'mapEscalationAttackEnded') ended.push(ev.cause);
+      return false;
+    });
+    expect(sim.world.isAlive(ship)).toBe(false);
+    expect(raiderMen(sim)).toEqual(ashore);
+    expect(ended).toEqual([]);
+    expect(mapEscalationProgress(sim.world).attack).toMatchObject({ sent: 1, men: ashore });
   });
 
   it('keeps a ship under way through a save', () => {

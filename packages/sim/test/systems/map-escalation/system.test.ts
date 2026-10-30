@@ -1,6 +1,12 @@
 import { MapEscalation } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
-import { Building, markPlayerDead, Owner, Settler } from '../../../src/components/index.js';
+import {
+  Building,
+  mapEscalationProgress,
+  markPlayerDead,
+  Owner,
+  Settler,
+} from '../../../src/components/index.js';
 import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
 import {
   exportSaveGame,
@@ -10,11 +16,11 @@ import {
   serializeSaveGame,
 } from '../../../src/index.js';
 import { hexDistanceBetween } from '../../../src/nav/halfcell.js';
-import { soldierCount } from '../../../src/systems/ai-shared/seat-roster.js';
 import { removeSettlerSilently } from '../../../src/systems/lifecycle/death.js';
 import {
   BOWMAN,
   distance,
+  EMPTY_SEAT,
   END_AFTER_SECONDS,
   ESCALATION,
   FIRST_LAUNCH_SECONDS,
@@ -32,7 +38,9 @@ import {
   runToSecond,
   SCRIPT,
   SPEARMAN,
+  soldiersOf,
   TARGET,
+  VIKING,
 } from '../../fixtures/map-escalation/keep.js';
 import { grassNodeMap } from '../../fixtures/terrain.js';
 
@@ -111,6 +119,27 @@ describe('map escalation - an attack', () => {
     for (const e of band) expect(sim.world.isAlive(e)).toBe(true);
   });
 
+  it('keeps an attack on two seats running on the other band once one seat has nothing left', () => {
+    const { sim } = keepWorld();
+    // A person makes the second target seat occupied, so its raider gets a band too.
+    sim.enqueueSetup({ kind: 'spawnSettler', jobType: 0, x: 12, y: 12, tribe: VIKING, owner: EMPTY_SEAT });
+    expect(eventsUntil(sim, FIRST_LAUNCH_SECONDS)).toEqual([`launched 1 ${PLAYER},${EMPTY_SEAT}`]);
+    const band = ownedFighters(sim, RAIDER);
+    const other = ownedFighters(sim, IDLE_RAIDER);
+    expect(band).toHaveLength(3);
+    expect(other).toHaveLength(3);
+    for (const e of [...sim.world.query(Owner)])
+      if (sim.world.get(e, Owner).player === EMPTY_SEAT) sim.world.destroy(e);
+    // Half its men count lost, short of the end share: the first band holds the attack.
+    expect(eventsUntil(sim, FIRST_LAUNCH_SECONDS + 3)).toEqual([]);
+    expect(mapEscalationProgress(sim.world).attack?.men).toEqual(band);
+    const [first] = band;
+    if (first === undefined) throw new Error('no band');
+    removeSettlerSilently(sim.world, first);
+    expect(eventsUntil(sim, FIRST_LAUNCH_SECONDS + 5)).toEqual(['ended 1 defeated']);
+    for (const e of other) expect(sim.world.isAlive(e)).toBe(true);
+  });
+
   it('launches nothing while no finished keep stands', () => {
     const { sim } = keepWorld();
     for (const e of [...sim.world.query(Building, Owner)]) {
@@ -123,7 +152,7 @@ describe('map escalation - an attack', () => {
 });
 
 describe('map escalation - the guard', () => {
-  const guard = (sim: Simulation) => soldierCount(sim.world, sim.content, FORTRESS);
+  const guard = (sim: Simulation) => soldiersOf(sim, FORTRESS);
 
   it('refills toward a cap that grows with each step for each occupied seat, and no further', () => {
     const { sim } = keepWorld();
@@ -155,5 +184,10 @@ describe('map escalation - a save', () => {
     expect(restored.hashState()).toBe(sim.hashState());
     expect(restored.mapEscalationView()).toEqual(sim.mapEscalationView());
     expect(() => restoreSimulation(save, inputs)).toThrow(/mapEscalationFingerprint/);
+    // Past the next refill beats and end checks, the restored run stays the unrestored one.
+    const AFTER_RESTORE_TICKS = 300;
+    sim.run(AFTER_RESTORE_TICKS);
+    restored.run(AFTER_RESTORE_TICKS);
+    expect(restored.hashState()).toBe(sim.hashState());
   });
 });

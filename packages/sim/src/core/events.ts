@@ -599,7 +599,8 @@ export type SimEvent =
       readonly seats: readonly number[];
     }
   | {
-      /** The running attack is over: every man it sent died (`defeated`), or its time ran out. */
+      /** The running attack is over: the variant's dead share of its men fell, the men against a seat
+       *  with nothing left to attack counted lost (`defeated`), or its time ran out (`expired`). */
       readonly kind: 'mapEscalationAttackEnded';
       readonly wave: number;
       readonly cause: 'defeated' | 'expired';

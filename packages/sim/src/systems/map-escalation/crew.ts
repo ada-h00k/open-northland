@@ -3,7 +3,6 @@ import {
   Building,
   HaulFlag,
   HaulingCart,
-  JobAssignment,
   Position,
   Rider,
   Settler,
@@ -17,13 +16,13 @@ import { isBuilt, ownedBuildings, ownedSettlers } from '../ai-shared/seat-roster
 import { builderJobOf } from '../ai-shared/workforce/pool.js';
 import type { SystemContext } from '../context.js';
 import { bindHaulFlag, liveHaulFlag } from '../economy/work-flag.js';
-import { spawnSettler } from '../spawn/index.js';
 import { assignedWorkers } from '../stores/assigned-workers.js';
 import { isCarrierJob } from '../stores/index.js';
 import { createVehicle } from '../vehicles/create.js';
 import { canTakeHaulingCart, orderHaulingCart } from '../vehicles/hauling-cart.js';
 import { vehicleIndex } from '../vehicles/registry.js';
 import { removeVehicle } from '../vehicles/remove.js';
+import { spawnAtKeep, spawnPostedAtKeep } from './keep.js';
 
 // The fortress's working crew, kept up on the guard refill beats the way the guard is: builders for the
 // map AI's wall and house sites, and porters who cart the goods lying in the fortress into its store. The
@@ -44,15 +43,7 @@ export function keepBuilders(
   const seat = config.keep.seat;
   let have = 0;
   for (const e of ownedSettlers(world, seat)) if (world.get(e, Settler).jobType === jobType) have++;
-  for (; have < builders.count; have++) {
-    spawnSettler(world, ctx, {
-      kind: 'spawnSettler',
-      jobType,
-      tribe: config.tribe,
-      ...keepPoint(config),
-      owner: seat,
-    });
-  }
+  for (; have < builders.count; have++) spawnAtKeep(world, ctx, config, jobType, seat);
 }
 
 /**
@@ -72,25 +63,15 @@ export function keepPorters(world: World, ctx: SystemContext, config: MapEscalat
   const crew = posted.slice(0, porters.count);
   const room = Math.min(porters.count, post.count) - crew.length;
   for (let i = 0; i < room; i++) {
-    const e = spawnSettler(world, ctx, {
-      kind: 'spawnSettler',
-      jobType: post.jobType,
-      tribe: config.tribe,
-      ...keepPoint(config),
-      owner: config.keep.seat,
-      workplace: { x: anchor.hx, y: anchor.hy },
-    });
-    if (e !== null && world.has(e, JobAssignment)) crew.push(e);
+    const e = spawnPostedAtKeep(world, ctx, config, post.jobType, store.entity, anchor);
+    if (e === null) break;
+    crew.push(e);
   }
   const vehicleType = contentIndex(ctx.content).vehicleTypeBySlug.get(porters.vehicle);
   for (const e of crew) {
     holdPorterFlag(world, ctx, e, porters);
     if (vehicleType !== undefined) handCart(world, ctx, config, e, vehicleType);
   }
-}
-
-function keepPoint(config: MapEscalation): { x: number; y: number } {
-  return { x: config.keep.x, y: config.keep.y };
 }
 
 /** The fortress seat's finished storehouse nearest the keep, ties by entity. */

@@ -13,7 +13,7 @@ import {
 } from '../../components/index.js';
 import type { Entity, World } from '../../ecs/world.js';
 import { hexDistanceBetween, nodeOfPosition } from '../../nav/halfcell.js';
-import { isBuilt, ownedSettlers, soldierCount } from '../ai-shared/seat-roster.js';
+import { isBuilt, ownedSettlers } from '../ai-shared/seat-roster.js';
 import type { SystemContext } from '../context.js';
 import { isFighterJob } from '../readviews/index.js';
 
@@ -163,7 +163,7 @@ function judge(
       if (ctx.tick <= PLAYER_DEAD_AFTER_TICK) return undefined;
       return ownedSettlers(world, def.player).length === 0;
     case 'onNumberOfSoldiers':
-      return def.count <= soldierCount(world, ctx.content, def.player);
+      return def.count <= soldierCount(world, ctx, def.player);
     case 'onExternal':
       return aiExternalFlagRaised(world, seat, def.slot);
     case 'onTimer': {
@@ -249,4 +249,11 @@ function inRange(world: World, e: Entity, hx: number, hy: number, range: number)
 function isSoldier(world: World, ctx: SystemContext, e: Entity): boolean {
   const jobType = world.get(e, Settler).jobType;
   return jobType !== null && isFighterJob(ctx.content, jobType);
+}
+
+/** The soldiers a player fields, as its statistics count them. */
+function soldierCount(world: World, ctx: SystemContext, player: number): number {
+  let count = 0;
+  for (const e of ownedSettlers(world, player)) if (isSoldier(world, ctx, e)) count++;
+  return count;
 }

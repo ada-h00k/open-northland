@@ -1,11 +1,12 @@
 import type { ContentSet, MapAiSeat, MapEscalationInput } from '@open-northland/data';
 import { MapEscalation, parseContentSet } from '@open-northland/data';
-import { Owner, Position, Settler } from '../../../src/components/index.js';
+import { Owner, Person, Position, Settler } from '../../../src/components/index.js';
 import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import { Simulation } from '../../../src/index.js';
 import { hexDistanceBetween, nodeOfPosition } from '../../../src/nav/halfcell.js';
 import { CONDITION_ALWAYS } from '../../../src/systems/map-ai/index.js';
+import { isFighterJob } from '../../../src/systems/readviews/index.js';
 import { aiContent } from '../ai-content.js';
 import { grassNodeMap } from '../terrain.js';
 
@@ -157,6 +158,14 @@ export function ownedFighters(sim: Simulation, player: number): Entity[] {
   return [...sim.world.query(Settler, Owner)].filter(
     (e) => sim.world.get(e, Owner).player === player && sim.world.get(e, Settler).jobType !== 0,
   );
+}
+
+/** The soldiers a seat fields, as its statistics count them. */
+export function soldiersOf(sim: Simulation, seat: number): number {
+  return [...sim.world.query(Person, Settler, Owner)].filter((e) => {
+    const jobType = sim.world.get(e, Settler).jobType;
+    return sim.world.get(e, Owner).player === seat && jobType !== null && isFighterJob(sim.content, jobType);
+  }).length;
 }
 
 export function distance(sim: Simulation, e: Entity, to: { x: number; y: number }): number {

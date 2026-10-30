@@ -181,7 +181,7 @@ function nearestPerson(world: World, seat: number, from: HalfCellNode): Entity |
  * not already marching on it, a strike once he stands within {@link STRIKE_REACH}. A man fighting, or
  * whose march waits out a fight to resume, gets none; a man not in the attack stance takes it first.
  */
-export function bandOrders(
+function bandOrders(
   world: World,
   terrain: TerrainGraph,
   band: readonly Entity[],

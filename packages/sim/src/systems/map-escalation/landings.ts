@@ -2,7 +2,6 @@ import type { MapEscalation } from '@open-northland/data';
 import {
   FOG_MODE,
   fogMode,
-  isPlayerDead,
   type MapEscalationLandingRecord,
   mapEscalationProgress,
   Vehicle,
@@ -23,6 +22,7 @@ import { dockVehicle } from '../vehicles/dock.js';
 import { startVehicleDrive } from '../vehicles/movement.js';
 import { removeVehicle } from '../vehicles/remove.js';
 import { enlistAttackMan } from './focus.js';
+import { occupiedTargets } from './keep.js';
 
 type Target = MapEscalation['attacks']['targets'][number];
 type LandingPoints = Target['landings'][number];
@@ -125,9 +125,10 @@ function boardMen(
 }
 
 /**
- * Move each ship under way on: an inbound one that moored sets its men ashore and turns back; one that
- * lost its way is sent to dock again, and scrapped with whoever is aboard when no way is left; an
- * outbound one that arrived, or stopped, leaves the map. A ship gone (sunk) is forgotten.
+ * Move each ship under way on: an inbound one that moored sets its men ashore and turns back, scrapped
+ * instead when the shore leaves any aboard; one that stopped short is sent to dock again, and scrapped
+ * with whoever is aboard when no way is left; an outbound one that arrived, or stopped, leaves the map.
+ * A ship gone (sunk) is forgotten.
  */
 export function landingsTurn(world: World, ctx: SystemContext, config: MapEscalation): void {
   const landings = mapEscalationProgress(world).landings;
@@ -146,12 +147,14 @@ export function landingsTurn(world: World, ctx: SystemContext, config: MapEscala
     }
     if (state.moored && state.mooring?.hx === points.x && state.mooring.hy === points.y) {
       unloadPeople(world, ctx, { kind: 'unloadPeople', vehicle: ship });
-      if (sailOut(world, ctx, ship, points)) kept.push({ ...copyRecord(landing), leg: 'outbound' });
+      // Nobody stays aboard an outbound ship: men the shore had no room for are scrapped with it.
+      if (aboard(world, ship).length > 0) scrapLanding(world, ctx, ship);
+      else if (sailOut(world, ctx, ship, points)) kept.push({ ...copyRecord(landing), leg: 'outbound' });
       else removeVehicle(world, ctx, ship, 'script');
       continue;
     }
-    const docking = underWay || state.task === 'docks';
-    if (docking || dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: points.x, y: points.y }))
+    // A ship stopped short of its shore, its `docks` task left standing or not, is sent to dock again.
+    if (underWay || dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: points.x, y: points.y }))
       kept.push(copyRecord(landing));
     else scrapLanding(world, ctx, ship);
   }
@@ -169,7 +172,7 @@ function copyRecord(landing: DeepReadonly<MapEscalationLandingRecord>): MapEscal
 const REVEAL_STEP = 2;
 
 /**
- * Reveal the water around every ship under way to each targeted seat not counted out, again each
+ * Reveal the water around every ship under way to each occupied target seat, again each
  * time the ship moved {@link REVEAL_STEP} from the last reveal, so the players watch it the whole voyage.
  * The reveal stays, as a script's reveal does. Costs a position read per ship per tick and a reveal per
  * move.
@@ -180,13 +183,14 @@ export function revealShips(world: World, ctx: SystemContext, config: MapEscalat
   const landings = mapEscalationProgress(world).landings;
   if (radius === 0 || fog === undefined || landings.length === 0 || fogMode(world) === FOG_MODE.OFF) return;
   const moved: Array<{ index: number; at: HalfCellNode }> = [];
+  let watchers: ReturnType<typeof occupiedTargets> | undefined;
   landings.forEach((landing, index) => {
     const at = vehicleAnchor(world, landing.ship);
     if (at === null) return;
     const seen = landing.seen;
     if (seen !== null && hexDistanceBetween(seen.hx, seen.hy, at.hx, at.hy) < REVEAL_STEP) return;
-    for (const target of config.attacks.targets)
-      if (!isPlayerDead(world, target.seat)) fog.revealArea(target.seat, at, radius);
+    watchers ??= occupiedTargets(world, config);
+    for (const target of watchers) fog.revealArea(target.seat, at, radius);
     moved.push({ index, at });
   });
   if (moved.length === 0) return;
@@ -211,10 +215,31 @@ function sailOut(world: World, ctx: SystemContext, ship: Entity, points: Landing
   return true;
 }
 
-/** A ship that cannot land leaves the map with its men, who never set foot ashore. */
-function scrapLanding(world: World, ctx: SystemContext, ship: Entity): void {
+/** The living men aboard the ship. */
+function aboard(world: World, ship: Entity): Entity[] {
   const state = world.tryGet(ship, Vehicle);
-  for (const seat of state === undefined ? [] : vehiclePassengers(state))
-    if (world.isAlive(seat.entity)) removeSettlerSilently(world, seat.entity);
+  if (state === undefined) return [];
+  return vehiclePassengers(state)
+    .map((seat) => seat.entity)
+    .filter((e) => world.isAlive(e));
+}
+
+/**
+ * A ship that cannot land leaves the map with its men, who never set foot ashore. They leave the attack
+ * too, and its sent count, so they never count as its dead.
+ */
+function scrapLanding(world: World, ctx: SystemContext, ship: Entity): void {
+  const men = aboard(world, ship);
+  for (const e of men) removeSettlerSilently(world, e);
   removeVehicle(world, ctx, ship, 'script');
+  const attack = mapEscalationProgress(world).attack;
+  if (attack === null) return;
+  const gone = new Set(men);
+  const kept = attack.men.filter((e) => !gone.has(e));
+  if (kept.length === attack.men.length) return;
+  writeMapEscalation(world, (progress) => {
+    if (progress.attack === null) return;
+    progress.attack.sent -= progress.attack.men.length - kept.length;
+    progress.attack.men = kept;
+  });
 }
