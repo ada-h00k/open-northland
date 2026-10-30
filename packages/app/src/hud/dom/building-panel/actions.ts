@@ -23,6 +23,8 @@ export interface BuildingPanelActions {
   readonly setHouseholdGoodUse: (player: number, effect: HouseholdEffect, allowed: boolean) => void;
   /** Keep `amount` units of `goodType` across every storehouse of `player`; zero keeps none. */
   readonly setStorageMinimum: (player: number, goodType: number, amount: number) => void;
+  /** Mark or unmark `goodType` as priority in `building`, whose porters then fetch it. */
+  readonly setStorePriority: (building: number, goodType: number, priority: boolean) => void;
 }
 
 /** The central windows the panel opens. */

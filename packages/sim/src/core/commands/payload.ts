@@ -417,6 +417,7 @@ const COMMAND_PAYLOAD: { readonly [K in Command['kind']]: PayloadSpec<Extract<Co
     },
   },
   setStorageMinimum: { required: { player: 'integer', goodType: 'integer', amount: 'integer' } },
+  setStorePriority: { required: { building: 'integer', goodType: 'integer', priority: 'boolean' } },
   setJob: { required: { entity: 'integer', jobType: 'integer' } },
   continueMatch: { required: { player: 'integer' } },
   endMatchContinuation: { required: {} },

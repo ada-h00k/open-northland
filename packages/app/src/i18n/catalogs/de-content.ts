@@ -666,6 +666,11 @@ export const deContent = {
       summary:
         'Die Lager halten mindestens 3 Wasser: Der Träger des Hauptquartiers holt es zuerst vom Brunnen und bringt dann den Steinhaufen vor der Tür herein.',
     },
+    'store-priority': {
+      title: 'Lagervorrang',
+      summary:
+        'Ein Lager gibt Langschwertern, großen Heiltränken, Met und einem Amulett Vorrang: seine drei Träger, einer mit Handkarren, holen sie aus dem Hauptquartier, das Holz bleibt liegen.',
+    },
     warehouse: {
       title: 'Lagerlogistik',
       summary: 'Träger sammeln herumliegende Waren ein, bis jedes Lagerhaus voll ist.',

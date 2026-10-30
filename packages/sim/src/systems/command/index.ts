@@ -78,6 +78,7 @@ import {
 import { obeyDespiteHunger } from '../orders/meal-break.js';
 import { isQueuedOrder, queueBehindCurrentOrder } from '../orders/queue.js';
 import { setStorageMinimum } from '../orders/storage-minimum.js';
+import { setStorePriority } from '../orders/store-priority.js';
 import { setPalisadeGateMode } from '../palisades/gate-control.js';
 import { convertPalisadeGate, placePalisade, setPalisadeGate } from '../palisades/index.js';
 import { cancelRoadSite, placeRoadSite } from '../roads/sites.js';
@@ -448,6 +449,9 @@ function applyCommand(
       return;
     case 'setStorageMinimum':
       setStorageMinimum(world, ctx, command);
+      return;
+    case 'setStorePriority':
+      setStorePriority(world, ctx, command);
       return;
     case 'placeSignpost':
       obeyDespiteHunger(world, ctx, command.entity, () => placeSignpost(world, ctx, command, origin));

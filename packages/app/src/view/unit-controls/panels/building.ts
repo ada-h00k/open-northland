@@ -66,6 +66,9 @@ export function buildingPanelActions(host: BuildingPanelHost): BuildingPanelActi
       host.cue('confirm');
       send({ kind: 'setHouseholdGoodUse', player, effect, allowed });
     },
+    setStorePriority: order((id, goodType: number, priority: boolean) =>
+      send({ kind: 'setStorePriority', building: id as Entity, goodType, priority }),
+    ),
     setStorageMinimum: (player, goodType, amount) => {
       if (player !== host.viewer.seat()) {
         host.cue('fail');

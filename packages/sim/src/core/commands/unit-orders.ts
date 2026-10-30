@@ -667,6 +667,14 @@ export type UnitOrderCommand =
       readonly player: number;
       readonly goodType: number;
       readonly amount: number;
+    }
+  | {
+      /** Mark or unmark one good as priority in an owned finished store that keeps porters and a shelf
+       *  for it: while it has room, its porters fetch the good from the owner's other stores. */
+      readonly kind: 'setStorePriority';
+      readonly building: Entity;
+      readonly goodType: number;
+      readonly priority: boolean;
     };
 
 /**

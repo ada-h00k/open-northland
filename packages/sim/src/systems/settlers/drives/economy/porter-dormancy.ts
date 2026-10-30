@@ -16,6 +16,7 @@ import {
   SiteAssignment,
   Stockpile,
   StorageMinimums,
+  StorePriority,
   SupplyRun,
   signpostNavigationEnabled,
   UnderConstruction,
@@ -101,6 +102,8 @@ function porterScanVersion(world: World): number {
     world.componentGeneration(Signpost) +
     world.componentGeneration(StorageMinimums) +
     world.componentValueGeneration(StorageMinimums) +
+    world.componentGeneration(StorePriority) +
+    world.componentValueGeneration(StorePriority) +
     world.componentGeneration(Owner) +
     landscapeTopologyRevision(world) +
     roadRevision(world) // the goods search reach floods over road resistance

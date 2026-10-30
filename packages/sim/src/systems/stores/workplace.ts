@@ -108,6 +108,26 @@ export function isStorageBuildingType(content: ContentSet, buildingType: number)
   );
 }
 
+/** Whether a building type may mark goods as priority: a store that takes general deliveries and posts
+ *  porters to fetch them (storehouses, the headquarters, the barracks, towers). */
+export function keepsStorePriority(content: ContentSet, buildingType: number): boolean {
+  const index = contentIndex(content);
+  const row = index.buildings.get(buildingType);
+  return row !== undefined && buildingRowKeepsPriority(row, (jobType) => index.jobs.get(jobType));
+}
+
+/** {@link keepsStorePriority} on a content row, for a reader holding the rows rather than the set. */
+export function buildingRowKeepsPriority(
+  row: Pick<ContentSet['buildings'][number], 'recipes' | 'refillsOwnStock' | 'workers'>,
+  jobOf: (jobType: number) => { readonly id: string } | undefined,
+): boolean {
+  if (row.recipes.length > 0 || row.refillsOwnStock === true) return false;
+  return row.workers.some((slot) => {
+    const job = jobOf(slot.jobType);
+    return job !== undefined && isCarrierJobId(job.id);
+  });
+}
+
 /** Whether `building` tops its own produced goods up with no worker: the well and the hive. It carries no
  *  recipe, yet its stock is output, not a passive store's reserve. */
 export function refillsOwnStock(world: World, ctx: ContentContext, building: Entity): boolean {

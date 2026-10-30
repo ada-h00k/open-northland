@@ -168,6 +168,7 @@ export const COMMAND_ISSUER: {
   setGatherGood: 'seat',
   setHouseholdGoodUse: 'seat',
   setStorageMinimum: 'seat',
+  setStorePriority: 'seat',
   setJob: 'seat',
   setMatchParticipants: 'trusted',
   continueMatch: 'trusted',

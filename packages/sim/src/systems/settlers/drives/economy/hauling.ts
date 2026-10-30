@@ -20,8 +20,8 @@ function isPorterBoundToStore(plan: PlannerContext): boolean {
 /**
  * PORTER - a carrier bound to a storage fixture that moves loose goods. A carrier at a producing building
  * hauls its finished output out to a warehouse first, so the producer's store keeps clearing; any bound
- * carrier then brings loose ground piles in. A warehouse or HQ carrier skips the haul-out half, and while a
- * storage minimum is short it first fetches that good wherever it may fetch goods.
+ * carrier then brings loose ground piles in. A store's carrier skips the haul-out half: it first fetches a
+ * good its store marks as priority, then, at a storehouse, a good short of its storage minimum.
  * One holding a pickup flag lifts ground piles and workshop output only around it and, with nothing there,
  * waits at the flag rather than falling through to haul output from elsewhere.
  */
@@ -39,7 +39,7 @@ export function planPorter(plan: PlannerContext, idle: IdleStands): boolean {
     return true;
   }
   wakePorter(world, e);
-  walkPickupBatch(plan, pick.from, pick.goodType);
+  walkPickupBatch(plan, pick.from, pick.goodType, undefined, pick.amount);
   return true;
 }
 

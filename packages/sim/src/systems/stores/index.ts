@@ -33,11 +33,13 @@ export { catchUpSeatStock, seatStockOf } from './seat-stock-ledger.js';
 export { collectSupplyTally, type SupplyTally } from './supply-tally.js';
 export {
   buildingProduces,
+  buildingRowKeepsPriority,
   buildingWorkerJobs,
   isCarrierJob,
   isStorageBuildingType,
   isStorehouseType,
   isWorkplaceOutput,
+  keepsStorePriority,
   mayFetchGoodFrom,
   mergedRecipeOf,
   recipeConsumes,

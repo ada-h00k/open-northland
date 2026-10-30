@@ -24,6 +24,8 @@ export const GLYPH = {
   /* A heater shield with an olive sprig: the lobby peace's countdown. */
   peace:
     '<svg aria-hidden="true" class="on-glyph" viewBox="0 0 24 24"><path d="M12 3 5 5.5V11c0 4.6 3 8 7 10 4-2 7-5.4 7-10V5.5Z"/><path d="M12 17V8.5M12 11.5 9.5 9.5M12 14.5l2.5-2"/></svg>',
+  /* A five-point star: a good its store marks as priority. */
+  star: '<svg aria-hidden="true" class="on-glyph on-glyph--solid" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z"/></svg>',
   banner:
     '<svg aria-hidden="true" class="on-glyph" viewBox="0 0 24 24"><path d="M6 3v18M6 4h12l-3 4.5 3 4.5H6M4 21h4"/></svg>',
   scroll:

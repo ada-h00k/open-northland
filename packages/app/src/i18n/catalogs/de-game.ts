@@ -1186,10 +1186,17 @@ export const deGame = {
       minimum: 'Lagerminimum',
       minimumTooltip:
         'Summe über alle Lager.\nDarunter nimmt niemand die Ware heraus.\nFehlt etwas, bringen die Träger von Lagern, Brunnen und Bienenstöcken sie zuerst.',
-      minimumPick: 'Klicke eine Ware in der Liste an, um ihr Minimum festzulegen',
+      minimumPick: 'Klicke eine Ware in der Liste an, um ihr Minimum oder ihren Vorrang festzulegen',
       minimumLess: 'Minimum senken: {good}',
       minimumMore: 'Minimum erhöhen: {good}',
       minimumAside: 'min. {amount}',
+      priority: 'Vorrang',
+      priorityTooltip:
+        'Die Träger dieses Gebäudes holen markierte Waren aus deinen anderen Lagern, solange Platz für sie ist.',
+      priorityPick: 'Klicke eine Ware in der Liste an, um ihr Vorrang zu geben',
+      priorityOn: '{good} · Vorrang · Klick: aufheben',
+      priorityOff: '{good} · kein Vorrang · Klick: markieren',
+      priorityMarked: 'Vorrang: die Träger dieses Gebäudes holen sie',
       offers: 'Handelsangebote',
     },
     tradeWindow: {

@@ -31,6 +31,12 @@ export function ownerPlayerOf(e: SnapshotEntity): number | undefined {
   return num(owner?.player);
 }
 
+/** The good types a store marks as priority, ascending; none without a mark. */
+export function storePriorityGoodsOf(e: SnapshotEntity): readonly number[] {
+  const goods = (e.components.StorePriority as { goods?: unknown } | undefined)?.goods;
+  return Array.isArray(goods) ? goods.filter((good): good is number => typeof good === 'number') : [];
+}
+
 /** The snapshot serializes `Fixed` as plain numbers; this reader restores the brand. */
 export function positionOf(e: SnapshotEntity): { x: Fixed; y: Fixed } | undefined {
   const pos = e.components.Position as { x?: unknown; y?: unknown } | undefined;

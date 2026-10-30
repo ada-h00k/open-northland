@@ -4,6 +4,7 @@ import {
   householdGoodPolicyView,
   indexesOf,
   storageMinimumsView,
+  systems,
   type WorldSnapshot,
 } from '@open-northland/sim';
 import { JOB_TRADER } from '../../../catalog/jobs.js';
@@ -21,6 +22,7 @@ import {
   settlerJobType,
   shelterClaimCount,
   staffOf,
+  storePriorityGoodsOf,
 } from '../../../game/snapshot/index.js';
 import { ownedByAnotherSeat, pickableSeat } from '../../../game/viewer-seat.js';
 import { messages, tribeName } from '../../../i18n/index.js';
@@ -101,6 +103,16 @@ export interface StorageMinimumModel {
   readonly control: SeatControl;
 }
 
+/** The goods an own store with porters marks as priority: its porters fetch them from the owner's other
+ *  storehouses while it has room. */
+export interface StorePriorityModel {
+  readonly building: number;
+  /** Good types, ascending. */
+  readonly goods: readonly number[];
+  /** True while the viewer may mark goods here, else the reason. */
+  readonly control: SeatControl;
+}
+
 /** A tier an Upgrade order can raise the building to. */
 export interface UpgradeLevelModel {
   readonly typeId: number;
@@ -170,6 +182,7 @@ export interface BuildingPanelModel {
   readonly stockLayout: StockLayout;
   readonly homeQuality: HomeQualityModel | null;
   readonly storageMinimum: StorageMinimumModel | null;
+  readonly storePriority: StorePriorityModel | null;
   readonly offers: readonly BuildingOfferModel[];
 }
 
@@ -294,6 +307,22 @@ function storageMinimum(
     minimums: Object.fromEntries(storageMinimumsView(snapshot, player)),
     good:
       own === undefined ? null : { goodType: own, goodId: goodDef(ctx, own)?.id, label: goodLabel(ctx, own) },
+    control: player === ctx.viewer?.seat() ? true : messages().hud.buildingPanel.policyForeign,
+  };
+}
+
+function storePriority(
+  ctx: UnitPanelModelContext,
+  def: BuildingDef,
+  ent: SnapshotEntity,
+): StorePriorityModel | null {
+  const player = ownerPlayerOf(ent);
+  if (player === undefined) return null;
+  if (!systems.buildingRowKeepsPriority(def, (jobType) => ctx.jobs.find((job) => job.typeId === jobType)))
+    return null;
+  return {
+    building: ent.id,
+    goods: storePriorityGoodsOf(ent),
     control: player === ctx.viewer?.seat() ? true : messages().hud.buildingPanel.policyForeign,
   };
 }
@@ -528,6 +557,7 @@ export function buildingPanelModel(
       foreign || def === undefined || !finished ? null : homeQuality(ctx, snapshot, def, ent, level),
     storageMinimum:
       foreign || def === undefined || !finished ? null : storageMinimum(ctx, snapshot, def, ent),
+    storePriority: foreign || def === undefined || !finished ? null : storePriority(ctx, def, ent),
     offers: (ctx.tradeOffersAt?.(ent.id) ?? []).map((offer) => ({
       give: offerSide(ctx, offer.giveAmount, offer.giveGood),
       take: offerSide(ctx, offer.takeAmount, offer.takeGood),

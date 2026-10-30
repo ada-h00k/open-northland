@@ -4838,6 +4838,19 @@ body.on-drag-scroll.on-drag-scroll-free * {
   font-weight: 400;
   color: var(--muted);
 }
+.on-hud .on-cargo-row__now i {
+  display: inline-flex;
+  margin-right: 4px;
+  vertical-align: -2px;
+  color: var(--bronze);
+}
+.on-hud .on-cargo-row__now i:empty {
+  display: none;
+}
+.on-hud .on-cargo-row__now i .on-glyph {
+  width: 13px;
+  height: 13px;
+}
 .on-hud .on-cargo-row__now em {
   margin: 0 1px 0 3px;
   font-style: normal;

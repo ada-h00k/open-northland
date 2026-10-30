@@ -1101,10 +1101,17 @@ export const enGame = {
       minimum: 'Storage minimum',
       minimumTooltip:
         'Total across all your storehouses.\nNobody takes the good below it.\nWhile short, carriers of storehouses, wells and hives bring it in first.',
-      minimumPick: 'Click a good in the list to set its minimum',
+      minimumPick: 'Click a good in the list to set its minimum or priority',
       minimumLess: 'Lower the minimum: {good}',
       minimumMore: 'Raise the minimum: {good}',
       minimumAside: 'min {amount}',
+      priority: 'Priority',
+      priorityTooltip:
+        "This building's carriers fetch the marked goods from your other storehouses while there is room for them.",
+      priorityPick: 'Click a good in the list to mark it as priority',
+      priorityOn: '{good} · priority · click: unmark',
+      priorityOff: '{good} · no priority · click: mark',
+      priorityMarked: "Priority: this building's carriers fetch it",
       offers: 'Trade offers',
     },
     tradeWindow: {

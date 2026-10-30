@@ -252,11 +252,17 @@ export function startCartUnload(
 }
 
 /** Walk to `from` and lift a carry-load of `goodType` (the settler's hands, or its hauling cart's free
- *  hold on top), claiming the units still unclaimed there first so a settler planned after this one picks
- *  another source while it walks. */
-export function walkPickupBatch(plan: PlannerContext, from: Entity, goodType: number, cell?: NodeId): void {
+ *  hold on top), at most `most` units, claiming the units still unclaimed there first so a settler planned
+ *  after this one picks another source while it walks. */
+export function walkPickupBatch(
+  plan: PlannerContext,
+  from: Entity,
+  goodType: number,
+  cell?: NodeId,
+  most = Number.POSITIVE_INFINITY,
+): void {
   const { world, ctx, entity: e, supply } = plan;
-  const capacity = carryCapacityOf(world, ctx.content, e);
+  const capacity = Math.min(most, carryCapacityOf(world, ctx.content, e));
   const claimed = Math.min(capacity, unclaimedStockOf(world, ctx, supply, from, goodType));
   if (claimed > 0) supply.stampPickupClaim(e, { source: from, goodType, amount: claimed });
   walkThenLift(plan, from, goodType, capacity, undefined, cell);

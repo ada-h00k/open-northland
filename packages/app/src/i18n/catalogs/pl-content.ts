@@ -659,6 +659,11 @@ export const plContent = {
       summary:
         'Magazyny trzymają co najmniej 3 wody: tragarz kwatery głównej najpierw przynosi ją ze studni, potem zbiera kamień spod drzwi.',
     },
+    'store-priority': {
+      title: 'Priorytet magazynu',
+      summary:
+        'Magazyn ma priorytet na długie miecze, duże mikstury lecznicze, miód pitny i amulet: trzech jego tragarzy, jeden z wózkiem, przenosi je z kwatery głównej, a drewno zostaje na miejscu.',
+    },
     warehouse: {
       title: 'Logistyka magazynu',
       summary: 'Tragarze zbierają luźne towary, dopóki magazyn nie osiągnie pojemności.',

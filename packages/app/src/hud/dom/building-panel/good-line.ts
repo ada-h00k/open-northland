@@ -19,6 +19,8 @@ export interface GoodLineModel {
   /** The figure at the right end, and a muted aside after it. */
   readonly value: string;
   readonly aside?: string;
+  /** Glyph markup before the figure, such as the priority star. */
+  readonly badge?: string;
   /** The rule under the line, as a CSS percentage. */
   readonly fill: string;
   readonly tooltip: string;
@@ -40,23 +42,26 @@ export function createGoodLine(icons: GoodIconPainter): GoodLine {
   const item = element(
     'li',
     'on-cargo-row on-cargo-row--needs',
-    `<span class="on-good-well">${goodIconMarkup(LINE_ICON_PX)}</span><span class="on-cargo-row__name"></span><span class="on-cargo-row__needs"></span><b class="on-cargo-row__now"><span></span><small></small></b>`,
+    `<span class="on-good-well">${goodIconMarkup(LINE_ICON_PX)}</span><span class="on-cargo-row__name"></span><span class="on-cargo-row__needs"></span><b class="on-cargo-row__now"><i></i><span></span><small></small></b>`,
   );
   const frame = item.querySelector('.on-good__frame');
   const name = item.querySelector('.on-cargo-row__name');
   const needs = item.querySelector('.on-cargo-row__needs');
   const value = item.querySelector('.on-cargo-row__now > span');
   const aside = item.querySelector('.on-cargo-row__now > small');
+  const badge = item.querySelector('.on-cargo-row__now > i');
   if (
     !(frame instanceof HTMLElement) ||
     name === null ||
     !(needs instanceof HTMLElement) ||
     value === null ||
-    aside === null
+    aside === null ||
+    badge === null
   ) {
     throw new Error('building panel: good line');
   }
   let good = '';
+  let badgeMarkup = '';
   let needGoods = '';
   let needTexts = '';
   let chips: HTMLElement[] = [];
@@ -119,6 +124,10 @@ export function createGoodLine(icons: GoodIconPainter): GoodLine {
       paintNeeds(model.needs ?? []);
       write(value, model.value);
       write(aside, model.aside ?? '');
+      if ((model.badge ?? '') !== badgeMarkup) {
+        badgeMarkup = model.badge ?? '';
+        badge.innerHTML = badgeMarkup;
+      }
       setStyleVar(item, '--fill', model.fill);
       setTip(item, model.tooltip);
       setClass(item, 'on-cargo-row--out', model.muted === true);

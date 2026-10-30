@@ -68,6 +68,7 @@ import { signpostsScene } from './economy/signposts.js';
 import { storageFullScene } from './economy/storage-full.js';
 import { storageMinimumScene } from './economy/storage-minimum.js';
 import { storageMinimumPorterScene } from './economy/storage-minimum-porter.js';
+import { storePriorityScene } from './economy/store-priority.js';
 import { storeReachScene } from './economy/store-reach.js';
 import { technologyScene } from './economy/technology.js';
 import { tradeScene } from './economy/trade.js';
@@ -206,6 +207,7 @@ export const SCENES: readonly SceneDefinition[] = [
   householdGoodsScene,
   storageMinimumScene,
   storageMinimumPorterScene,
+  storePriorityScene,
   templeAuraScene,
   idleWorkScene,
   storeReachScene,

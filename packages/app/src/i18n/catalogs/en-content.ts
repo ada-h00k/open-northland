@@ -662,6 +662,11 @@ export const enContent = {
       summary:
         'The storehouses keep at least 3 water: the headquarters porter fetches it from the well first, then brings in the stone heap at the door.',
     },
+    'store-priority': {
+      title: 'Store priority',
+      summary:
+        'A storehouse marks long swords, big healing potions, mead and an amulet as priority: its three porters, one with a handcart, bring them over from the headquarters while the wood stays put.',
+    },
     warehouse: {
       title: 'Warehouse logistics',
       summary: 'Carriers collect loose goods until each warehouse capacity is reached.',

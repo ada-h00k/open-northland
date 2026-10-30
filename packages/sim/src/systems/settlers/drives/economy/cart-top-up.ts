@@ -1,4 +1,10 @@
-import { Building, Stockpile, sameSideAs } from '../../../../components/index.js';
+import {
+  Building,
+  JobAssignment,
+  prioritizesGood,
+  Stockpile,
+  sameSideAs,
+} from '../../../../components/index.js';
 import type { Entity } from '../../../../ecs/world.js';
 import { buildingBlockedCells } from '../../../footprint/index.js';
 import { isLoosePile } from '../../../stores/index.js';
@@ -15,6 +21,7 @@ import {
 import { unreachableGoalVeto } from '../../unreachable-goals.js';
 import { homeBoundGoodProbe } from './delivery-targets.js';
 import { workAreaGate } from './haul-flag-area.js';
+import { porterLoadOf, roomLeftForPorters } from './haul-targets.js';
 import { isBoundToStorageSink } from './store-policy.js';
 
 /**
@@ -37,6 +44,8 @@ export function planCartTopUp(plan: PlannerContext, load: { goodType: number; am
   if (carryCapacityOf(world, ctx.content, e) <= 0) return false;
   const good = load.goodType;
   if (!homeBoundGoodProbe(plan)(good)) return false;
+  const most = priorityRoomFor(plan, good);
+  if (most <= 0) return false;
   const sameGood = (goodType: number): boolean => goodType === good;
   const walls = buildingBlockedCells(world, ctx, terrain);
   const more = (candidate: Entity): Qualified<number> | null => {
@@ -55,6 +64,14 @@ export function planCartTopUp(plan: PlannerContext, load: { goodType: number; am
     sameSideAs(world, plan.owner),
   );
   if (found === null) return false;
-  walkPickupBatch(plan, found.entity, found.payload);
+  walkPickupBatch(plan, found.entity, found.payload, undefined, most);
   return true;
+}
+
+/** How much more of `good` a priority shelf at home takes beyond this porter's own load and its fellow
+ *  porters', so a top-up never undoes the priority rung's capped lift; unbounded for any other good. */
+function priorityRoomFor(plan: PlannerContext, good: number): number {
+  const home = plan.world.tryGet(plan.entity, JobAssignment)?.workplace;
+  if (home === undefined || !prioritizesGood(plan.world, home, good)) return Number.POSITIVE_INFINITY;
+  return roomLeftForPorters(plan, home, good) - porterLoadOf(plan.world, plan.entity, good);
 }

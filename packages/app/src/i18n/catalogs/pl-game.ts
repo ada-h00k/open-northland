@@ -1081,10 +1081,17 @@ export const plGame = {
       minimum: 'Minimum w magazynach',
       minimumTooltip:
         'Suma we wszystkich magazynach.\nNikt nie bierze towaru poniżej tej ilości.\nGdy brakuje, tragarze magazynów, studni i pasiek najpierw go dowożą.',
-      minimumPick: 'Kliknij towar na liście, aby ustawić minimum',
+      minimumPick: 'Kliknij towar na liście, aby ustawić minimum lub priorytet',
       minimumLess: 'Zmniejsz minimum: {good}',
       minimumMore: 'Zwiększ minimum: {good}',
       minimumAside: 'min {amount}',
+      priority: 'Priorytet',
+      priorityTooltip:
+        'Tragarze tego budynku zwożą zaznaczone towary z Twoich innych magazynów, dopóki jest na nie miejsce.',
+      priorityPick: 'Kliknij towar na liście, aby nadać mu priorytet',
+      priorityOn: '{good} · priorytet · kliknij: zdejmij',
+      priorityOff: '{good} · bez priorytetu · kliknij: nadaj',
+      priorityMarked: 'Priorytet: tragarze tego budynku go zwożą',
       offers: 'Oferty handlowe',
     },
     tradeWindow: {

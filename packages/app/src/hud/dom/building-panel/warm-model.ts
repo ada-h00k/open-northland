@@ -152,6 +152,7 @@ export function warmBuildingModel(goodIds: readonly string[]): BuildingPanelMode
       good: { goodType: 0, goodId: goodIds[0], label: 'Warm' },
       control: true,
     },
+    storePriority: { building: -1, goods: [0], control: true },
     offers: [{ give: side(0), take: side(1) }],
   };
 }
