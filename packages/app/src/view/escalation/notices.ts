@@ -1,10 +1,10 @@
-import { MapEscalationNoticeKey } from '@open-northland/data';
+import type { MapEscalationNoticeKey } from '@open-northland/data';
 import type { SimEvent } from '@open-northland/sim';
 import type { Messages } from '../../i18n/en.js';
 
 export type SiegeNoticeId = keyof Messages['hud']['escalation']['notices'];
 
-/** The notice the app shows for each key a committed variant may name (`packages/data/src/map-variants`). */
+/** The notice the app shows for each key an escalation may name (`packages/data/src/map-variants`). */
 const NOTICE_BY_KEY: Readonly<Record<MapEscalationNoticeKey, SiegeNoticeId>> = {
   'forteca.attack': 'fortecaAttack',
   'forteca.landing': 'fortecaLanding',
@@ -15,27 +15,20 @@ const NOTICE_BY_KEY: Readonly<Record<MapEscalationNoticeKey, SiegeNoticeId>> = {
 };
 
 /** The centre-screen notices a batch of sim events raises, in order. An attack launch shows
- *  `attackNoticeKey`, the variant's own, or nothing when it names none; a key the app has no text for
- *  is reported through `unknown` and shows nothing. */
+ *  `attackNoticeKey`, the variant's own, or nothing when it names none. */
 export function siegeNoticesOf(
   events: readonly SimEvent[],
-  attackNoticeKey: string | undefined,
-  unknown: (noticeKey: string) => void,
+  attackNoticeKey: MapEscalationNoticeKey | undefined,
 ): SiegeNoticeId[] {
   const out: SiegeNoticeId[] = [];
-  const byKey = (noticeKey: string): void => {
-    const key = MapEscalationNoticeKey.safeParse(noticeKey);
-    if (key.success) out.push(NOTICE_BY_KEY[key.data]);
-    else unknown(noticeKey);
-  };
   for (const event of events) {
     switch (event.kind) {
       case 'mapEscalationAttackLaunched':
-        if (attackNoticeKey !== undefined) byKey(attackNoticeKey);
+        if (attackNoticeKey !== undefined) out.push(NOTICE_BY_KEY[attackNoticeKey]);
         break;
       case 'mapEscalationGearStep':
       case 'mapEscalationLanding':
-        byKey(event.noticeKey);
+        out.push(NOTICE_BY_KEY[event.noticeKey]);
         break;
       default:
         break;

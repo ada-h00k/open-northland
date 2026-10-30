@@ -1,4 +1,4 @@
-import { type ContentSet, parseContentSet } from '@open-northland/data';
+import { type ContentSet, type MapEscalationInput, parseContentSet } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
 import { Equipment, Settler, Stance, Weapon } from '../../../src/components/index.js';
 import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
@@ -87,7 +87,7 @@ function gearSteps(sim: Simulation, seconds: number): string[] {
 describe('map escalation - gear', () => {
   it('gears every soldier of the gear seats at each step, and each one they gain later with every step passed', () => {
     const { sim, garrison } = keepWorld(GEARED, gearContent());
-    expect(gearSteps(sim, LIGHT_ARMOR_SECONDS + 1)).toEqual(['1 light']);
+    expect(gearSteps(sim, LIGHT_ARMOR_SECONDS + 1)).toEqual(['1 forteca.gear.lightArmor']);
     const band = ownedFighters(sim, RAIDER);
     expect(band.length).toBeGreaterThan(0);
     for (const e of [...garrison, ...band]) {
@@ -95,7 +95,7 @@ describe('map escalation - gear', () => {
       expect([WOOL, LEATHER]).toContain(gearOf(sim, e).armor);
     }
 
-    expect(gearSteps(sim, AMULET_SECONDS + 1)).toEqual(['2 amulets']);
+    expect(gearSteps(sim, AMULET_SECONDS + 1)).toEqual(['2 forteca.gear.amulets']);
     for (const e of garrison) expect(gearOf(sim, e).misc).toEqual([DEFENSE_AMULET]);
     // The cap grew at 30 s, so the next refill beat brings a newcomer.
     runToSecond(sim, AMULET_SECONDS + REFILL_EVERY_SECONDS + 1);
@@ -108,14 +108,14 @@ describe('map escalation - gear', () => {
   });
 
   it('swaps a soldier’s weapon for the better one of its class, trade and combat weapon with it, keeping his stance', () => {
-    const config = {
+    const config: MapEscalationInput = {
       ...ESCALATION,
       gear: {
         seats: [FORTRESS],
         steps: [
           {
             atSeconds: LIGHT_ARMOR_SECONDS,
-            noticeKey: 'weapons',
+            noticeKey: 'forteca.gear.heavyArmor',
             weaponUpgrades: [{ from: 'spear_wooden', to: 'spear_iron' }],
           },
         ],
@@ -143,14 +143,14 @@ describe('map escalation - gear', () => {
   });
 
   it('gives a second, different amulet on the extra chance beside a sure draught', () => {
-    const config = {
+    const config: MapEscalationInput = {
       ...ESCALATION,
       gear: {
         seats: [FORTRESS],
         steps: [
           {
             atSeconds: AMULET_SECONDS,
-            noticeKey: 'amulets',
+            noticeKey: 'forteca.gear.amulets',
             grants: [
               { goods: ['amulet_defense', 'amulet_strength'], extraChancePct: 100 },
               { goods: ['potion_heal_big'] },

@@ -1,6 +1,5 @@
 import type { MapVariant } from '@open-northland/data';
 import type { SimEvent } from '@open-northland/sim';
-import { diag } from '../../diag/index.js';
 import type { MissionInfoRow } from '../../game/map/info-lines.js';
 import { createCentreNotice } from '../../hud/dom/centre-notice.js';
 import { formatMessage, messages } from '../../i18n/index.js';
@@ -13,10 +12,6 @@ import {
   type SiegeNoticeId,
   siegeNoticesOf,
 } from './notices.js';
-
-const DIAG_CHANNEL = 'escalation';
-
-const warnUnknown = (noticeKey: string): void => diag.warn(DIAG_CHANNEL, `no notice text for ${noticeKey}`);
 
 export interface SiegePresentationDeps {
   readonly host: Pick<SessionHost, 'mapEscalation'>;
@@ -53,7 +48,7 @@ export function mountSiegePresentation(deps: SiegePresentationDeps): SiegePresen
   let showing: NoticeShowing<SiegeNoticeId> | null = null;
   return {
     onEvents(events) {
-      for (const id of siegeNoticesOf(events, attackNoticeKey, warnUnknown)) queue.push(id);
+      for (const id of siegeNoticesOf(events, attackNoticeKey)) queue.push(id);
       if (events.some((event) => event.kind === 'mapEscalationAttackLaunched')) deps.playAttackMusic();
     },
     frame() {

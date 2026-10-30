@@ -7,8 +7,7 @@ const seat = z.number().int().nonnegative();
 /** A half-cell node of the map, as the map's own AI rows name points. */
 const mapPoint = z.number().int().nonnegative();
 
-/** The notices a committed variant's escalation may name, each one the app has a text for. The schema
- *  below takes any key, so a synthetic escalation names its own; a committed variant is held to these. */
+/** The notices an escalation may name, each one the app has a text for. */
 export const MapEscalationNoticeKey = z.enum([
   'forteca.attack',
   'forteca.landing',
@@ -88,7 +87,7 @@ const MapEscalationWeaponUpgrade = z.strictObject({
 const MapEscalationGearStep = z
   .strictObject({
     atSeconds: seconds,
-    noticeKey: z.string().min(1),
+    noticeKey: MapEscalationNoticeKey,
     grants: z.array(MapEscalationGearGrant).default([]),
     weaponUpgrades: z.array(MapEscalationWeaponUpgrade).default([]),
   })
@@ -158,7 +157,7 @@ export const MapEscalation = z
       endAfterSeconds: z.number().int().positive(),
       targets: z.array(MapEscalationTarget).min(1),
       /** The notice the app shows when an attack sets out; absent, it shows none. */
-      noticeKey: z.string().min(1).optional(),
+      noticeKey: MapEscalationNoticeKey.optional(),
     }),
     /** The fortress's own guard: a soldier cap of `base` plus, per occupied target seat,
      *  `perSeatStep` for each completed `stepSeconds`, at most `perSeatMax`; filled by the refill beats. */
@@ -184,7 +183,7 @@ export const MapEscalation = z
       .strictObject({
         vehicle: z.string().min(1),
         menPerShip: count,
-        noticeKey: z.string().min(1),
+        noticeKey: MapEscalationNoticeKey,
         revealNodes: count.default(0),
       })
       .optional(),
@@ -239,12 +238,3 @@ export const MapEscalation = z
   });
 export type MapEscalation = z.infer<typeof MapEscalation>;
 export type MapEscalationInput = z.input<typeof MapEscalation>;
-
-/** Every notice key `escalation` names, in no particular order. */
-export function mapEscalationNoticeKeys(escalation: MapEscalation): string[] {
-  return [
-    ...(escalation.attacks.noticeKey === undefined ? [] : [escalation.attacks.noticeKey]),
-    ...(escalation.landings === undefined ? [] : [escalation.landings.noticeKey]),
-    ...(escalation.gear?.steps.map((step) => step.noticeKey) ?? []),
-  ];
-}

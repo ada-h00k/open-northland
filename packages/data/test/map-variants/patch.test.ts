@@ -365,7 +365,7 @@ describe('applyMapVariantStrings', () => {
 });
 
 describe('MapEscalation', () => {
-  it('refuses a schedule or gear steps out of order, a seat targeted twice or a refill above its max', () => {
+  it('refuses a schedule or gear steps out of order, a seat targeted twice, a refill above its max or an unknown notice', () => {
     const variant = MAP_VARIANTS.find((row) => row.escalation !== undefined);
     if (variant?.escalation === undefined) throw new Error('no committed escalation to vary');
     const { attacks, guard, gear, keep } = variant.escalation;
@@ -380,20 +380,10 @@ describe('MapEscalation', () => {
       { attacks: { ...attacks, targets: [target, { ...other, raider: target.seat }] } },
       { guard: { ...guard, refill: { ...guard.refill, baseMen: guard.refill.maxMen + 1 } } },
       { gear: { ...gear, steps: [...gear.steps].reverse() } },
+      { attacks: { ...attacks, noticeKey: 'forteca.atack' } },
     ]) {
       expect(MapEscalation.safeParse({ ...variant.escalation, ...bad }).success).toBe(false);
     }
-  });
-});
-
-describe('MapVariant', () => {
-  it('refuses an escalation naming a notice the app has no text for', () => {
-    const variant = MAP_VARIANTS.find((row) => row.escalation !== undefined);
-    if (variant?.escalation === undefined) throw new Error('no committed escalation to vary');
-    const { attacks } = variant.escalation;
-    expect(MapVariant.safeParse(variant).success).toBe(true);
-    const typo = { ...variant.escalation, attacks: { ...attacks, noticeKey: 'forteca.atack' } };
-    expect(MapVariant.safeParse({ ...variant, escalation: typo }).error?.message).toMatch(/forteca\.atack/);
   });
 });
 

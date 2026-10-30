@@ -1,3 +1,4 @@
+import type { MapEscalationNoticeKey } from '@open-northland/data';
 import type { ChestKind } from '../components/chest.js';
 import type { Paper } from '../components/players/papers.js';
 import type { SettlerIdentity } from '../components/settler.js';
@@ -610,7 +611,7 @@ export type SimEvent =
       readonly kind: 'mapEscalationGearStep';
       /** The step's number, from 1. */
       readonly step: number;
-      readonly noticeKey: string;
+      readonly noticeKey: MapEscalationNoticeKey;
     }
   | {
       /** The landing ships of attack `wave` set out, one for each of `seats`; `noticeKey` names the
@@ -618,7 +619,7 @@ export type SimEvent =
       readonly kind: 'mapEscalationLanding';
       readonly wave: number;
       readonly seats: readonly number[];
-      readonly noticeKey: string;
+      readonly noticeKey: MapEscalationNoticeKey;
     };
 
 /** A pass's pending map change: into a campaign's sub map, or back to the parent from mission `mission`. */

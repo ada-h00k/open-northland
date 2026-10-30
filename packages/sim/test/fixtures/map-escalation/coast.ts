@@ -1,4 +1,4 @@
-import type { ContentSet, MapAiSeat, MapEscalationInput } from '@open-northland/data';
+import type { ContentSet, MapAiSeat, MapEscalationInput, MapEscalationNoticeKey } from '@open-northland/data';
 import { MapEscalation, parseContentSet } from '@open-northland/data';
 import { Owner, Position, Settler, Vehicle } from '../../../src/components/index.js';
 import { TICKS_PER_SECOND } from '../../../src/core/loop.js';
@@ -39,7 +39,7 @@ export const LANDING = { spawnX: 4, spawnY: 30, x: 21, y: 30 };
 export const SECOND_LANDING = { spawnX: 4, spawnY: 50, x: 21, y: 50 };
 
 export const LAUNCH_SECONDS = 10;
-export const NOTICE = 'landing';
+export const NOTICE: MapEscalationNoticeKey = 'forteca.landing';
 
 /** {@link aiContent} with a small ship that admits the attack's trades. */
 function landingContent(): ContentSet {

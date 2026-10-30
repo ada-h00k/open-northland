@@ -227,10 +227,14 @@ export const GEARED: MapEscalationInput = {
     steps: [
       {
         atSeconds: LIGHT_ARMOR_SECONDS,
-        noticeKey: 'light',
+        noticeKey: 'forteca.gear.lightArmor',
         grants: [{ goods: ['armor_wool', 'armor_leather'] }, { goods: ['shoes'] }],
       },
-      { atSeconds: AMULET_SECONDS, noticeKey: 'amulets', grants: [{ goods: ['amulet_defense'] }] },
+      {
+        atSeconds: AMULET_SECONDS,
+        noticeKey: 'forteca.gear.amulets',
+        grants: [{ goods: ['amulet_defense'] }],
+      },
     ],
   },
   catapults: { respawnSeconds: CATAPULT_RESPAWN_SECONDS },
