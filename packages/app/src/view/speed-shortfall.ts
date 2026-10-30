@@ -8,7 +8,11 @@ const TENTHS = 10;
 
 /** The speed bar's look while a local game sustains less than its requested speed: the preset it
  *  reaches pressed and dimmed, the title naming both speeds. Null while it keeps up. */
-export function shortfallLook(delivered: number | null, requested: number): SpeedBarLook | null {
+export function shortfallLook(
+  delivered: number | null,
+  requested: number,
+  devSpeeds = false,
+): SpeedBarLook | null {
   if (delivered === null) return null;
   return {
     kind: 'slowed',
@@ -16,13 +20,15 @@ export function shortfallLook(delivered: number | null, requested: number): Spee
       delivered: formatRoomSpeed(Math.round(delivered * TENTHS) / TENTHS),
       requested: formatRoomSpeed(requested),
     }),
-    pressed: presetAtOrBelow(delivered),
+    pressed: presetAtOrBelow(delivered, devSpeeds),
   };
 }
 
 /** {@link shortfallLook} for a caller that asks every frame: the same look until its figure to the
  *  tenth, the request or the language moved. */
-export function createShortfallLook(): (delivered: number | null, requested: number) => SpeedBarLook | null {
+export function createShortfallLook(
+  devSpeeds = false,
+): (delivered: number | null, requested: number) => SpeedBarLook | null {
   let shownTenths: number | null | undefined;
   let shownRequested = 0;
   let shownCopy: Messages | null = null;
@@ -34,7 +40,7 @@ export function createShortfallLook(): (delivered: number | null, requested: num
       shownTenths = tenths;
       shownRequested = requested;
       shownCopy = copy;
-      look = shortfallLook(delivered, requested);
+      look = shortfallLook(delivered, requested, devSpeeds);
     }
     return look;
   };

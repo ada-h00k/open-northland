@@ -137,6 +137,7 @@ export interface GameToolPanelDeps {
   readonly lang?: string;
   readonly bindings: KeyBindings;
   readonly onSpeed: (spec: GameSpeedStateSpec, cause: GameSpeedChangeCause) => void;
+  readonly devSpeeds?: boolean;
   /** Whether the session clock stands, whoever stopped it; absent, the bar shows its own pause only. */
   readonly clockPaused?: () => boolean;
   /** True while an overlay holds the game paused (the system menu, the verdict, the mission book). */
@@ -324,6 +325,7 @@ export async function mountGameToolPanel(deps: GameToolPanelDeps): Promise<GameT
     placementClickAsks: deps.placementClickAsks,
     palisadeTools: deps.palisadeTools,
     onSpeedChange: deps.onSpeed,
+    ...(deps.devSpeeds !== undefined ? { devSpeeds: deps.devSpeeds } : {}),
     ...(deps.clockPaused !== undefined ? { clockPaused: deps.clockPaused } : {}),
     ...(deps.pauseHeld !== undefined ? { pauseHeld: deps.pauseHeld } : {}),
     screenScale: (c) => screenScale(c, deps.app.renderer.resolution),

@@ -5,6 +5,7 @@ import {
   effectiveGameSpeedSpec,
   gameSpeedSpec,
   nextRunningSpeed,
+  presetAtOrBelow,
   toggleGameSpeedPause,
 } from '../../../src/hud/tool-panel/game-speed.js';
 import { createSpeedControl } from '../../../src/hud/tool-panel/speed-control.js';
@@ -147,5 +148,13 @@ describe('the speed key', () => {
     expect(nextRunningSpeed({ running: 'fast', paused: false })).toBe('faster');
     expect(nextRunningSpeed({ running: 'faster', paused: false })).toBe('normal');
     expect(nextRunningSpeed({ running: 'faster', paused: true })).toBe('normal');
+  });
+});
+
+describe('presetAtOrBelow', () => {
+  it('reaches the dev tempos only when the bar shows them', () => {
+    expect(presetAtOrBelow(12)).toBe('faster');
+    expect(presetAtOrBelow(12, true)).toBe('dev10');
+    expect(presetAtOrBelow(2.5, true)).toBe('fast');
   });
 });

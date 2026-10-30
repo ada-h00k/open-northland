@@ -3,6 +3,7 @@ import { formatMessage, messages } from '../../../i18n/index.js';
 import { createTooltip } from '../../../view/tooltip.js';
 import { formatPeaceLeft, formatSimClock } from '../../summary/model.js';
 import {
+  DEV_GAME_SPEED_STATES,
   GAME_SPEED_STATES,
   type GameSpeedControl,
   type RunningGameSpeed,
@@ -36,6 +37,8 @@ export interface HudSystemBarDeps {
   readonly summary: HudSummaryDeps;
   readonly onPauseToggle: () => void;
   readonly onSpeed: (running: RunningGameSpeed) => void;
+  /** Adds the ×5..×60 segments after ×3. */
+  readonly devSpeeds?: boolean;
   readonly onMenu: () => void;
   /** The caller's own node standing first in the bar's row (the frame rate, the debug tools). Hidden
    *  while empty. */
@@ -108,7 +111,7 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
   const pause = segment(copy.pause, deps.onPauseToggle);
   pause.textContent = '❚❚';
   const running = new Map<RunningGameSpeed, HTMLButtonElement>();
-  for (const spec of GAME_SPEED_STATES) {
+  for (const spec of [...GAME_SPEED_STATES, ...(deps.devSpeeds === true ? DEV_GAME_SPEED_STATES : [])]) {
     if (!isRunning(spec.state)) continue;
     const state = spec.state;
     const button = segment(formatMessage(copy.speed, { factor: spec.factor }), () => deps.onSpeed(state));

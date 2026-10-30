@@ -339,6 +339,8 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
   };
   const seatTribeOf = deps.seatTribeOf ?? ((): number => PRIMARY_TRIBE);
   const sharedClock = deps.sharedClock === true;
+  // A relay refuses a tempo past its cap, so a shared clock keeps the original's three.
+  const devSpeeds = import.meta.env.DEV && !sharedClock;
   const netReadout = deps.netReadout ?? ((): null => null);
 
   // Installed before the HUD mounts so the system menu sees an active recording.
@@ -736,6 +738,7 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
       onSpeed: (spec, cause) => {
         if (!sharedClock || !watching) applyGameSpeed(driver, spec, cause);
       },
+      devSpeeds,
       clockPaused: () => driver.paused,
       pauseHeld: pauseHolds.isHeld,
       deferToOverlay: (clientX, clientY) => minimap?.claimsPointer(clientX, clientY) ?? false,
@@ -1396,7 +1399,7 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
     });
 
     const autosave = createAutosave(saveLoad, host.tick, liveSettings.settings.current(), lifetime.signal);
-    const shortfallLook = createShortfallLook();
+    const shortfallLook = createShortfallLook(devSpeeds);
     // This mount owns construction; the loop owns the pinned per-frame order.
     loop = startFrameLoop({
       deps: {

@@ -2,9 +2,12 @@
 // app-side tick multiplier, since the sim tick stays fixed at `TICKS_PER_SECOND`; pause is a separate
 // toggle that remembers the running speed.
 
-export type GameSpeedState = 'normal' | 'fast' | 'faster' | 'paused';
+export type GameSpeedState = RunningGameSpeed | 'paused';
 
-export type RunningGameSpeed = 'normal' | 'fast' | 'faster';
+export type RunningGameSpeed = 'normal' | 'fast' | 'faster' | DevGameSpeed;
+
+/** Tempos past the original's ×3 that only a local dev server's bar offers. */
+export type DevGameSpeed = 'dev5' | 'dev10' | 'dev30' | 'dev60';
 
 export interface GameSpeedStateSpec {
   readonly state: GameSpeedState;
@@ -21,8 +24,15 @@ export const GAME_SPEED_STATES: readonly GameSpeedStateSpec[] = [
   { state: 'paused', factor: 0, tickMultiplier: 0 },
 ];
 
+export const DEV_GAME_SPEED_STATES: readonly GameSpeedStateSpec[] = [
+  { state: 'dev5', factor: 5, tickMultiplier: 5 },
+  { state: 'dev10', factor: 10, tickMultiplier: 10 },
+  { state: 'dev30', factor: 30, tickMultiplier: 30 },
+  { state: 'dev60', factor: 60, tickMultiplier: 60 },
+];
+
 const SPEC_BY_STATE: ReadonlyMap<GameSpeedState, GameSpeedStateSpec> = new Map(
-  GAME_SPEED_STATES.map((s) => [s.state, s]),
+  [...GAME_SPEED_STATES, ...DEV_GAME_SPEED_STATES].map((s) => [s.state, s]),
 );
 
 export function gameSpeedSpec(state: GameSpeedState): GameSpeedStateSpec {
@@ -31,16 +41,23 @@ export function gameSpeedSpec(state: GameSpeedState): GameSpeedStateSpec {
   return spec;
 }
 
+type Preset = { readonly multiplier: number; readonly running: RunningGameSpeed };
+
 /** The running presets by the multiplier each stands for, highest first. */
-const PRESETS_FASTEST_FIRST: readonly { readonly multiplier: number; readonly running: RunningGameSpeed }[] =
-  GAME_SPEED_STATES.flatMap((spec) =>
-    spec.state === 'paused' ? [] : [{ multiplier: spec.tickMultiplier, running: spec.state }],
-  ).sort((a, b) => b.multiplier - a.multiplier);
+const fastestFirst = (states: readonly GameSpeedStateSpec[]): readonly Preset[] =>
+  states
+    .flatMap((spec) =>
+      spec.state === 'paused' ? [] : [{ multiplier: spec.tickMultiplier, running: spec.state }],
+    )
+    .sort((a, b) => b.multiplier - a.multiplier);
+const PRESETS_FASTEST_FIRST = fastestFirst(GAME_SPEED_STATES);
+const WITH_DEV_PRESETS_FASTEST_FIRST = fastestFirst([...GAME_SPEED_STATES, ...DEV_GAME_SPEED_STATES]);
 
 /** The highest running preset not above `speed`, ×1 below that: what a bar presses for a game that
- *  runs slower than it was asked to. */
-export function presetAtOrBelow(speed: number): RunningGameSpeed {
-  return PRESETS_FASTEST_FIRST.find((preset) => preset.multiplier <= speed)?.running ?? 'normal';
+ *  runs slower than it was asked to. `devSpeeds` counts the bar's dev-only tempos too. */
+export function presetAtOrBelow(speed: number, devSpeeds = false): RunningGameSpeed {
+  const presets = devSpeeds ? WITH_DEV_PRESETS_FASTEST_FIRST : PRESETS_FASTEST_FIRST;
+  return presets.find((preset) => preset.multiplier <= speed)?.running ?? 'normal';
 }
 
 /** The speed control: the running speed persists across a pause, so unpausing restores the same pace. */

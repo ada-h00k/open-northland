@@ -209,6 +209,8 @@ export interface ToolPanelOptions {
    *  row leaves its button disabled. */
   readonly palisadeTools?: PalisadeTools;
   readonly onSpeedChange: (spec: GameSpeedStateSpec, cause: GameSpeedChangeCause) => void;
+  /** The system bar's dev-only tempos (`HudSystemBarDeps.devSpeeds`). */
+  readonly devSpeeds?: boolean;
   /** Whether the session clock stands, so the bar lights the pause for any stop, not only its own. */
   readonly clockPaused?: () => boolean;
   /** True while an overlay outside the panel holds the game paused; a speed press then waits. */
@@ -741,6 +743,7 @@ export async function mountToolPanel(opts: ToolPanelOptions): Promise<ToolPanelC
       },
       onPauseToggle: () => ctx.cue(speed.togglePause() ? 'confirm' : 'fail'),
       onSpeed: (running) => ctx.cue(speed.setRunning(running) ? 'confirm' : 'fail'),
+      ...(opts.devSpeeds !== undefined ? { devSpeeds: opts.devSpeeds } : {}),
       onMenu: () => {
         ctx.cue('confirm');
         opts.onSystemMenu?.();
