@@ -22,14 +22,14 @@ import { attachToVehicle, boardRider, unloadPeople } from '../vehicles/crew.js';
 import { dockVehicle } from '../vehicles/dock.js';
 import { startVehicleDrive } from '../vehicles/movement.js';
 import { removeVehicle } from '../vehicles/remove.js';
+import { enlistAttackMan } from './focus.js';
 
 type Target = MapEscalation['attacks']['targets'][number];
 type LandingPoints = Target['landings'][number];
 
 // A wave's sea landing: each of its ships against a seat appears at the next of the seat's sea spawn
 // points with the fresh men aboard, docks at that point's shore, sets them ashore, then sails back and
-// leaves the map. The men belong to the raider seat like the land band, so the same Attack task and aim
-// take them.
+// leaves the map. The men belong to the raider seat like the land band and go for the same aim.
 
 /**
  * Send `ships` ships against the target, one from each of its first landing points, each with `jobs`
@@ -118,6 +118,7 @@ function boardMen(
       continue;
     }
     boardRider(world, e, ship);
+    enlistAttackMan(world, e);
     men.push(e);
   }
   return men;

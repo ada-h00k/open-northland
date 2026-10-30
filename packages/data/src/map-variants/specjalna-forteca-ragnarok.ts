@@ -15,8 +15,8 @@ const BOW_LONG = 41;
 const SPEAR_WOODEN = 32;
 const SPEAR_IRON = 33;
 
-/** Each player seat, the raider camp the map sends against it, and that camp's authored Attack task:
- *  the seat's headquarters, the reach and the rally point. `landings` are the seat's sea landings, one per
+/** Each player seat, the raider camp the map sends against it, and the seat's headquarters point that
+ *  camp's authored Attack task names. `landings` are the seat's sea landings, one per
  *  ship of a wave, on different stretches of its coast: a sea node in the map's edge band the ship
  *  appears on, and a shore node a small ship can dock at from the open sea, on the headquarters' own
  *  land and nearer it than any other seat's. The first is the shore nearest the headquarters. */
@@ -26,8 +26,6 @@ const RAIDS = [
     raider: 7,
     x: 407,
     y: 263,
-    rallyX: 289,
-    rallyY: 254,
     landings: [
       { spawnX: 490, spawnY: 219, x: 481, y: 263 },
       { spawnX: 490, spawnY: 168, x: 455, y: 168 },
@@ -39,8 +37,6 @@ const RAIDS = [
     raider: 8,
     x: 129,
     y: 203,
-    rallyX: 209,
-    rallyY: 220,
     landings: [
       { spawnX: 9, spawnY: 169, x: 65, y: 169 },
       { spawnX: 9, spawnY: 223, x: 27, y: 224 },
@@ -52,8 +48,6 @@ const RAIDS = [
     raider: 9,
     x: 348,
     y: 159,
-    rallyX: 286,
-    rallyY: 204,
     landings: [
       { spawnX: 351, spawnY: 9, x: 386, y: 84 },
       { spawnX: 490, spawnY: 152, x: 453, y: 152 },
@@ -65,8 +59,6 @@ const RAIDS = [
     raider: 10,
     x: 138,
     y: 385,
-    rallyX: 206,
-    rallyY: 282,
     landings: [
       { spawnX: 85, spawnY: 490, x: 108, y: 443 },
       { spawnX: 9, spawnY: 385, x: 61, y: 385 },
@@ -78,8 +70,6 @@ const RAIDS = [
     raider: 11,
     x: 248,
     y: 120,
-    rallyX: 240,
-    rallyY: 191,
     landings: [
       { spawnX: 213, spawnY: 9, x: 256, y: 103 },
       { spawnX: 179, spawnY: 9, x: 180, y: 48 },
@@ -91,8 +81,6 @@ const RAIDS = [
     raider: 12,
     x: 310,
     y: 375,
-    rallyX: 289,
-    rallyY: 254,
     landings: [
       { spawnX: 271, spawnY: 490, x: 294, y: 437 },
       { spawnX: 356, spawnY: 490, x: 368, y: 461 },
@@ -106,11 +94,6 @@ const FORTRESS_PORTERS = 3;
 /** The porters' flag area around the keep, in Manhattan half-cell nodes: the farthest palisade lies 68
  *  away, and the rest reaches the heaps a fight leaves just outside the gates. */
 const PORTER_RADIUS = 76;
-const RAID_RANGE = 120;
-const RAID_PRIORITY = 100;
-const RAID_STANCE = 1;
-/** A raider program's slot that holds while its target still has a finished house in reach. */
-const TARGET_STANDS_SLOT = 2;
 
 /** Defend posts on open ground around the keep, inside its inner ring of towers, uncapped, so the
  *  growing guard stands in the fortress. */
@@ -229,26 +212,6 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
           max: 0,
         })),
       },
-      // The authored Attack holds only while no enemy soldier stands near the keep; this twin holds
-      // while the target stands, so one seat's men at the walls do not keep every raid at home.
-      ...RAIDS.map((raid) => ({
-        player: raid.raider,
-        tasks: [
-          {
-            kind: 'attack' as const,
-            priority: RAID_PRIORITY,
-            condition: TARGET_STANDS_SLOT,
-            x: raid.x,
-            y: raid.y,
-            range: RAID_RANGE,
-            min: 0,
-            max: 0,
-            rallyX: raid.rallyX,
-            rallyY: raid.rallyY,
-            stance: RAID_STANCE,
-          },
-        ],
-      })),
     ],
   },
   startHumans: Array.from({ length: HIGHLAND_MEN.count }, () => ({
@@ -288,7 +251,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
       repeat: { everySeconds: 20 * MINUTE, waves: [{ landMen: 60, ships: 3 }] },
       endDeadPct: 80,
       endAfterSeconds: 10 * MINUTE,
-      targets: RAIDS.map(({ seat, raider, x, y, landings }) => ({ seat, raider, x, y, landings })),
+      targets: RAIDS,
     },
     guard: {
       base: 140,

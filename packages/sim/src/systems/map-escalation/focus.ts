@@ -1,53 +1,69 @@
 import type { MapEscalation } from '@open-northland/data';
 import {
+  Age,
   AttackOrder,
   Building,
   Engagement,
+  hasMissionBehaviour,
   isPlayerDead,
+  MISSION_BEHAVIOUR,
   type MapEscalationFocusRecord,
   mapEscalationProgress,
   Owner,
   Person,
+  PlayerOrder,
   Position,
   Rider,
+  Stance,
+  setMissionBehaviour,
   writeMapEscalation,
 } from '../../components/index.js';
-import { aiCommand } from '../../core/commands/index.js';
+import { aiCommand, type PlayerCommand } from '../../core/commands/index.js';
 import type { DeepReadonly, Entity, World } from '../../ecs/world.js';
-import { type HalfCellNode, hexDistanceBetween, nodeOfPosition } from '../../nav/halfcell.js';
+import {
+  type HalfCellNode,
+  hexDistanceBetween,
+  nodeManhattan,
+  nodeOfPosition,
+} from '../../nav/halfcell.js';
+import type { NodeId, TerrainGraph } from '../../nav/terrain/index.js';
 import { isBuilt, ownedBuildings, ownedSettlers } from '../ai-shared/seat-roster.js';
 import type { SystemContext } from '../context.js';
 import { houseFootprintOf, translatedCells } from '../footprint/geometry.js';
+import { MILITARY_MODE } from '../readviews/index.js';
 
 type Target = MapEscalation['attacks']['targets'][number];
 type Focus = Pick<MapEscalationFocusRecord, 'kind' | 'entity'>;
 
-// Each targeted seat's aim. While its headquarters stands the raider's own Attack task marches the men
-// on it. Once it falls the aim moves to a random other building of the seat, re-drawn when that one
-// falls, and once none stands to one of its people nearest the attack's men; the escalation orders
-// those men onto it itself. The aim costs its seat's rosters only when it moves.
+/** Within this many map points of the aim a man strikes it itself; farther out he attack-moves on it. */
+const STRIKE_REACH = 12;
+/** A march whose goal lies within this many half-cell nodes of the aim's point is already on it: the
+ *  walk order re-aims a blocked point to reachable ground beside it. */
+const MARCH_SLACK = 8;
+
+// Each targeted seat's aim: its headquarters first, then a random other building of the seat, re-drawn
+// when that one falls, and once none stands one of its people nearest the attack's men. The escalation
+// orders every attack man itself, the land band and the landed alike: an attack-move to the aim, the
+// order a player's attack-move issues, so he walks at his pace and fights what he meets, then a strike
+// on the aim once he stands beside it. Its men are no scripted handler's soldiers (`enlistAttackMan`).
+// The aim costs its seat's rosters only when it moves.
 
 /**
- * Re-aim every seat whose aim fell and order the attack's men of every seat aimed past its headquarters
- * onto the aim. `men` are the running attack's living men. A man already fighting is left to it. Returns
- * the seats with men ashore and nothing left to aim at: counted out, or without a building or a person.
+ * Re-aim every seat whose aim fell and order its attack men onto the aim, those left standing from
+ * earlier attacks included. A man fighting is left to it. Returns the seats with men ashore and nothing
+ * left to aim at: counted out, or without a building or a person.
  */
-export function focusTurn(
-  world: World,
-  ctx: SystemContext,
-  config: MapEscalation,
-  men: readonly Entity[],
-): ReadonlySet<number> {
+export function focusTurn(world: World, ctx: SystemContext, config: MapEscalation): ReadonlySet<number> {
   const spent = new Set<number>();
-  const bySeat = menByTarget(world, config, men);
-  if (bySeat.size === 0) return spent;
+  const terrain = ctx.terrain;
+  if (terrain === undefined) return spent;
   const held = mapEscalationProgress(world).focus;
   const next: MapEscalationFocusRecord[] = [];
   let changed = false;
   for (const target of config.attacks.targets) {
     const own = held.find((record) => record.seat === target.seat);
-    const band = bySeat.get(target.seat);
-    if (band === undefined) {
+    const band = attackMen(world, target.raider);
+    if (band.length === 0) {
       if (own !== undefined) next.push({ ...own });
       continue;
     }
@@ -61,7 +77,8 @@ export function focusTurn(
       continue;
     }
     next.push({ seat: target.seat, kind: aim.kind, entity: aim.entity });
-    if (aim.kind !== 'headquarters') orderOnto(world, ctx, target.raider, band, aim.entity);
+    for (const command of bandOrders(world, terrain, band, aim.entity))
+      ctx.commands.enqueue(aiCommand(target.raider, command, 'map-ai'));
   }
   if (changed)
     writeMapEscalation(world, (progress) => {
@@ -70,20 +87,19 @@ export function focusTurn(
   return spent;
 }
 
-/** The living men standing on the map, by the seat their raider targets. */
-function menByTarget(world: World, config: MapEscalation, men: readonly Entity[]): Map<number, Entity[]> {
-  const seatOf = new Map(config.attacks.targets.map((target) => [target.raider, target.seat]));
-  const out = new Map<number, Entity[]>();
-  for (const e of men) {
-    if (!world.has(e, Position) || world.has(e, Rider)) continue;
-    const raider = world.tryGet(e, Owner)?.player;
-    const seat = raider === undefined ? undefined : seatOf.get(raider);
-    if (seat === undefined) continue;
-    const band = out.get(seat);
-    if (band === undefined) out.set(seat, [e]);
-    else band.push(e);
-  }
-  return out;
+/** Make `e` an attack man: beyond every scripted handler's list, so only the escalation orders him. */
+export function enlistAttackMan(world: World, e: Entity): void {
+  setMissionBehaviour(world, e, MISSION_BEHAVIOUR.NOT_CONTROLLABLE, true);
+}
+
+/** The raider's attack men standing on the map: the escalation's own, not riding. */
+function attackMen(world: World, raider: number): Entity[] {
+  return ownedSettlers(world, raider).filter(
+    (e) =>
+      world.has(e, Position) &&
+      !world.has(e, Rider) &&
+      hasMissionBehaviour(world, e, MISSION_BEHAVIOUR.NOT_CONTROLLABLE),
+  );
 }
 
 /** Whether the aim is still the seat's: its building, or its living person. */
@@ -94,8 +110,8 @@ function stands(world: World, seat: number, aim: DeepReadonly<Focus>): boolean {
 
 /**
  * The seat's next aim: its headquarters, the building on the target point, on the first look; then a
- * random finished building, else a random site; else the seat's person nearest the band. Null for a
- * seat with nothing left.
+ * random finished building, else a random site; else the seat's grown person nearest the band. Null
+ * for a seat with nothing left.
  */
 function pickFocus(
   world: World,
@@ -148,12 +164,13 @@ function bandCentre(world: World, band: readonly Entity[]): HalfCellNode {
   return { hx: Math.trunc(hx / band.length), hy: Math.trunc(hy / band.length) };
 }
 
-/** The seat's person standing nearest `from`, the lower id on a tie. */
+/** The seat's grown person standing nearest `from`, the lower id on a tie: a child takes no attack
+ *  order, so a band aimed at one would stand beside it. */
 function nearestPerson(world: World, seat: number, from: HalfCellNode): Entity | null {
   let best: Entity | null = null;
   let closest = Number.POSITIVE_INFINITY;
   for (const e of ownedSettlers(world, seat)) {
-    if (!world.has(e, Position)) continue;
+    if (!world.has(e, Position) || world.has(e, Age)) continue;
     const at = pointOf(world, e);
     const d = hexDistanceBetween(from.hx, from.hy, at.hx, at.hy);
     if (d < closest) {
@@ -164,19 +181,41 @@ function nearestPerson(world: World, seat: number, from: HalfCellNode): Entity |
   return best;
 }
 
-/** An attack order onto the aim for every man not fighting and not already on it, issued as the
- *  raider's map-AI order, so its own turn leaves a man on it to the attack. */
-function orderOnto(
+/**
+ * Each man's order onto the aim, when he needs a new one: an attack-move toward it while he is far and
+ * not already marching on it, a strike once he stands within {@link STRIKE_REACH}. A man fighting, or
+ * whose march waits out a fight to resume, gets none; a man not in the attack stance takes it first.
+ */
+export function bandOrders(
   world: World,
-  ctx: SystemContext,
-  raider: number,
+  terrain: TerrainGraph,
   band: readonly Entity[],
   aim: Entity,
-): void {
+): PlayerCommand[] {
+  const commands: PlayerCommand[] = [];
+  const goal = pointOf(world, aim);
   for (const e of band) {
     if (world.has(e, Engagement) || world.tryGet(e, AttackOrder)?.target === aim) continue;
-    ctx.commands.enqueue(aiCommand(raider, { kind: 'attackUnit', entity: e, target: aim }, 'map-ai'));
+    const at = pointOf(world, e);
+    let order: PlayerCommand;
+    if (hexDistanceBetween(at.hx, at.hy, goal.hx, goal.hy) <= STRIKE_REACH) {
+      order = { kind: 'attackUnit', entity: e, target: aim };
+    } else {
+      const march = world.tryGet(e, PlayerOrder)?.attackMove;
+      if (march !== undefined && nodeManhattan(nodeOfId(terrain, march.goal), goal) <= MARCH_SLACK) continue;
+      const { x, y } = terrain.coordsOf(terrain.nodeAtClamped(goal.hx, goal.hy));
+      order = { kind: 'attackMoveUnit', entity: e, x, y };
+    }
+    if (world.tryGet(e, Stance)?.mode !== MILITARY_MODE.ATTACK)
+      commands.push({ kind: 'setStance', entity: e, mode: MILITARY_MODE.ATTACK });
+    commands.push(order);
   }
+  return commands;
+}
+
+function nodeOfId(terrain: TerrainGraph, node: NodeId): HalfCellNode {
+  const { x, y } = terrain.coordsOf(node);
+  return { hx: x, hy: y };
 }
 
 function pointOf(world: World, e: Entity): HalfCellNode {

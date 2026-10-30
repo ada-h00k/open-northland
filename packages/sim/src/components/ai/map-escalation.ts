@@ -38,8 +38,8 @@ export interface MapEscalationLandingRecord {
 }
 
 /**
- * What a targeted seat's attack is aimed at: its headquarters, which the raider's own Attack task
- * marches on; once that falls, another of the seat's buildings; once none stands, one of its people.
+ * What a targeted seat's attack is aimed at: its headquarters; once that falls, another of the seat's
+ * buildings; once none stands, one of its people.
  */
 export interface MapEscalationFocusRecord {
   seat: number;
