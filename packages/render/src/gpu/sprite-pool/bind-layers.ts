@@ -259,7 +259,7 @@ export class LayerBinder {
         if (layer.glow !== undefined) {
           // The glow reads the owner's team ramp, which a human's own rolled rows may have recoloured.
           const glowRow =
-            human && this.sheet?.palette !== undefined ? this.sheet.palette.teamRow(item.player ?? 0) : row;
+            human && this.sheet?.palette !== undefined ? this.sheet.palette.glowRow(item.player ?? 0) : row;
           this.bindPalettedQuad(pe, spriteSlot++, layer, box, frame, glowRow, tint);
         } else if (pe.kind === 'vehicle') {
           this.bindPalettedMesh(pe, spriteSlot++, layer, originX, originY, camScale, frame, row, tint);

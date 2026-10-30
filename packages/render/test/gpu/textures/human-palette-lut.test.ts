@@ -138,15 +138,15 @@ describe('the human palette LUT', () => {
   it('holds an unrolled team row per player past every human row', () => {
     const lut = syntheticHumanLut(new Map(), SMALL_ROWS);
     lut.beginFrame();
-    const team = lut.teamRow(0);
+    const team = lut.glowRow(0);
     expect(team).toBeGreaterThanOrEqual(SMALL_ROWS - TEAM_HUMANS * 2);
-    expect(lut.teamRow(0)).toBe(team);
+    expect(lut.glowRow(0)).toBe(team);
     expect(texel(lut, team, TEAM_BAND_START)).toEqual([255, 0, 0]);
     expect(lut.stats.composed).toBe(1);
     lut.rowFor(1, man({ seed: 1 }));
     lut.rowFor(2, man({ seed: 2 }));
     lut.rowFor(3, man({ seed: 3 }));
-    expect(lut.teamRow(0)).toBe(team);
+    expect(lut.glowRow(0)).toBe(team);
     expect(texel(lut, team, TEAM_BAND_START)).toEqual([255, 0, 0]);
   });
 
@@ -165,7 +165,7 @@ describe('the human palette LUT', () => {
       expect(lut.fixedRow(stem.slice())).toBe(row + 1);
       expect(lut.fixedRow(stem)).toBe(row);
       expect(texel(lut, row, 2)).toEqual([6, 7, 8]);
-      const humans = [lut.rowFor(1, man()), lut.rowFor(2, man({ seed: 2 })), lut.teamRow(0)];
+      const humans = [lut.rowFor(1, man()), lut.rowFor(2, man({ seed: 2 })), lut.glowRow(0)];
       for (const human of humans) expect([human, human + 1]).not.toContain(row);
       lut.fitTo(ROWS - 2);
       expect(texel(lut, lut.fixedRow(stem), 2)).toEqual([6, 7, 8]);

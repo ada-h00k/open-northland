@@ -1,3 +1,4 @@
+import { MapEscalation } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
 import {
   Equipment,
@@ -7,9 +8,16 @@ import {
   Owner,
   ScriptedName,
   Settler,
+  VisualScale,
 } from '../../../src/components/index.js';
 import type { Entity } from '../../../src/ecs/world.js';
-import type { Simulation } from '../../../src/index.js';
+import {
+  exportSaveGame,
+  parseSaveGame,
+  restoreSimulation,
+  type Simulation,
+  serializeSaveGame,
+} from '../../../src/index.js';
 import {
   AMULET_SECONDS,
   DEFENSE_AMULET,
@@ -19,11 +27,14 @@ import {
   gearContent,
   KEEP,
   keepWorld,
+  MAP,
   runToSecond,
+  SCRIPT,
   SPEARMAN,
   WOOL,
 } from '../../fixtures/map-escalation/keep.js';
 import { needsOf } from '../../fixtures/settler.js';
+import { grassNodeMap } from '../../fixtures/terrain.js';
 
 const HERO_HITPOINTS = 30000;
 const NAME_STRING_ID = 90001;
@@ -31,9 +42,10 @@ const NAME_STRING_ID = 90001;
 const HERO_AT = { x: KEEP.x, y: KEEP.y + 8 };
 /** How far a defender standing his ground may have moved. */
 const HOLD_NODES = 4;
+const TALLER_PCT = 120;
 
-function heroWorld(hero = false): Simulation {
-  const config = {
+function heroConfig(hero = false, scalePct?: number) {
+  return {
     ...GEARED,
     heroes: [
       {
@@ -45,10 +57,14 @@ function heroWorld(hero = false): Simulation {
         nameStringId: NAME_STRING_ID,
         name: { eng: 'Lord Usurper' },
         hero,
+        ...(scalePct !== undefined ? { scalePct } : {}),
       },
     ],
   };
-  return keepWorld(config, gearContent(), { scriptedFortress: true }).sim;
+}
+
+function heroWorld(hero = false, scalePct?: number): Simulation {
+  return keepWorld(heroConfig(hero, scalePct), gearContent(), { scriptedFortress: true }).sim;
 }
 
 function heroesOf(sim: Simulation): Entity[] {
@@ -95,5 +111,26 @@ describe('map escalation - heroes', () => {
     };
     expect(run(true)).toEqual({ glows: true, hungerRose: false, fatigueRose: false });
     expect(run(false)).toEqual({ glows: false, hungerRose: true, fatigueRose: true });
+  });
+
+  it('draws a hero at his scale through a save, and a plain defender with no scale at all', () => {
+    const sim = heroWorld(true, TALLER_PCT);
+    const [hero] = heroesOf(sim);
+    if (hero === undefined) throw new Error('no hero');
+    expect(sim.world.tryGet(hero, VisualScale)).toEqual({ pct: TALLER_PCT });
+
+    const save = parseSaveGame(JSON.parse(serializeSaveGame(exportSaveGame(sim))));
+    const restored = restoreSimulation(save, {
+      content: sim.content,
+      map: grassNodeMap(MAP, MAP),
+      mapAiScript: SCRIPT,
+      mapEscalation: MapEscalation.parse(heroConfig(true, TALLER_PCT)),
+    });
+    expect(restored.world.tryGet(hero, VisualScale)).toEqual({ pct: TALLER_PCT });
+
+    const plainSim = heroWorld(true);
+    const [plain] = heroesOf(plainSim);
+    if (plain === undefined) throw new Error('no hero');
+    expect(plainSim.world.has(plain, VisualScale)).toBe(false);
   });
 });

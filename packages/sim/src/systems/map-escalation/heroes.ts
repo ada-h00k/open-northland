@@ -3,6 +3,7 @@ import {
   MISSION_BEHAVIOUR,
   mapEscalationProgress,
   setMissionBehaviour,
+  setVisualScale,
   writeMapEscalation,
 } from '../../components/index.js';
 import type { SettlerEquipment, SettlerEquipmentSlot } from '../../core/commands/spawn.js';
@@ -37,6 +38,7 @@ export function placeHeroes(world: World, ctx: SystemContext, config: MapEscalat
     setMissionBehaviour(world, e, MISSION_BEHAVIOUR.NOT_CONTROLLABLE, true);
     if (hero.hero)
       setMissionBehaviour(world, e, MISSION_BEHAVIOUR.GLOWS | MISSION_BEHAVIOUR.NEEDS_FROZEN, true);
+    if (hero.scalePct !== undefined) setVisualScale(world, e, hero.scalePct);
     setStance(world, ctx, { kind: 'setStance', entity: e, mode: MILITARY_MODE.DEFEND });
     placed.push(e);
   }

@@ -33,6 +33,7 @@ import {
   readsCartLift,
   readUpgradePct,
   readUpgradeTypeId,
+  readVisualScale,
 } from '../snapshot-readers/index.js';
 import type { DrawList } from './draw-list.js';
 import { anchorTileBox } from './entity-source.js';
@@ -79,6 +80,8 @@ export function assignSettlerFields(
   // from colliding synthetic adult ids.
   if ('Age' in components) item.young = true;
   if (readBehaviourGlow(components)) item.glow = true;
+  const visualScale = readVisualScale(components);
+  if (visualScale !== undefined) item.visualScale = visualScale;
   if ('Female' in components) item.female = true;
   const scriptedLook = readScriptedLook(components);
   if (scriptedLook !== undefined) item.scriptedLook = scriptedLook;

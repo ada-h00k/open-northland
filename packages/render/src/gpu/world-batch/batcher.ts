@@ -66,7 +66,6 @@ import {
 import type { ShadowStyle } from './shadow-style.js';
 
 export {
-  GLOW_PALETTE_INDEX,
   lutSlotOf,
   WORLD_FLAG_GLOW,
   WORLD_FLAG_INDEXED,

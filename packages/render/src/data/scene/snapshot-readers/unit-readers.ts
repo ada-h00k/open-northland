@@ -165,6 +165,14 @@ export function readBehaviourGlow(components: Readonly<Record<string, unknown>>)
   return (flags & simComponents.MISSION_BEHAVIOUR.GLOWS) !== 0;
 }
 
+/** The factor a unit draws at about its feet (`VisualScale.pct` / 100), or undefined at full size. */
+export function readVisualScale(components: Readonly<Record<string, unknown>>): number | undefined {
+  const pct = readNumField(components, 'VisualScale', 'pct');
+  return pct === undefined || pct === simComponents.VISUAL_SCALE_FULL_PCT
+    ? undefined
+    : pct / simComponents.VISUAL_SCALE_FULL_PCT;
+}
+
 /** Whether a human's mission behaviour mask carries the scripted import marker. */
 export function readBehaviourImported(components: Readonly<Record<string, unknown>>): boolean {
   const flags = readNumField(components, 'MissionBehaviour', 'flags') ?? 0;

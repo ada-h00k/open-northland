@@ -52,6 +52,23 @@ export const SCRIPTED_LOOK_MAX_RECIPES = 32;
 export const SCRIPTED_LOOK_RECIPE_MAX_CHARS = 64;
 
 /**
+ * How large one unit draws, in percent of its look's own size, scaled about its feet. Absent means 100:
+ * {@link setVisualScale} never stores the full size, so an unscaled unit carries nothing. The sim never
+ * reads it; the renderer sizes the unit's sprites, glow, outline and picking box by it.
+ */
+export const VisualScale = defineComponent<{ pct: number }>('VisualScale', 'settlers');
+
+/** The size every unit draws at unless a {@link VisualScale} says otherwise. */
+export const VISUAL_SCALE_FULL_PCT = 100;
+
+/** Give `e` a drawn size of `pct` percent; the full size drops the component. */
+export function setVisualScale(world: World, e: Entity, pct: number): void {
+  if (pct === VISUAL_SCALE_FULL_PCT) {
+    if (world.has(e, VisualScale)) world.remove(e, VisualScale);
+  } else if (world.tryGet(e, VisualScale)?.pct !== pct) world.add(e, VisualScale, { pct });
+}
+
+/**
  * One mission's live state, indexed by the mission's position in the map's script - the same index
  * every `ActivateMission`, `DeactivateMission`, `CheckMission`, `IsMissionDone`, `IfMissionIsActive`
  * and `SetVisible` argument names. The mission's goals and results are content, not state, so only

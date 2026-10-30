@@ -33,6 +33,8 @@ const REFILL_MISSIONS = [3, 4];
 const TAKE_OVER_MISSIONS = [9, 10];
 const FIRST_WAVE_MISSION = 11;
 const WAVE_MISSIONS = 13;
+/** Owner ruling: Lord Usurper stands a fifth taller than his men. */
+const LORD_SCALE_PCT = 120;
 const DROPPED_MISSIONS = [
   ...REFILL_MISSIONS,
   ...TAKE_OVER_MISSIONS,
@@ -800,6 +802,8 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     expect(w.get(hero, components.Owner).player).toBe(FORTRESS);
     const heroMarks = components.MISSION_BEHAVIOUR.GLOWS | components.MISSION_BEHAVIOUR.NEEDS_FROZEN;
     expect(w.get(hero, components.MissionBehaviour).flags & heroMarks).toBe(heroMarks);
+    expect(w.get(hero, components.VisualScale).pct).toBe(lord.scalePct);
+    expect(lord.scalePct).toBe(LORD_SCALE_PCT);
     // A temple's aura near the keep lifts a man past his pool.
     expect(w.get(hero, components.Health).max).toBe(lord.hitpoints);
     expect(w.get(hero, components.Health).hitpoints).toBeGreaterThanOrEqual(lord.hitpoints);

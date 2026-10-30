@@ -132,6 +132,8 @@ const TOWER_ARCHERS_PER_BOW = 4;
  *  His name goes into the map's string table under an id past the map's own. */
 const LORD_HITPOINTS = 30000;
 const LORD_NAME_STRING_ID = 90001;
+/** Owner ruling: the lord stands a fifth taller than his men. */
+const LORD_SCALE_PCT = 120;
 const LORD_EQUIPMENT = ['sword_long', 'armor_plate', 'amulet_strength', 'amulet_defense', 'amulet_crithit'];
 const LORD_NAME = {
   pol: 'Lord Uzurpator',
@@ -414,6 +416,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         nameStringId: LORD_NAME_STRING_ID,
         name: LORD_NAME,
         hero: true,
+        scalePct: LORD_SCALE_PCT,
       },
     ],
     // Owner ruling: nothing falls from the fortress side's men.

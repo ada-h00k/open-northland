@@ -88,6 +88,10 @@ const MapEscalationTowerSlot = z.strictObject({
   count: z.number().int().positive(),
 });
 
+/** The drawn sizes a hero may take, in percent: past them his art would crowd or vanish among the others. */
+const HERO_SCALE_MIN_PCT = 50;
+const HERO_SCALE_MAX_PCT = 200;
+
 /** A defender placed at match start: a soldier of `job` for `seat` at the node nearest (`x`, `y`) free of
  *  buildings, with `hitpoints` and `equipment` (content good slugs; each good's equip category names its
  *  slot). He holds his ground there, outside every scripted task, and gets no gear step. `nameStringId`
@@ -103,6 +107,8 @@ const MapEscalationHero = z.strictObject({
   name: z.partialRecord(z.enum(LANGUAGES), z.string().min(1)),
   /** Marked the way a map marks its heroes: the owner-coloured hero glow, and needs that never fall. */
   hero: z.boolean().default(false),
+  /** How large he draws, in percent of his look's size, about his feet; absent draws him at full size. */
+  scalePct: z.number().int().min(HERO_SCALE_MIN_PCT).max(HERO_SCALE_MAX_PCT).optional(),
 });
 export type MapEscalationHero = z.infer<typeof MapEscalationHero>;
 

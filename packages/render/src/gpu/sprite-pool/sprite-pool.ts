@@ -48,7 +48,7 @@ import { restoreStash, type StashedVisibility, stashHidden } from '../world-view
 import { LayerBinder } from './bind-layers.js';
 import { FrameEpoch } from './bind-stamp.js';
 import { coatBody } from './blood-coats.js';
-import { cullBox, type KindReaches, kindReaches } from './cull-reach.js';
+import { cullBox, type KindReach, type KindReaches, kindReaches } from './cull-reach.js';
 import { GroundPileCover } from './ground-pile-cover.js';
 import { damageScaffoldLayers } from './layers/building.js';
 import { resolvesWithoutClock } from './layers/resolve.js';
@@ -213,12 +213,27 @@ function pooledDepth(pe: PooledEntity, item: DrawItem): number {
 }
 
 /** Whether `item`'s drawn feet, its anchor raised by its lift, stand inside one of `boxes`. */
-function shows(boxes: readonly Viewport[], item: DrawItem): boolean {
+function shows(boxes: readonly Viewport[], item: DrawItem, slack: number): boolean {
   const y = item.y - (item.lift ?? 0);
   for (const box of boxes) {
-    if (item.x >= box.minX && item.x <= box.maxX && y >= box.minY && y <= box.maxY) return true;
+    if (
+      item.x >= box.minX - slack &&
+      item.x <= box.maxX + slack &&
+      y >= box.minY - slack &&
+      y <= box.maxY + slack
+    )
+      return true;
   }
   return false;
+}
+
+/** World px a unit drawn larger than its look reaches past its kind's cull box: its art grows about the
+ *  feet by `visualScale - 1` of the kind's farthest reach. */
+function scaledSlack(reach: KindReach | undefined, item: DrawItem): number {
+  const factor = item.visualScale;
+  if (factor === undefined || factor <= 1 || reach === undefined) return 0;
+  const { up, down, left, right } = reach.art;
+  return Math.max(up, down, left, right) * (factor - 1);
 }
 
 /** World px a portrait inset's view may move between two frames that frame the same subjects: a
@@ -449,7 +464,11 @@ export class SpritePool {
       if (item === undefined) continue;
       // An item drawing nothing on screen stays detached, and out of the drawn list the pickers read.
       const boxes = culls?.[item.kind];
-      if (boxes !== undefined && item.portraitOnly !== true && !shows(boxes, item)) {
+      if (
+        boxes !== undefined &&
+        item.portraitOnly !== true &&
+        !shows(boxes, item, scaledSlack(this.reaches[item.kind], item))
+      ) {
         this.lastPooled[i] = undefined;
         this.release(item);
         continue;

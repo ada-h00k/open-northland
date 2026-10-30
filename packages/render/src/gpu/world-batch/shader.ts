@@ -1,3 +1,4 @@
+import { GLOW_PALETTE_INDEX } from '../../data/palettes/glow-colour.js';
 import { BLOOD_COAT_GLSL } from '../blood/coat-shader.js';
 import { BLOOD_SURFACE_GLSL } from '../blood/surface-shader.js';
 import { PIXEL_ART_MAGNIFY_CORE_GLSL, XBR_NEIGHBOURS } from '../pixel-art/magnify.js';
@@ -30,12 +31,6 @@ export const WORLD_FLAG_MIPMAPPED = 32;
 export const WORLD_FLAG_RECOLOURED = 64;
 /** A paletted element's LUT row, from `aFlags` bit 7 up; a float32 holds it exactly below 2^17 rows. */
 export const WORLD_LUT_ROW_SHIFT = 7;
-/**
- * The palette index a hero's glow takes its colour from: step 10 of the team ramp in the body palette's
- * vest band (160-175), which each player's team row of the human LUT carries. Original behavior: the glow
- * colour is that step of the owner's `Player NN` ramp.
- */
-export const GLOW_PALETTE_INDEX = 170;
 /** `aSelection` values that draw a selection outline in its colour over the body's coverage alone: an
  *  offset copy of the body, or one quad grown past the body that gathers its coverage at every
  *  {@link OUTLINE_DIRECTIONS} offset. */

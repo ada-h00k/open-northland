@@ -6,6 +6,7 @@ import {
   type GlTexture,
   type TextureSource,
 } from 'pixi.js';
+import { liftDarkGlowColour } from '../../data/palettes/glow-colour.js';
 import {
   type CharacterPalette,
   copyHumanPaletteIdentity,
@@ -25,7 +26,7 @@ const ROWS_PER_HUMAN = 2;
 export const HUMAN_LUT_ROWS = 4096;
 /** Humans kept for the shared fallbacks a full LUT hands out (see {@link HumanPaletteLut.rowFor}). */
 export const SHARED_HUMANS = 64;
-/** Row pairs after the shared ones kept for the team palettes, one per player colour (the app's
+/** Row pairs after the shared ones kept for the glow palettes, one per player colour (the app's
  *  `PLAYER_COLOR_COUNT`), so no two colours drawn in one frame share a row. */
 export const TEAM_HUMANS = 24;
 /** Team-colour slots and sexes a shared fallback key makes room for. */
@@ -318,15 +319,17 @@ export class HumanPaletteLut implements PaletteLut {
   }
 
   /**
-   * The body row of `player`'s unrolled team palette ({@link HumanPaletteBook.composeTeam}), composed on
+   * The body row a hero glow of `player` reads: the unrolled team palette
+   * ({@link HumanPaletteBook.composeTeam}) with its glow colour lifted when too dark to show, composed on
    * first ask and held until the LUT is resized.
    */
-  teamRow(player: number): number {
+  glowRow(player: number): number {
     const team = player % TEAM_HUMANS;
     const slot = this.sharedStart + SHARED_HUMANS + team;
     if (this.teams[team] !== player) {
       this.teams[team] = player;
       this.book.composeTeam(player, this.scratch);
+      liftDarkGlowColour(this.scratch.body);
       this.writeSlot(slot);
     }
     return slot * ROWS_PER_HUMAN;

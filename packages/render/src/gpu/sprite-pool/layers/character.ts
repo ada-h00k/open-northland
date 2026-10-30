@@ -21,6 +21,19 @@ const headCastRecords = new WeakMap<ResolvedLayer, ResolvedLayer>();
 const headRecords = new WeakMap<ResolvedLayer, ResolvedLayer>();
 const blobRecords = new WeakMap<ResolvedLayer, ResolvedLayer>();
 const glowRecords = new WeakMap<ResolvedLayer, readonly ResolvedLayer[]>();
+/** A record drawn at a unit's visual scale, apart from the shared record every full-size unit draws. */
+const scaledRecords = new WeakMap<ResolvedLayer, ResolvedLayer>();
+
+/** `of` at `factor` times its scale about the feet, or `of` itself for a full-size unit. */
+function scaledLayer(of: ResolvedLayer | null, factor: number | undefined): ResolvedLayer | null {
+  if (of === null || factor === undefined) return of;
+  const scale = of.scale * factor;
+  const cached = scaledRecords.get(of);
+  if (cached?.scale === scale) return cached;
+  const record: ResolvedLayer = { ...of, scale };
+  scaledRecords.set(of, record);
+  return record;
+}
 
 /**
  * The hero glow's eight copies of a layer's silhouette, painted in this order under it, each blending
@@ -172,22 +185,25 @@ export function pushComposedCharacterLayers(
   headRef: number = item.ref,
 ): boolean {
   const scale = characterScale(sheet, char);
+  // Every layer below derives from these records, so a scaled unit's cast, glow, box and outline follow.
+  const factor = item.visualScale;
   const bob = resolveSettlerBobId(binding, item, tick, gaitClock, idleElapsed);
-  const body = resolveFromLayer(char.body, bob, scale);
+  const body = scaledLayer(resolveFromLayer(char.body, bob, scale), factor);
   const heads = char.heads;
   const headLayer = heads !== undefined && heads.length > 0 ? heads[headRef % heads.length] : undefined;
   const headBob =
     headBinding !== undefined ? resolveSettlerBobId(headBinding, item, tick, gaitClock, idleElapsed) : bob;
-  const head = headLayer === undefined ? null : resolveFromLayer(headLayer, headBob, scale);
+  const head =
+    headLayer === undefined ? null : scaledLayer(resolveFromLayer(headLayer, headBob, scale), factor);
   if (body !== null) {
     const originY =
-      char.castAnchor === 'body-bottom' ? (body.frame.offsetY + body.frame.height) * scale : undefined;
+      char.castAnchor === 'body-bottom' ? (body.frame.offsetY + body.frame.height) * body.scale : undefined;
     out.push(castLayerFor(body, undefined, originY));
     if (head !== null) {
       const rows = headCastRows(body.frame, head.frame);
       if (rows > 0) out.push(castLayerFor(head, rows, originY));
     }
-    const shadow = shadowLayerFor(char.body, bob, scale);
+    const shadow = scaledLayer(shadowLayerFor(char.body, bob, scale), factor);
     if (shadow !== null) out.push(blobLayerFor(shadow));
   }
   if (char.glow === 'always' || (item.glow === true && char.glow !== 'never')) {

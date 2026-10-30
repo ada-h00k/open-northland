@@ -72,6 +72,27 @@ describe('SpritePool - the sprite-class decision without a LUT', () => {
   });
 });
 
+describe('SpritePool - a unit with a visual scale draws and picks larger about its feet', () => {
+  const TALLER_PCT = 120;
+  const boundsOf = (marker: Record<string, unknown>) => {
+    const pool = new SpritePool(new Container(), new TextureCache(), sheet);
+    pool.reconcile(poolFrame(snapshotOf([entity(1, 0, 0, { Settler: { tribe: 0 }, ...marker })])));
+    const bounds = pool.boundsOf(1);
+    if (bounds === undefined) throw new Error('a drawn settler must stamp bounds');
+    return bounds;
+  };
+
+  it('grows the picking box by its scale while the feet stay on the same spot', () => {
+    const plain = boundsOf({});
+    const taller = boundsOf({ VisualScale: { pct: TALLER_PCT } });
+    const factor = TALLER_PCT / 100;
+    expect(taller.maxY).toBeCloseTo(plain.maxY);
+    expect(taller.maxY - taller.minY).toBeCloseTo((plain.maxY - plain.minY) * factor);
+    expect(taller.maxX - taller.minX).toBeCloseTo((plain.maxX - plain.minX) * factor);
+    expect((taller.minX + taller.maxX) / 2).toBeCloseTo((plain.minX + plain.maxX) / 2);
+  });
+});
+
 describe('SpritePool - a plain character shadow draws under the body without moving its box', () => {
   // The silhouette is wider and shorter than the body, as the decoded `_s` twins are, so a box that
   // counted it would be unmistakable - and the picker's box is what a click on the shadow would hit.
@@ -475,7 +496,7 @@ describe("LayerBinder - a hero glow binds under the body on its owner's team row
 
     const halo = quadAt(pe, 0);
     const drawn = quadAt(pe, 1);
-    expect([halo.glow, halo.alpha, halo.lutRow]).toEqual([true, 0.25, lut.teamRow(PLAYER)]);
+    expect([halo.glow, halo.alpha, halo.lutRow]).toEqual([true, 0.25, lut.glowRow(PLAYER)]);
     expect([drawn.glow, drawn.alpha]).toEqual([false, 1]);
     expect(drawn.lutRow).not.toBe(halo.lutRow); // the armored body reads its own composed row
     expect(pe.bounds.maxX - pe.bounds.minX).toBe(frame.width); // the halo's offset copy is off the box

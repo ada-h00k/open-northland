@@ -12,6 +12,7 @@ import {
   type HumanPaletteColours,
   humanPaletteIdentity,
   isDrawableResource,
+  liftDarkGlowColour,
   type PaletteLut,
   type ResolvedLayer,
   readable2dContext,
@@ -163,6 +164,7 @@ class FigurePalettes {
     if (flat === undefined) {
       const team = createHumanPaletteColours();
       book.composeTeam(player, team);
+      liftDarkGlowColour(team.body);
       flat = flatGlowPalette(team.body);
       this.teamGlows.set(player, flat);
     }

@@ -51,6 +51,7 @@ export {
   minimapScene,
 } from './data/minimap/scene.js';
 export { rasterizeMinimap } from './data/minimap/style.js';
+export { GLOW_PALETTE_INDEX, liftDarkGlowColour } from './data/palettes/glow-colour.js';
 export { HumanPaletteCache } from './data/palettes/human-palette-cache.js';
 export {
   type ArmorBand,
@@ -329,7 +330,6 @@ export {
   syntheticAtlasFrames,
 } from './gpu/textures/synthetic-atlas.js';
 export { TextureCache } from './gpu/textures/texture-cache.js';
-export { GLOW_PALETTE_INDEX } from './gpu/world-batch/batcher.js';
 export {
   SPRITE_CULL_MARGIN,
   type TargetMark,
