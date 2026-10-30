@@ -21,7 +21,7 @@ export interface SiegePresentationDeps {
   readonly now: () => number;
 }
 
-/** How a map variant's siege shows: the mode mark under the goal slip, its centre-screen notices, the night that falls while an attack
+/** How a map variant's siege shows: the mode mark on the goal slip, its centre-screen notices, the night that falls while an attack
  *  runs, and the countdown lines at the head of the goal panel's rows. */
 export interface SiegePresentation {
   onEvents(events: readonly SimEvent[]): void;

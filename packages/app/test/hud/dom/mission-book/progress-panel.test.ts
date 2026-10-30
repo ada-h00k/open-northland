@@ -85,10 +85,10 @@ describe('mission progress on the goal slip', () => {
     );
   });
 
-  it('marks the match mode under the slip, open or folded', () => {
+  it('marks the match mode under the open sheet heading, and under the tab when folded', () => {
     const { panel, marks, dock } = slip();
     panel.update([], marks, false, count(3), 'Ragnarok mode');
-    expect(dock?.querySelector('.on-slip__mode')?.textContent).toBe('Ragnarok mode');
+    expect(dock?.querySelector('.on-slip__heading + .on-slip__mode')?.textContent).toBe('Ragnarok mode');
     dock?.querySelector<HTMLButtonElement>('[data-fold]')?.click();
     expect(dock?.querySelector('.on-slip__mode')?.textContent).toBe('Ragnarok mode');
     panel.update([], marks, false, count(3), null);

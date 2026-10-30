@@ -6525,7 +6525,7 @@ body.on-drag-scroll.on-drag-scroll-free * {
 .on-hud .on-slip__tab--open {
   margin-top: 0;
 }
-/* The match mode's mark under the slip: a dark plate with a bronze rim, its name in the title face
+/* The match mode's mark under the sheet's heading, or under the folded tab: a dark plate with a bronze rim, its name in the title face
    between two flame ornaments, a dark-red ember behind it. */
 .on-hud .on-slip__mode {
   --mode-flame: #c0432a;
@@ -6551,6 +6551,10 @@ body.on-drag-scroll.on-drag-scroll-free * {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+.on-hud .on-slip__content > .on-slip__mode {
+  width: fit-content;
+  margin: 0 auto 9px;
 }
 .on-hud .on-slip__mode-ornament {
   flex: none;

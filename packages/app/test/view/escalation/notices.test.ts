@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { NOTICE_SHOWN_MS, NoticeQueue, siegeNoticesOf } from '../../../src/view/escalation/notices.js';
 
 describe('siegeNoticesOf', () => {
-  it('announces the first attack, every landing and each gear step, and reports an unknown key', () => {
+  it('announces every attack launch, every landing and each gear step, and reports an unknown key', () => {
     const unknown: string[] = [];
     const events: SimEvent[] = [
       { kind: 'mapEscalationAttackLaunched', wave: 1, seats: [0] },
@@ -12,7 +12,12 @@ describe('siegeNoticesOf', () => {
       { kind: 'mapEscalationGearStep', step: 1, noticeKey: 'ragnarok.gear.lightArmor' },
       { kind: 'mapEscalationGearStep', step: 2, noticeKey: 'other.key' },
     ];
-    expect(siegeNoticesOf(events, (key) => unknown.push(key))).toEqual(['attack', 'landing', 'lightArmor']);
+    expect(siegeNoticesOf(events, (key) => unknown.push(key))).toEqual([
+      'attack',
+      'attack',
+      'landing',
+      'lightArmor',
+    ]);
     expect(unknown).toEqual(['other.key']);
   });
 });

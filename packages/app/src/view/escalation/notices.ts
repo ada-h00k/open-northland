@@ -3,9 +3,6 @@ import type { Messages } from '../../i18n/en.js';
 
 export type SiegeNoticeId = keyof Messages['hud']['escalation']['notices'];
 
-/** The first attack is the one announced; later launches come as the countdown says. */
-const FIRST_WAVE = 1;
-
 /** A variant's notice keys (`packages/data/src/map-variants`) by the notice the app shows for them. */
 const NOTICE_BY_KEY: Readonly<Record<string, SiegeNoticeId>> = {
   'ragnarok.landing': 'landing',
@@ -30,7 +27,7 @@ export function siegeNoticesOf(
   for (const event of events) {
     switch (event.kind) {
       case 'mapEscalationAttackLaunched':
-        if (event.wave === FIRST_WAVE) out.push('attack');
+        out.push('attack');
         break;
       case 'mapEscalationGearStep':
       case 'mapEscalationLanding':

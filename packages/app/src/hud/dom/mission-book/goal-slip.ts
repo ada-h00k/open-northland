@@ -18,7 +18,7 @@ const SLIP_READ_MS = 30_000;
 const MODE_ORNAMENT =
   '<svg viewBox="0 0 30 16" class="on-slip__mode-ornament" aria-hidden="true"><path d="M1 8h9M20 8h9" stroke="currentColor" stroke-width="1"/><path d="M15 3l5 5-5 5-5-5z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M15 5.2c1.4 1.3 1.9 2.4 0 4.6-1.9-2.2-1.4-3.3 0-4.6z" fill="var(--mode-flame)"/><circle cx="4" cy="8" r="1" fill="currentColor"/><circle cx="26" cy="8" r="1" fill="currentColor"/></svg>';
 
-/** The match mode's mark under the slip, folded or open. */
+/** The match mode's mark: in the open sheet under its heading, under the tab when folded. */
 const modeMarkup = (text: string | null): string =>
   text === null
     ? ''
@@ -47,7 +47,7 @@ export interface GoalSlip {
     marks: GoalMarks,
     bookOpen: boolean,
     infoRows: readonly MissionInfoRow[],
-    /** The match mode marked under the slip; null for none. */
+    /** The match mode marked on the slip; null for none. */
     modeMark: string | null,
   ): void;
   dispose(): void;
@@ -112,12 +112,12 @@ export function createGoalSlip(deps: GoalSlipDeps): GoalSlip {
     const key = deps.bookKey();
     const moreText = more > 0 ? escapeHtml(formatMessage(copy.slipMore, { count: more })) : '';
     return `<aside class="on-slip__sheet${unroll ? ' on-slip__sheet--unroll' : ''}" aria-label="${escapeHtml(copy.slipLabel)}">
-        <div class="on-slip__content"><div class="on-slip__heading"><span>${escapeHtml(copy.goalsKicker)}</span>${infoRows.length > 0 ? `<span>${escapeHtml(copy.progress)}</span>` : ''}</div>
+        <div class="on-slip__content"><div class="on-slip__heading"><span>${escapeHtml(copy.goalsKicker)}</span>${infoRows.length > 0 ? `<span>${escapeHtml(copy.progress)}</span>` : ''}</div>${modeMarkup(modeMark)}
         <ul class="on-slip__list">${items}${empty}</ul>${infoRowsMarkup(infoRows)}</div>
         <button type="button" class="on-slip__book" data-book><span>${moreText}</span><span>${escapeHtml(copy.openBook)}${
           key === null ? '' : ` <kbd class="on-key">${escapeHtml(key)}</kbd>`
         }</span></button>
-      </aside>${tab}${modeMarkup(modeMark)}`;
+      </aside>${tab}`;
   };
 
   let lastMarks: GoalMarks | null = null;
