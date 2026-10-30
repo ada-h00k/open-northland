@@ -57,7 +57,7 @@ export function variantStrings(strings: MapStrings | null, world: SessionWorld):
 export function variantMap(map: TerrainMapFile | null, world: SessionWorld): TerrainMapFile | null {
   const variant = sessionMapVariant(world);
   if (map?.entities === undefined || variant === null) return map;
-  return { ...map, entities: applyMapVariantEntities(map.entities, variant) };
+  return { ...map, entities: applyMapVariantEntities(map.entities, variant, map) };
 }
 
 /** The script world with the session variant's escalation, which the build and every restore pass on. */

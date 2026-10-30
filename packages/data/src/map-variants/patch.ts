@@ -7,6 +7,9 @@ import type { MapMission, MapRelationFlag, MapScript } from '../schema/maps/scri
 import type { MapStrings } from '../schema/maps/strings.js';
 import type { MapVariant, MapVariantStartSeat } from './schema.js';
 
+/** The half-cell lattice is `2W x 2H` over a `W x H` cell map. */
+const HALF_CELLS_PER_CELL = 2;
+
 const ACTIVATE_MISSION = 'ActivateMission';
 
 /**
@@ -55,14 +58,21 @@ export function applyMapVariantScript(script: MapScript, variant: MapVariant): M
 
 /** The map's placements as the variant starts them: each start seat's copied settlers after the
  *  authored ones, its own left out. A copy carries no mission object id, house or vehicle attachment,
- *  which name the source seat's own objects. Throws when a shift moves a settler off the map. */
-export function applyMapVariantEntities(entities: TerrainEntities, variant: MapVariant): TerrainEntities {
+ *  which name the source seat's own objects. Throws when a shift moves a settler off the map, whose
+ *  `size` is in cells. */
+export function applyMapVariantEntities(
+  entities: TerrainEntities,
+  variant: MapVariant,
+  size: { readonly width: number; readonly height: number },
+): TerrainEntities {
   if (variant.startSeats.length === 0) return entities;
   const humans = copiedSeatRows(entities.humans, variant, (human, player, seat) => {
     const { missionId: _id, attach: _attach, boardVehicleAt: _vehicle, ...copy } = human;
     const hx = human.hx + seat.dx;
     const hy = human.hy + seat.dy;
-    if (hx < 0 || hy < 0) throw new Error(`${label(variant)}: seat ${player}'s start leaves the map`);
+    const offMap =
+      hx < 0 || hy < 0 || hx >= size.width * HALF_CELLS_PER_CELL || hy >= size.height * HALF_CELLS_PER_CELL;
+    if (offMap) throw new Error(`${label(variant)}: seat ${player}'s start leaves the map`);
     return { ...copy, player, hx, hy };
   });
   return { ...entities, humans };
@@ -137,19 +147,21 @@ function copiedSeatRows<T extends { readonly player: number }>(
   return [...kept, ...copies];
 }
 
-/** The relation flags with each start seat's own rows replaced by its source seat's, the source's seat
- *  number swapped for the start seat's. */
+/** The relation flags with each start seat's own rows replaced: every row between seats that are not
+ *  start seats is kept and copied onto each pair its seats start, a start seat standing in for its
+ *  source. Two seats started from one source get no row between them, as the source has none with itself. */
 function copiedRelationFlags(rows: readonly MapRelationFlag[], variant: MapVariant): MapRelationFlag[] {
   const seats = startSeatsOf(variant);
   if (seats.size === 0) return [...rows];
+  const startedAs = (seat: number): number[] => [
+    seat,
+    ...variant.startSeats.filter(({ from }) => from === seat).map(({ player }) => player),
+  ];
   const kept = rows.filter((row) => !seats.has(row.a) && !seats.has(row.b));
-  const copies = variant.startSeats.flatMap(({ player, from }) =>
-    rows.flatMap((row) => {
-      if (row.a !== from && row.b !== from) return [];
-      const other = row.a === from ? row.b : row.a;
-      if (other === player || seats.has(other)) return [];
-      return [row.a === from ? { ...row, a: player } : { ...row, b: player }];
-    }),
+  const copies = kept.flatMap((row) =>
+    startedAs(row.a).flatMap((a) =>
+      startedAs(row.b).flatMap((b) => (a === row.a && b === row.b ? [] : [{ ...row, a, b }])),
+    ),
   );
   return [...kept, ...copies];
 }

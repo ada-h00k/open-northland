@@ -141,6 +141,8 @@ describe('a start seat', () => {
   const PLACE_ANY = 2;
   const PLACE_HOUSE = 3;
   const HOUSE = 41;
+  /** In cells: an 80 x 80 half-cell grid. */
+  const MAP_SIZE = { width: 40, height: 40 };
   const started = MapVariant.parse({
     ...VARIANT,
     startSeats: [{ player: VILLAGE_SEAT, from: OPEN_SEAT, dx: 10, dy: -2 }],
@@ -155,7 +157,7 @@ describe('a start seat', () => {
         { tribe: 'viking', role: 'soldier', player: FORTRESS, hx: 50, hy: 50 },
       ],
     });
-    const humans = applyMapVariantEntities(entities, started).humans;
+    const humans = applyMapVariantEntities(entities, started, MAP_SIZE).humans;
 
     expect(humans.map((h) => [h.player, h.role, h.hx, h.hy, h.missionId])).toEqual([
       [OPEN_SEAT, 'woman', 4, 5, 3],
@@ -165,8 +167,10 @@ describe('a start seat', () => {
       [VILLAGE_SEAT, 'collector', 16, 5, undefined],
     ]);
     expect(humans.at(-1)?.producedGood).toBe('wood');
-    const offMap = { ...started, startSeats: [{ player: VILLAGE_SEAT, from: OPEN_SEAT, dx: -5, dy: 0 }] };
-    expect(() => applyMapVariantEntities(entities, offMap)).toThrow(/leaves the map/);
+    for (const dx of [-5, 75]) {
+      const offMap = { ...started, startSeats: [{ player: VILLAGE_SEAT, from: OPEN_SEAT, dx, dy: 0 }] };
+      expect(() => applyMapVariantEntities(entities, offMap, MAP_SIZE)).toThrow(/leaves the map/);
+    }
   });
 
   it('takes the source seat’s papers and diplomacy locks in place of its own', () => {
@@ -197,6 +201,31 @@ describe('a start seat', () => {
       { kind: 'hide', a: FORTRESS, b: OPEN_SEAT },
       { kind: 'notChangeable', a: VILLAGE_SEAT, b: FORTRESS },
       { kind: 'hide', a: FORTRESS, b: VILLAGE_SEAT },
+    ]);
+  });
+
+  it('copies a lock between two sources onto the seats they start', () => {
+    const OTHER_START = 2;
+    const twoSources = MapVariant.parse({
+      ...VARIANT,
+      startSeats: [
+        { player: VILLAGE_SEAT, from: OPEN_SEAT, dx: 0, dy: 0 },
+        { player: OTHER_START, from: FORTRESS, dx: 0, dy: 0 },
+      ],
+    });
+    const script = MapScript.parse({
+      ...SCRIPT,
+      relationFlags: [
+        { kind: 'notChangeable', a: OPEN_SEAT, b: FORTRESS },
+        { kind: 'hide', a: VILLAGE_SEAT, b: OTHER_START },
+      ],
+    });
+
+    expect(applyMapVariantScript(script, twoSources).relationFlags).toEqual([
+      { kind: 'notChangeable', a: OPEN_SEAT, b: FORTRESS },
+      { kind: 'notChangeable', a: OPEN_SEAT, b: OTHER_START },
+      { kind: 'notChangeable', a: VILLAGE_SEAT, b: FORTRESS },
+      { kind: 'notChangeable', a: VILLAGE_SEAT, b: OTHER_START },
     ]);
   });
 
