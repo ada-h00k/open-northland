@@ -1,5 +1,5 @@
 import type { ContentSet, MapScript, TerrainMapFile } from '@open-northland/data';
-import { mapLobbySlots } from '@open-northland/data';
+import { assertMapVariantFitsMap, mapLobbySlots } from '@open-northland/data';
 import { type GameSession, localPlayerOf, parseSavedSessionMetadata } from '@open-northland/lockstep';
 import { DESCRIPTOR_WORLD } from '@open-northland/net-protocol';
 import { type Entity, parseSaveGame, type SaveGame } from '@open-northland/sim';
@@ -50,6 +50,11 @@ const NO_PLACEMENTS: MapWorldPlacements = { harvestablePlacements: [], pooledPla
 /** Build or restore the world standing at a tick boundary; throws when a save does not fit it. */
 export function buildMapWorldFromInputs(inputs: MapWorldInputs): BuiltWorld<MapWorldPlacements> {
   const { ir, script, session, save } = inputs;
+  const variant = sessionMapVariant(session.world);
+  if (variant !== null && inputs.map !== null) {
+    const goods = ir?.goods === undefined ? null : new Set(ir.goods.map((good) => good.id));
+    assertMapVariantFitsMap(variant, inputs.map, goods);
+  }
   const map = variantMap(inputs.map, session.world);
   // The render layers read the raw map; the sim runs on the collision resolution of the same map.
   const seated = sessionMapScript(session, script, ir);
@@ -69,7 +74,6 @@ export function buildMapWorldFromInputs(inputs: MapWorldInputs): BuiltWorld<MapW
     demoOwner: localPlayerOf(session),
   };
   if (save !== null) return { sim: restoreMapWorld(worldOptions, save).sim, extras: NO_PLACEMENTS };
-  const variant = sessionMapVariant(session.world);
   const world = buildMapWorld({
     ...worldOptions,
     ...sessionWorldOptions(session, script, missionWorld),

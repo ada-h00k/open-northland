@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { LANGUAGES } from '../languages.js';
 import { HypertextBlock } from '../schema/gui/hypertext.js';
 import { MapAiTask, MapMultiplayerSlot, MapScriptLine } from '../schema/maps/script.js';
-import { MapEscalation } from './escalation.js';
+import { MapEscalation, MapEscalationNoticeKey, mapEscalationNoticeKeys } from './escalation.js';
 
 /** The kinds of variant a map can ship. A kind is also the variant's id within its map, the value the
  *  `variant` launch param and the session descriptor carry, and the key its lobby label is looked up by. */
@@ -75,23 +75,31 @@ export type MapVariantBriefingPages = z.infer<typeof MapVariantBriefingPages>;
  * One committed variant of one map: our own authored rules over the map's decoded data, never a copy
  * of it. Every map-specific number lives here, so the systems that read it stay generic.
  */
-export const MapVariant = z.strictObject({
-  mapId: z.string().min(1),
-  kind: MapVariantKind,
-  script: MapVariantScriptPatch,
-  /** The seats whose start the variant copies from another seat's. A copied settler is placed as if the
-   *  map authored it, so an absent seat's stay out too. */
-  startSeats: z.array(MapVariantStartSeat).default([]),
-  /** Each map-placed node of the named good (a content good id) starts with its authored amount times
-   *  this factor: a deposit's stock, a tree's felled trunk, a picked plant's yield. */
-  depositYield: z.record(z.string().min(1), z.number().int().min(1)).default({}),
-  /** Placed at world assembly after every authored object, so authored nodes keep their entity ids; their
-   *  stock takes the variant's yield like the map's own. */
-  landscapeObjects: z.array(MapVariantLandscapeObject).default([]),
-  /** The briefing pages the variant replaces, to tell what it changes. */
-  briefingPages: MapVariantBriefingPages.optional(),
-  /** The siege the simulation runs over the map; absent for a variant that only patches the map. */
-  escalation: MapEscalation.optional(),
-});
+export const MapVariant = z
+  .strictObject({
+    mapId: z.string().min(1),
+    kind: MapVariantKind,
+    script: MapVariantScriptPatch,
+    /** The seats whose start the variant copies from another seat's. A copied settler is placed as if the
+     *  map authored it, so an absent seat's stay out too. */
+    startSeats: z.array(MapVariantStartSeat).default([]),
+    /** Each map-placed node of the named good (a content good id) starts with its authored amount times
+     *  this factor: a deposit's stock, a tree's felled trunk, a picked plant's yield. */
+    depositYield: z.record(z.string().min(1), z.number().int().min(1)).default({}),
+    /** Placed at world assembly after every authored object, so authored nodes keep their entity ids; their
+     *  stock takes the variant's yield like the map's own. */
+    landscapeObjects: z.array(MapVariantLandscapeObject).default([]),
+    /** The briefing pages the variant replaces, to tell what it changes. */
+    briefingPages: MapVariantBriefingPages.optional(),
+    /** The siege the simulation runs over the map; absent for a variant that only patches the map. */
+    escalation: MapEscalation.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.escalation === undefined) return;
+    for (const key of mapEscalationNoticeKeys(value.escalation)) {
+      if (!MapEscalationNoticeKey.safeParse(key).success)
+        ctx.addIssue({ code: 'custom', path: ['escalation'], message: `no notice has the key ${key}` });
+    }
+  });
 export type MapVariant = z.infer<typeof MapVariant>;
 export type MapVariantInput = z.input<typeof MapVariant>;

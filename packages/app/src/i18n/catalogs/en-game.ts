@@ -12,18 +12,21 @@ export const enGame = {
     escalation: {
       nextAttack: 'Next attack in {time}',
       attackRunning: 'Attack under way',
-      modeMark: 'Ragnarök mode',
+      modeMark: '{variant} mode',
       notices: {
-        attack: { title: 'The Fortress enforcers march to attack!' },
-        landing: { title: 'Darkland ships are landing on the shore!' },
-        lightArmor: {
-          title: 'The fortress warriors grow stronger.',
+        fortecaAttack: { title: 'The Fortress enforcers march to attack!' },
+        fortecaLanding: { title: 'Darkland ships are landing on the shore!' },
+        fortecaLightArmor: {
+          title: 'The Fortress warriors grow stronger.',
           detail: 'They received better weapons and light armour.',
         },
-        heavyArmor: { title: 'The fortress warriors grow stronger.', detail: 'They received heavy armour.' },
-        amulets: { title: 'The fortress warriors grow stronger.', detail: 'They received amulets.' },
-        healDraughts: {
-          title: 'The fortress warriors grow stronger.',
+        fortecaHeavyArmor: {
+          title: 'The Fortress warriors grow stronger.',
+          detail: 'They received heavy armour.',
+        },
+        fortecaAmulets: { title: 'The Fortress warriors grow stronger.', detail: 'They received amulets.' },
+        fortecaHealDraughts: {
+          title: 'The Fortress warriors grow stronger.',
           detail: 'They received healing potions.',
         },
       },

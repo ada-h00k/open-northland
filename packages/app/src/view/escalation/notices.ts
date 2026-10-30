@@ -1,33 +1,37 @@
+import { MapEscalationNoticeKey } from '@open-northland/data';
 import type { SimEvent } from '@open-northland/sim';
 import type { Messages } from '../../i18n/en.js';
 
 export type SiegeNoticeId = keyof Messages['hud']['escalation']['notices'];
 
-/** A variant's notice keys (`packages/data/src/map-variants`) by the notice the app shows for them. */
-const NOTICE_BY_KEY: Readonly<Record<string, SiegeNoticeId>> = {
-  'ragnarok.landing': 'landing',
-  'ragnarok.gear.lightArmor': 'lightArmor',
-  'ragnarok.gear.heavyArmor': 'heavyArmor',
-  'ragnarok.gear.amulets': 'amulets',
-  'ragnarok.gear.healDraughts': 'healDraughts',
+/** The notice the app shows for each key a committed variant may name (`packages/data/src/map-variants`). */
+const NOTICE_BY_KEY: Readonly<Record<MapEscalationNoticeKey, SiegeNoticeId>> = {
+  'forteca.attack': 'fortecaAttack',
+  'forteca.landing': 'fortecaLanding',
+  'forteca.gear.lightArmor': 'fortecaLightArmor',
+  'forteca.gear.heavyArmor': 'fortecaHeavyArmor',
+  'forteca.gear.amulets': 'fortecaAmulets',
+  'forteca.gear.healDraughts': 'fortecaHealDraughts',
 };
 
-/** The centre-screen notices a batch of sim events raises, in order; a key the app has no text for
+/** The centre-screen notices a batch of sim events raises, in order. An attack launch shows
+ *  `attackNoticeKey`, the variant's own, or nothing when it names none; a key the app has no text for
  *  is reported through `unknown` and shows nothing. */
 export function siegeNoticesOf(
   events: readonly SimEvent[],
+  attackNoticeKey: string | undefined,
   unknown: (noticeKey: string) => void,
 ): SiegeNoticeId[] {
   const out: SiegeNoticeId[] = [];
   const byKey = (noticeKey: string): void => {
-    const id = NOTICE_BY_KEY[noticeKey];
-    if (id === undefined) unknown(noticeKey);
-    else out.push(id);
+    const key = MapEscalationNoticeKey.safeParse(noticeKey);
+    if (key.success) out.push(NOTICE_BY_KEY[key.data]);
+    else unknown(noticeKey);
   };
   for (const event of events) {
     switch (event.kind) {
       case 'mapEscalationAttackLaunched':
-        out.push('attack');
+        if (attackNoticeKey !== undefined) byKey(attackNoticeKey);
         break;
       case 'mapEscalationGearStep':
       case 'mapEscalationLanding':
@@ -43,23 +47,29 @@ export function siegeNoticesOf(
 /** How long one notice stands, fade in and out included; foundation.css animates over the same. */
 export const NOTICE_SHOWN_MS = 5000;
 
+/** One showing of a notice: a notice shown again is a new showing, so its fade starts over. */
+export interface NoticeShowing<T> {
+  readonly notice: T;
+  readonly sinceMs: number;
+}
+
 /** Notices shown one at a time, each for {@link NOTICE_SHOWN_MS}, the rest waiting in order. */
 export class NoticeQueue<T> {
   private readonly waiting: T[] = [];
-  private shown: { readonly notice: T; readonly sinceMs: number } | null = null;
+  private shown: NoticeShowing<T> | null = null;
 
   /** Queue `notice`, unless the same one already waits. */
   push(notice: T): void {
     if (!this.waiting.includes(notice)) this.waiting.push(notice);
   }
 
-  /** The notice standing at `nowMs`, null while none waits. */
-  current(nowMs: number): T | null {
+  /** The showing standing at `nowMs`, null while none waits. */
+  current(nowMs: number): NoticeShowing<T> | null {
     if (this.shown !== null && nowMs - this.shown.sinceMs >= NOTICE_SHOWN_MS) this.shown = null;
     if (this.shown === null) {
       const next = this.waiting.shift();
       if (next !== undefined) this.shown = { notice: next, sinceMs: nowMs };
     }
-    return this.shown?.notice ?? null;
+    return this.shown;
   }
 }

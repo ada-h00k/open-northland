@@ -368,6 +368,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
       endDeadPct: 80,
       endAfterSeconds: 10 * MINUTE,
       targets: RAIDS,
+      noticeKey: 'forteca.attack',
     },
     guard: {
       base: 140,
@@ -382,19 +383,19 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
       steps: [
         {
           atSeconds: HOUR,
-          noticeKey: 'ragnarok.gear.lightArmor',
+          noticeKey: 'forteca.gear.lightArmor',
           grants: [{ goods: LIGHT_ARMOR }, { goods: ['shoes'] }],
           weaponUpgrades: BETTER_WEAPONS,
         },
-        { atSeconds: 105 * MINUTE, noticeKey: 'ragnarok.gear.heavyArmor', grants: [{ goods: HEAVY_ARMOR }] },
+        { atSeconds: 105 * MINUTE, noticeKey: 'forteca.gear.heavyArmor', grants: [{ goods: HEAVY_ARMOR }] },
         {
           atSeconds: 135 * MINUTE,
-          noticeKey: 'ragnarok.gear.amulets',
+          noticeKey: 'forteca.gear.amulets',
           grants: [{ goods: COMBAT_AMULETS, extraChancePct: SECOND_AMULET_CHANCE_PCT }],
         },
         {
           atSeconds: 150 * MINUTE,
-          noticeKey: 'ragnarok.gear.healDraughts',
+          noticeKey: 'forteca.gear.healDraughts',
           grants: [{ goods: ['potion_heal_big'] }],
         },
       ],
@@ -424,7 +425,7 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
     landings: {
       vehicle: 'ship_small',
       menPerShip: SHIP_MEN,
-      noticeKey: 'ragnarok.landing',
+      noticeKey: 'forteca.landing',
       revealNodes: SHIP_REVEAL_NODES,
     },
     catapults: { respawnSeconds: CATAPULT_RESPAWN_MINUTES * MINUTE },

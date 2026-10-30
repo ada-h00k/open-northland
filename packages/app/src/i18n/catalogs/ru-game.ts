@@ -12,17 +12,23 @@ export const ruGame = {
     escalation: {
       nextAttack: 'Следующая атака через {time}',
       attackRunning: 'Идёт атака',
-      modeMark: 'Режим Рагнарёк',
+      modeMark: 'Режим {variant}',
       notices: {
-        attack: { title: 'Приспешники Крепости идут в атаку!' },
-        landing: { title: 'Корабли Страны Тьмы причаливают к берегу!' },
-        lightArmor: {
-          title: 'Воины крепости становятся сильнее.',
+        fortecaAttack: { title: 'Приспешники Крепости идут в атаку!' },
+        fortecaLanding: { title: 'Корабли Страны Тьмы причаливают к берегу!' },
+        fortecaLightArmor: {
+          title: 'Воины Крепости становятся сильнее.',
           detail: 'Они получили лучшее оружие и лёгкие доспехи.',
         },
-        heavyArmor: { title: 'Воины крепости становятся сильнее.', detail: 'Они получили тяжёлые доспехи.' },
-        amulets: { title: 'Воины крепости становятся сильнее.', detail: 'Они получили амулеты.' },
-        healDraughts: { title: 'Воины крепости становятся сильнее.', detail: 'Они получили зелья лечения.' },
+        fortecaHeavyArmor: {
+          title: 'Воины Крепости становятся сильнее.',
+          detail: 'Они получили тяжёлые доспехи.',
+        },
+        fortecaAmulets: { title: 'Воины Крепости становятся сильнее.', detail: 'Они получили амулеты.' },
+        fortecaHealDraughts: {
+          title: 'Воины Крепости становятся сильнее.',
+          detail: 'Они получили зелья лечения.',
+        },
       },
     },
     armyOrderLimit:

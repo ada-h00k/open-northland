@@ -12,17 +12,20 @@ export const plGame = {
     escalation: {
       nextAttack: 'Następny atak za {time}',
       attackRunning: 'Atak trwa',
-      modeMark: 'Tryb Ragnarök',
+      modeMark: 'Tryb {variant}',
       notices: {
-        attack: { title: 'Siepacze Twierdzy ruszają do ataku!' },
-        landing: { title: 'Okręty Krainy Ciemności przybijają do brzegu!' },
-        lightArmor: {
-          title: 'Wojownicy twierdzy rosną w siłę.',
+        fortecaAttack: { title: 'Siepacze Twierdzy ruszają do ataku!' },
+        fortecaLanding: { title: 'Okręty Krainy Ciemności przybijają do brzegu!' },
+        fortecaLightArmor: {
+          title: 'Wojownicy Twierdzy rosną w siłę.',
           detail: 'Otrzymali lepszą broń i lekkie zbroje.',
         },
-        heavyArmor: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali ciężkie zbroje.' },
-        amulets: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali amulety.' },
-        healDraughts: { title: 'Wojownicy twierdzy rosną w siłę.', detail: 'Otrzymali mikstury leczenia.' },
+        fortecaHeavyArmor: { title: 'Wojownicy Twierdzy rosną w siłę.', detail: 'Otrzymali ciężkie zbroje.' },
+        fortecaAmulets: { title: 'Wojownicy Twierdzy rosną w siłę.', detail: 'Otrzymali amulety.' },
+        fortecaHealDraughts: {
+          title: 'Wojownicy Twierdzy rosną w siłę.',
+          detail: 'Otrzymali mikstury leczenia.',
+        },
       },
     },
     armyOrderLimit:

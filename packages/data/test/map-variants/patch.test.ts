@@ -5,6 +5,7 @@ import {
   applyMapVariantScript,
   applyMapVariantSlots,
   applyMapVariantStrings,
+  assertMapVariantFitsMap,
   MAP_VARIANTS,
   MapBriefing,
   MapEscalation,
@@ -127,6 +128,14 @@ describe('applyMapVariantScript', () => {
     expect(() => applyMapVariantScript(SCRIPT, stale)).toThrow(/no single mission named Gone/);
   });
 
+  it('refuses a variant offering a seat or dropping a trade house the script lacks', () => {
+    const MISSING = 9;
+    const offered = { ...VARIANT.script, slotOptions: [{ player: MISSING, allowed: ['ai' as const] }] };
+    expect(() => applyMapVariantScript(SCRIPT, { ...VARIANT, script: offered })).toThrow(/no seat 9/);
+    const dropped = { ...VARIANT.script, droppedTradeHouses: [MISSING] };
+    expect(() => applyMapVariantScript(SCRIPT, { ...VARIANT, script: dropped })).toThrow(/no trade house 9/);
+  });
+
   it('refuses a variant that leaves a kept mission activating a neutralised one', () => {
     const dangling = {
       ...VARIANT,
@@ -238,6 +247,69 @@ describe('a start seat', () => {
   });
 });
 
+describe('assertMapVariantFitsMap', () => {
+  /** In cells: a 20 x 10 half-cell grid. */
+  const SIZE = { width: 10, height: 5 };
+  const GOODS = new Set(['wood']);
+  const committed = MAP_VARIANTS.find((row) => row.escalation !== undefined)?.escalation;
+  if (committed === undefined) throw new Error('no committed escalation to vary');
+  const escalation: MapEscalation = committed;
+  const target = escalation.attacks.targets[0];
+  if (target === undefined) throw new Error('no committed target to vary');
+  const onMap = { x: 1, y: 1 };
+  const landing = { spawnX: 1, spawnY: 1, ...onMap };
+  /** The committed escalation moved onto the small map, with `change` applied. */
+  const fitted = (change: (fit: MapEscalation) => MapEscalation) => {
+    const fit = {
+      ...escalation,
+      keep: { ...escalation.keep, ...onMap },
+      attacks: { ...escalation.attacks, targets: [{ ...target, ...onMap, landings: [landing] }] },
+      heroes: escalation.heroes.map((hero) => ({ ...hero, ...onMap })),
+      ...(escalation.porters === undefined ? {} : { porters: { ...escalation.porters, ...onMap } }),
+    };
+    return { ...VARIANT, depositYield: { wood: 2 }, escalation: change(fit) };
+  };
+  const off = { x: 20, y: 0 };
+
+  it('passes a variant whose objects, points and goods all fit', () => {
+    const placed = { ...fitted((fit) => fit), landscapeObjects: [{ object: 'cedar 01', hx: 19, hy: 9 }] };
+    expect(() => assertMapVariantFitsMap(placed, SIZE, GOODS)).not.toThrow();
+  });
+
+  it('refuses a placed object or an escalation point off the map', () => {
+    const placed = { ...fitted((fit) => fit), landscapeObjects: [{ object: 'cedar 01', hx: 0, hy: 10 }] };
+    expect(() => assertMapVariantFitsMap(placed, SIZE, GOODS)).toThrow(/places cedar 01 at \(0, 10\)/);
+    const [fitTarget] = fitted((fit) => fit).escalation.attacks.targets;
+    if (fitTarget === undefined) throw new Error('no target');
+    const offPoints = [
+      fitted((fit) => ({ ...fit, keep: { ...fit.keep, ...off } })),
+      fitted((fit) => ({ ...fit, attacks: { ...fit.attacks, targets: [{ ...fitTarget, ...off }] } })),
+      fitted((fit) => ({
+        ...fit,
+        attacks: {
+          ...fit.attacks,
+          targets: [{ ...fitTarget, landings: [{ ...landing, spawnX: off.x, spawnY: off.y }] }],
+        },
+      })),
+      fitted((fit) => ({
+        ...fit,
+        attacks: { ...fit.attacks, targets: [{ ...fitTarget, landings: [{ ...landing, ...off }] }] },
+      })),
+      fitted((fit) => ({ ...fit, heroes: fit.heroes.map((hero) => ({ ...hero, ...off })) })),
+      fitted((fit) => (fit.porters === undefined ? fit : { ...fit, porters: { ...fit.porters, ...off } })),
+    ];
+    for (const variant of offPoints) {
+      expect(() => assertMapVariantFitsMap(variant, SIZE, GOODS)).toThrow(/at \(20, 0\) lies off the map/);
+    }
+  });
+
+  it('refuses a deposit yield for a good the content lacks, unless no goods are known', () => {
+    const variant = { ...fitted((fit) => fit), depositYield: { gold: 3 } };
+    expect(() => assertMapVariantFitsMap(variant, SIZE, GOODS)).toThrow(/unknown good gold/);
+    expect(() => assertMapVariantFitsMap(variant, SIZE, null)).not.toThrow();
+  });
+});
+
 describe('applyMapVariantSlots', () => {
   it('re-reads only the replaced seats of a map index roster', () => {
     const slots = mapLobbySlots(SCRIPT);
@@ -296,17 +368,32 @@ describe('MapEscalation', () => {
   it('refuses a schedule or gear steps out of order, a seat targeted twice or a refill above its max', () => {
     const variant = MAP_VARIANTS.find((row) => row.escalation !== undefined);
     if (variant?.escalation === undefined) throw new Error('no committed escalation to vary');
-    const { attacks, guard, gear } = variant.escalation;
+    const { attacks, guard, gear, keep } = variant.escalation;
     if (gear === undefined) throw new Error('no committed gear to vary');
-    const target = attacks.targets[0];
+    const [target, other] = attacks.targets;
+    if (target === undefined || other === undefined) throw new Error('no two committed targets to vary');
     for (const bad of [
       { attacks: { ...attacks, launches: [...attacks.launches].reverse() } },
       { attacks: { ...attacks, targets: [target, target] } },
+      { attacks: { ...attacks, targets: [target, { ...other, raider: target.raider }] } },
+      { attacks: { ...attacks, targets: [{ ...target, raider: keep.seat }] } },
+      { attacks: { ...attacks, targets: [target, { ...other, raider: target.seat }] } },
       { guard: { ...guard, refill: { ...guard.refill, baseMen: guard.refill.maxMen + 1 } } },
       { gear: { ...gear, steps: [...gear.steps].reverse() } },
     ]) {
       expect(MapEscalation.safeParse({ ...variant.escalation, ...bad }).success).toBe(false);
     }
+  });
+});
+
+describe('MapVariant', () => {
+  it('refuses an escalation naming a notice the app has no text for', () => {
+    const variant = MAP_VARIANTS.find((row) => row.escalation !== undefined);
+    if (variant?.escalation === undefined) throw new Error('no committed escalation to vary');
+    const { attacks } = variant.escalation;
+    expect(MapVariant.safeParse(variant).success).toBe(true);
+    const typo = { ...variant.escalation, attacks: { ...attacks, noticeKey: 'forteca.atack' } };
+    expect(MapVariant.safeParse({ ...variant, escalation: typo }).error?.message).toMatch(/forteca\.atack/);
   });
 });
 

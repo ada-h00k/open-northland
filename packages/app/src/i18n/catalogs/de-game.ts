@@ -12,20 +12,23 @@ export const deGame = {
     escalation: {
       nextAttack: 'Nächster Angriff in {time}',
       attackRunning: 'Angriff läuft',
-      modeMark: 'Ragnarök-Modus',
+      modeMark: '{variant}-Modus',
       notices: {
-        attack: { title: 'Die Schlächter der Festung ziehen zum Angriff!' },
-        landing: { title: 'Schiffe der Dunkelländer legen am Ufer an!' },
-        lightArmor: {
+        fortecaAttack: { title: 'Die Schlächter der Festung ziehen zum Angriff!' },
+        fortecaLanding: { title: 'Schiffe der Dunkelländer legen am Ufer an!' },
+        fortecaLightArmor: {
           title: 'Die Krieger der Festung werden stärker.',
           detail: 'Sie haben bessere Waffen und leichte Rüstungen erhalten.',
         },
-        heavyArmor: {
+        fortecaHeavyArmor: {
           title: 'Die Krieger der Festung werden stärker.',
           detail: 'Sie haben schwere Rüstungen erhalten.',
         },
-        amulets: { title: 'Die Krieger der Festung werden stärker.', detail: 'Sie haben Amulette erhalten.' },
-        healDraughts: {
+        fortecaAmulets: {
+          title: 'Die Krieger der Festung werden stärker.',
+          detail: 'Sie haben Amulette erhalten.',
+        },
+        fortecaHealDraughts: {
           title: 'Die Krieger der Festung werden stärker.',
           detail: 'Sie haben Heiltränke erhalten.',
         },

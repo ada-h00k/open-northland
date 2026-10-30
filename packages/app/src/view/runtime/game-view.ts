@@ -1,5 +1,5 @@
 import type { SceneryObject, SoundStatsView, UiCue, VoiceCall } from '@open-northland/audio';
-import type { Campaign } from '@open-northland/data';
+import type { Campaign, MapVariant } from '@open-northland/data';
 import { BUILDING_KIND, jobCanPray, type MapRelationFlag } from '@open-northland/data';
 import type { SessionDriver } from '@open-northland/lockstep';
 import type {
@@ -296,6 +296,8 @@ export interface GameViewDeps {
   /** The map's `[misc_music]` code, null for a map that names none (it plays the nation's music);
    *  omitted, the world plays no music. */
   readonly musicType?: number | null;
+  /** The map variant the session plays; omitted, the map as authored. */
+  readonly mapVariant?: MapVariant | null;
 }
 
 export interface GameViewHandle {
@@ -875,6 +877,7 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
     cleanup.push(() => scriptTints.dispose());
     const siege = mountSiegePresentation({
       host,
+      variant: deps.mapVariant ?? null,
       plane: hudDom.element,
       setAttackNight: (on) => renderer.setAttackNight(on),
       setModeMark: (text) => toolPanel.controller.setModeMark(text),

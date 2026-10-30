@@ -12,6 +12,14 @@ const HALF_CELLS_PER_CELL = 2;
 
 const ACTIVATE_MISSION = 'ActivateMission';
 
+interface MapCells {
+  readonly width: number;
+  readonly height: number;
+}
+
+const onMap = (size: MapCells, hx: number, hy: number): boolean =>
+  hx >= 0 && hy >= 0 && hx < size.width * HALF_CELLS_PER_CELL && hy < size.height * HALF_CELLS_PER_CELL;
+
 /**
  * The map's script as the variant plays it. Throws when the variant names a mission the script lacks
  * or leaves a kept mission activating a neutralised one: either means the variant was written for
@@ -19,6 +27,14 @@ const ACTIVATE_MISSION = 'ActivateMission';
  */
 export function applyMapVariantScript(script: MapScript, variant: MapVariant): MapScript {
   const patch = variant.script;
+  const seats = new Set(script.players.map((row) => row.player));
+  for (const { player } of patch.slotOptions) {
+    if (!seats.has(player)) throw new Error(`${label(variant)}: the script has no seat ${player} to offer`);
+  }
+  const traders = new Set(script.tradeAgreements.map((row) => row.missionId));
+  for (const house of patch.droppedTradeHouses) {
+    if (!traders.has(house)) throw new Error(`${label(variant)}: the script has no trade house ${house}`);
+  }
   const indexOf = missionIndexes(script.missions, variant);
   const neutralized = new Set(patch.neutralizedMissions.map(indexOf));
   const appended = new Map<number, MapMission['results']>();
@@ -56,6 +72,48 @@ export function applyMapVariantScript(script: MapScript, variant: MapVariant): M
   };
 }
 
+/**
+ * Throws when the variant does not fit the map it is played on: a placed object or an escalation point
+ * off the map, whose `size` is in cells, or a deposit yield for a good `goodIds` lacks. Either means the
+ * variant was written for another version of the map or its content. Null `goodIds` skips the goods.
+ */
+export function assertMapVariantFitsMap(
+  variant: MapVariant,
+  size: MapCells,
+  goodIds: ReadonlySet<string> | null,
+): void {
+  for (const row of variant.landscapeObjects) {
+    if (!onMap(size, row.hx, row.hy))
+      throw new Error(`${label(variant)}: places ${row.object} at (${row.hx}, ${row.hy}), off the map`);
+  }
+  for (const [name, x, y] of escalationPoints(variant)) {
+    if (!onMap(size, x, y))
+      throw new Error(`${label(variant)}: the ${name} at (${x}, ${y}) lies off the map`);
+  }
+  if (goodIds === null) return;
+  for (const good of Object.keys(variant.depositYield)) {
+    if (!goodIds.has(good)) throw new Error(`${label(variant)}: yields more of unknown good ${good}`);
+  }
+}
+
+function escalationPoints(variant: MapVariant): (readonly [string, number, number])[] {
+  const escalation = variant.escalation;
+  if (escalation === undefined) return [];
+  const { keep, attacks, heroes, porters } = escalation;
+  return [
+    ['keep', keep.x, keep.y],
+    ...attacks.targets.flatMap((target): (readonly [string, number, number])[] => [
+      [`seat ${target.seat}'s target`, target.x, target.y],
+      ...target.landings.flatMap((landing): (readonly [string, number, number])[] => [
+        [`seat ${target.seat}'s landing ship`, landing.spawnX, landing.spawnY],
+        [`seat ${target.seat}'s landing shore`, landing.x, landing.y],
+      ]),
+    ]),
+    ...heroes.map((hero): readonly [string, number, number] => [`seat ${hero.seat}'s hero`, hero.x, hero.y]),
+    ...(porters === undefined ? [] : [["porters' flag", porters.x, porters.y] as const]),
+  ];
+}
+
 /** The map's placements as the variant starts them: each start seat's copied settlers after the
  *  authored ones, its own left out. A copy carries no mission object id, house or vehicle attachment,
  *  which name the source seat's own objects. Throws when a shift moves a settler off the map, whose
@@ -63,16 +121,14 @@ export function applyMapVariantScript(script: MapScript, variant: MapVariant): M
 export function applyMapVariantEntities(
   entities: TerrainEntities,
   variant: MapVariant,
-  size: { readonly width: number; readonly height: number },
+  size: MapCells,
 ): TerrainEntities {
   if (variant.startSeats.length === 0) return entities;
   const humans = copiedSeatRows(entities.humans, variant, (human, player, seat) => {
     const { missionId: _id, attach: _attach, boardVehicleAt: _vehicle, ...copy } = human;
     const hx = human.hx + seat.dx;
     const hy = human.hy + seat.dy;
-    const offMap =
-      hx < 0 || hy < 0 || hx >= size.width * HALF_CELLS_PER_CELL || hy >= size.height * HALF_CELLS_PER_CELL;
-    if (offMap) throw new Error(`${label(variant)}: seat ${player}'s start leaves the map`);
+    if (!onMap(size, hx, hy)) throw new Error(`${label(variant)}: seat ${player}'s start leaves the map`);
     return { ...copy, player, hx, hy };
   });
   return { ...entities, humans };

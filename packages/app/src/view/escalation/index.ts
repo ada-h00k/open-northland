@@ -1,11 +1,18 @@
+import type { MapVariant } from '@open-northland/data';
 import type { SimEvent } from '@open-northland/sim';
 import { diag } from '../../diag/index.js';
 import type { MissionInfoRow } from '../../game/map/info-lines.js';
 import { createCentreNotice } from '../../hud/dom/centre-notice.js';
-import { messages } from '../../i18n/index.js';
+import { formatMessage, messages } from '../../i18n/index.js';
 import type { SessionHost } from '../../session/index.js';
 import { createSiegeRows, siegeCountdownLines } from './countdown.js';
-import { NOTICE_SHOWN_MS, NoticeQueue, type SiegeNoticeId, siegeNoticesOf } from './notices.js';
+import {
+  NOTICE_SHOWN_MS,
+  NoticeQueue,
+  type NoticeShowing,
+  type SiegeNoticeId,
+  siegeNoticesOf,
+} from './notices.js';
 
 const DIAG_CHANNEL = 'escalation';
 
@@ -13,6 +20,8 @@ const warnUnknown = (noticeKey: string): void => diag.warn(DIAG_CHANNEL, `no not
 
 export interface SiegePresentationDeps {
   readonly host: Pick<SessionHost, 'mapEscalation'>;
+  /** The variant the session plays, which names the mode mark and the attack notice; null for none. */
+  readonly variant: MapVariant | null;
   readonly plane: HTMLElement;
   /** The world renderer's attack night. */
   readonly setAttackNight: (on: boolean) => void;
@@ -38,26 +47,32 @@ export function mountSiegePresentation(deps: SiegePresentationDeps): SiegePresen
   const queue = new NoticeQueue<SiegeNoticeId>();
   const banner = createCentreNotice(deps.plane, NOTICE_SHOWN_MS);
   const siegeRows = createSiegeRows();
+  const attackNoticeKey = deps.variant?.escalation?.attacks.noticeKey;
   let night = false;
   let marked = false;
+  let showing: NoticeShowing<SiegeNoticeId> | null = null;
   return {
     onEvents(events) {
-      for (const id of siegeNoticesOf(events, warnUnknown)) queue.push(id);
+      for (const id of siegeNoticesOf(events, attackNoticeKey, warnUnknown)) queue.push(id);
       if (events.some((event) => event.kind === 'mapEscalationAttackLaunched')) deps.playAttackMusic();
     },
     frame() {
-      const view = deps.host.mapEscalation();
-      if ((view !== null) !== marked) {
-        marked = view !== null;
-        deps.setModeMark(marked ? messages().hud.escalation.modeMark : null);
+      if (!marked && deps.variant !== null) {
+        marked = true;
+        const variant = messages().mainMenu.lobby.variantNames[deps.variant.kind];
+        deps.setModeMark(formatMessage(messages().hud.escalation.modeMark, { variant }));
       }
-      const running = view?.attackRunning === true;
+      const running = deps.host.mapEscalation()?.attackRunning === true;
       if (running !== night) {
         night = running;
         deps.setAttackNight(running);
       }
-      const id = queue.current(deps.now());
-      banner.show(id === null ? null : messages().hud.escalation.notices[id]);
+      const next = queue.current(deps.now());
+      if (next !== showing) {
+        showing = next;
+        // A fresh text for every showing, so a notice shown again restarts its fade.
+        banner.show(next === null ? null : { ...messages().hud.escalation.notices[next.notice] });
+      }
     },
     infoRows(rows, tick) {
       const lines = siegeCountdownLines(deps.host.mapEscalation(), tick, messages().hud.escalation);

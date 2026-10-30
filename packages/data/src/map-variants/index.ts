@@ -3,6 +3,7 @@ export {
   type MapEscalationHero,
   type MapEscalationInput,
   MapEscalationJobShare,
+  MapEscalationNoticeKey,
   MapEscalationWaveSize,
 } from './escalation.js';
 export {
@@ -11,6 +12,7 @@ export {
   applyMapVariantScript,
   applyMapVariantSlots,
   applyMapVariantStrings,
+  assertMapVariantFitsMap,
 } from './patch.js';
 export { findMapVariant, MAP_VARIANTS, mapVariantsOf } from './registry.js';
 export {

@@ -7,6 +7,18 @@ const seat = z.number().int().nonnegative();
 /** A half-cell node of the map, as the map's own AI rows name points. */
 const mapPoint = z.number().int().nonnegative();
 
+/** The notices a committed variant's escalation may name, each one the app has a text for. The schema
+ *  below takes any key, so a synthetic escalation names its own; a committed variant is held to these. */
+export const MapEscalationNoticeKey = z.enum([
+  'forteca.attack',
+  'forteca.landing',
+  'forteca.gear.lightArmor',
+  'forteca.gear.heavyArmor',
+  'forteca.gear.amulets',
+  'forteca.gear.healDraughts',
+]);
+export type MapEscalationNoticeKey = z.infer<typeof MapEscalationNoticeKey>;
+
 /** One trade of a spawn mix and its share; the mix splits a spawn by weight, larger remainders first. */
 export const MapEscalationJobShare = z.strictObject({
   job: z.number().int().nonnegative(),
@@ -145,6 +157,8 @@ export const MapEscalation = z
       endDeadPct: z.number().int().min(1).max(100),
       endAfterSeconds: z.number().int().positive(),
       targets: z.array(MapEscalationTarget).min(1),
+      /** The notice the app shows when an attack sets out; absent, it shows none. */
+      noticeKey: z.string().min(1).optional(),
     }),
     /** The fortress's own guard: a soldier cap of `base` plus, per occupied target seat,
      *  `perSeatStep` for each completed `stepSeconds`, at most `perSeatMax`; filled by the refill beats. */
@@ -211,9 +225,26 @@ export const MapEscalation = z
     const refill = value.guard.refill;
     if (refill.baseMen > refill.maxMen)
       ctx.addIssue({ code: 'custom', path: ['guard', 'refill'], message: 'refill starts above its max' });
-    const seats = value.attacks.targets.map((row) => row.seat);
-    if (new Set(seats).size !== seats.length)
+    const targets = value.attacks.targets;
+    const seats = new Set(targets.map((row) => row.seat));
+    if (seats.size !== targets.length)
       ctx.addIssue({ code: 'custom', path: ['attacks', 'targets'], message: 'a seat is targeted twice' });
+    const raiders = targets.map((row) => row.raider);
+    if (new Set(raiders).size !== raiders.length)
+      ctx.addIssue({ code: 'custom', path: ['attacks', 'targets'], message: 'a raider seat attacks twice' });
+    if (raiders.includes(value.keep.seat))
+      ctx.addIssue({ code: 'custom', path: ['attacks', 'targets'], message: 'the keep seat is a raider' });
+    if (raiders.some((raider) => seats.has(raider)))
+      ctx.addIssue({ code: 'custom', path: ['attacks', 'targets'], message: 'a raider seat is a target' });
   });
 export type MapEscalation = z.infer<typeof MapEscalation>;
 export type MapEscalationInput = z.input<typeof MapEscalation>;
+
+/** Every notice key `escalation` names, in no particular order. */
+export function mapEscalationNoticeKeys(escalation: MapEscalation): string[] {
+  return [
+    ...(escalation.attacks.noticeKey === undefined ? [] : [escalation.attacks.noticeKey]),
+    ...(escalation.landings === undefined ? [] : [escalation.landings.noticeKey]),
+    ...(escalation.gear?.steps.map((step) => step.noticeKey) ?? []),
+  ];
+}

@@ -20,6 +20,7 @@ import { briefingMatchObjectives, briefingPage, mapBriefFallback } from '../../g
 import { playerNameMap, playerTribe } from '../../game/map/roster.js';
 import { mapStartFocus } from '../../game/map/start.js';
 import { mapStringLookup } from '../../game/map/strings.js';
+import { sessionMapVariant } from '../../game/map/variant.js';
 import { observerSeats } from '../../game/match/observer-seats.js';
 import { hasEliminationGoal } from '../../game/match/participants.js';
 import { sessionSearch } from '../../game/match/session-url.js';
@@ -284,6 +285,7 @@ export async function presentMapWorld(
     saveEntrySearch: formatSearch(sessionSearch(session, script === null ? [] : mapLobbySlots(script))),
     introAtStart: runtime.introAtStart && host.missions === undefined,
     musicType: meta?.musicType ?? null,
+    mapVariant: sessionMapVariant(session.world),
     missionBriefSource: {
       matchObjectives: briefingMatchObjectives(host.missions),
       page: (id) => briefingPage(world.briefing, currentLocale(), id),
