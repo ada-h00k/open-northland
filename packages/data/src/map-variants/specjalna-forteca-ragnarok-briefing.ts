@@ -43,10 +43,10 @@ const TEXTS: Record<Language, LanguageText> = {
     intro: {
       title: 'FORTECA',
       paragraphs: [
-        'Dla Wikingów nadeszły ciężkie czasy...\nKraj terroryzują oddziały siepaczy z fortecy znajdującej się w samym środku kraju. Przed tymi oprawcami nie ma ucieczki.',
-        'Nie trzeba tu nikogo szukać ani nawiązywać kontaktów handlowych: wszystkie plemiona w grze, także Mieszkańcy równiny i Górale, są graczami i sojusznikami. Fortecę zdobędziecie tylko wspólnymi siłami!',
-        'Plemiona Wikingów mogą przekazywać sobie ludzi: każ kilku Wikingom udać się do świętego ognia sojuszniczego plemienia Wikingów i przestąpić magiczny krąg ognia. Od tej chwili będą słuchać rozkazów sojusznika. Mieszkańców równiny i Górali ten rytuał nie obejmuje.',
-        'Wskazówka: Jesteś w posiadaniu kilku listów z budynkami. Wykorzystaj je szybko i mądrze!',
+        'Nastały dla Wikingów mroczne dni...\nZ fortecy w samym sercu kraju wyruszają bandy siepaczy i pustoszą wszystko wokół. Nikt nie może się przed nimi ukryć.',
+        'Tym razem nie musicie nikogo szukać ani z nikim handlować. Wszystkie plemiona, również Mieszkańcy równiny i Górale, biorą udział w grze jako sojusznicy. Fortecę zdobędziecie tylko razem!',
+        'Plemiona Wikingów mogą oddawać sobie nawzajem ludzi. Wyślij kilku swoich Wikingów do świętego ognia sprzymierzonego plemienia Wikingów: kto przejdzie przez płonący krąg, służy odtąd temu sojusznikowi. Mieszkańców równiny i Górali to nie dotyczy.',
+        'Na początek dostajesz kilka listów z budynkami. Nie zwlekaj z nimi zbyt długo, ale wybieraj rozważnie!',
       ],
     },
     rules: {
@@ -60,6 +60,7 @@ const TEXTS: Record<Language, LanguageText> = {
         'Fortecy broni ponadto potężny bohater, Lord Uzurpator.',
         'Forteca ma własnych budowniczych, którzy odbudowują to, co zniszczysz, i tragarzy, którzy zbierają łupy z pola walki.',
         'Złoża złota, żelaza i grzybów dają trzy razy więcej.',
+        'Drzewa oraz złoża kamienia i gliny też dają więcej niż zwykle, a Mieszkańcy równiny mają u siebie dodatkową gliniankę i zagajnik.',
         'Ile czasu zostało do następnego ataku, zobaczysz wśród celów misji.',
       ],
     },
@@ -76,10 +77,10 @@ const TEXTS: Record<Language, LanguageText> = {
     intro: {
       title: 'DARK CASTLE',
       paragraphs: [
-        'Hard times have come for the Vikings...\nThe land is terrorized by squads of enforcers from a fortress in the very center of the country. There is no escape from these oppressors.',
-        'There is no one to search for here and no trade contacts to make: every tribe in play, the Inhabitants of the Plain and the Highlanders too, is a player and an ally. Only together can you take the fortress!',
-        'The Viking tribes can hand people to each other: order a few Vikings to go to the sacred fire of an allied Viking tribe and step into the magical circle of fire. From that moment they obey that ally. The ritual does not take in the Inhabitants of the Plain or the Highlanders.',
-        'Tip: You have several building letters. Use them quickly and wisely!',
+        'Dark days have fallen on the Vikings...\nFrom a fortress at the heart of the land, bands of enforcers ride out and lay waste to everything around them. No one can hide from them.',
+        'This time there is nobody to seek out and nobody to trade with. Every tribe on the map, the Inhabitants of the Plain and the Highlanders included, takes part as an ally. You will only take the fortress together!',
+        'Viking tribes can lend each other people. Send a few of your Vikings to an allied Viking tribe’s sacred fire: whoever walks through the burning ring serves that ally from then on. The Inhabitants of the Plain and the Highlanders cannot do this.',
+        'You start with a few building letters. Do not hold on to them for long, but choose with care!',
       ],
     },
     rules: {
@@ -93,6 +94,7 @@ const TEXTS: Record<Language, LanguageText> = {
         'The fortress is also defended by a mighty hero, Lord Usurper.',
         'The fortress has builders of its own who rebuild what you destroy, and porters who clear the loot off the battlefield.',
         'Gold, iron and mushroom deposits yield three times as much.',
+        'Trees, stone and clay deposits yield more than usual too, and the Inhabitants of the Plain get an extra clay pit and grove.',
         'The time left until the next attack is shown among your goals.',
       ],
     },
@@ -109,10 +111,10 @@ const TEXTS: Record<Language, LanguageText> = {
     intro: {
       title: 'FESTUNG',
       paragraphs: [
-        'Für die Wikinger sind schwere Zeiten angebrochen...\nDas Land wird von Schlächtertruppen aus einer Festung mitten im Land terrorisiert. Vor diesen Peinigern gibt es kein Entkommen.',
-        'Hier muss niemand gesucht und kein Handel geknüpft werden: Alle Stämme im Spiel, auch die Plattländer und die Bergländer, sind Spieler und Verbündete. Nur gemeinsam könnt ihr die Festung einnehmen!',
-        'Die Wikingerstämme können einander Leute übergeben: Schicke einige Wikinger zum heiligen Feuer eines verbündeten Wikingerstammes und lasse sie durch den magischen Feuerring schreiten. Von diesem Moment an folgen sie den Befehlen des Verbündeten. Die Plattländer und die Bergländer nehmen an diesem Ritual nicht teil.',
-        'Tipp: Du besitzt einige Baubriefe. Nutze sie schnell und klug!',
+        'Finstere Tage sind über die Wikinger gekommen...\nAus einer Festung im Herzen des Landes ziehen Banden von Schlächtern aus und verwüsten alles ringsum. Niemand kann sich vor ihnen verstecken.',
+        'Diesmal musst du niemanden suchen und mit niemandem handeln. Jeder Stamm auf der Karte, auch die Plattländer und die Bergländer, spielt als Verbündeter mit. Die Festung fällt nur, wenn ihr zusammensteht!',
+        'Wikingerstämme können einander Leute überlassen. Schicke ein paar deiner Wikinger zum heiligen Feuer eines verbündeten Wikingerstammes: Wer durch den brennenden Ring geht, dient fortan diesem Verbündeten. Für die Plattländer und die Bergländer gilt das nicht.',
+        'Zu Beginn hast du ein paar Baubriefe. Halte sie nicht zu lange zurück, aber wähle mit Bedacht!',
       ],
     },
     rules: {
@@ -126,6 +128,7 @@ const TEXTS: Record<Language, LanguageText> = {
         'Zudem verteidigt die Festung ein mächtiger Held: Lord Usurpator.',
         'Die Festung hat eigene Baumeister, die wieder aufbauen, was du zerstörst, und Träger, die die Beute vom Schlachtfeld räumen.',
         'Gold-, Eisen- und Pilzvorkommen geben dreimal so viel her.',
+        'Auch Bäume, Stein- und Lehmvorkommen geben mehr her als sonst, und die Plattländer bekommen eine zusätzliche Lehmgrube und ein Wäldchen.',
         'Wie lange es noch bis zum nächsten Angriff dauert, siehst du bei den Missionszielen.',
       ],
     },
@@ -142,10 +145,10 @@ const TEXTS: Record<Language, LanguageText> = {
     intro: {
       title: 'КРЕПОСТЬ',
       paragraphs: [
-        'Для Викингов настали тяжелые времена...\nСтрану терроризируют отряды приспешников из крепости в самом центре страны. От этих палачей нет спасения.',
-        'Здесь никого не нужно искать и не с кем торговать: все племена в игре, в том числе Жители Равнины и Горцы, являются игроками и союзниками. Только вместе вы сможете взять крепость!',
-        'Племена Викингов могут передавать друг другу людей: прикажите нескольким Викингам отправиться к священному огню союзного племени Викингов и переступить магический круг огня. С этого момента они будут слушать приказы союзника. Жителей Равнины и Горцев этот ритуал не касается.',
-        'Совет: Вы владеете несколькими разрешениями на строительство. Используйте их быстро и мудро!',
+        'Для Викингов наступили мрачные дни...\nИз крепости в сердце страны выходят банды приспешников и разоряют всё вокруг. Никому не укрыться от них.',
+        'На этот раз никого не нужно разыскивать и ни с кем не нужно торговать. Каждое племя на карте, включая Жителей Равнины и Горцев, участвует в игре как союзник. Крепость падёт, только если вы будете действовать сообща!',
+        'Племена Викингов могут уступать друг другу людей. Отправьте нескольких своих Викингов к священному огню союзного племени Викингов: тот, кто пройдёт сквозь пылающее кольцо, отныне служит этому союзнику. На Жителей Равнины и Горцев это не распространяется.',
+        'В начале у Вас есть несколько разрешений на строительство. Не откладывайте их надолго, но выбирайте обдуманно!',
       ],
     },
     rules: {
@@ -159,6 +162,7 @@ const TEXTS: Record<Language, LanguageText> = {
         'Кроме того, крепость защищает могучий герой, Лорд Узурпатор.',
         'У крепости есть свои строители, которые восстанавливают то, что Вы разрушили, и носильщики, которые убирают добычу с поля боя.',
         'Залежи золота, железа и грибов дают втрое больше.',
+        'Деревья, залежи камня и глины тоже дают больше обычного, а у Жителей Равнины есть дополнительный глиняный карьер и роща.',
         'Сколько времени осталось до следующей атаки, Вы увидите среди целей миссии.',
       ],
     },
@@ -175,10 +179,10 @@ const TEXTS: Record<Language, LanguageText> = {
     intro: {
       title: '黑暗城堡',
       paragraphs: [
-        '对维京人而言，这是个暗无天日的年代……\n来自国土正中央那座要塞的爪牙四处横行，无人能逃过这些暴徒的魔掌。',
-        '这里无需寻找任何部族，也没有贸易往来：参战的所有部族，包括普拉特兰人和高地人，都是玩家，也都是盟友。只有齐心协力，才能攻下要塞！',
-        '维京部族之间可以互相转交人手：命令几名维京人前往同盟维京部族的圣火，跨过魔法火圈。从此刻起，他们将听从盟友的命令。普拉特兰人和高地人不参与这个仪式。',
-        '提示：你手中有几封建筑书信。要尽快明智地使用它们！',
+        '维京人迎来了艰难的岁月……\n国土中心的要塞不断派出成群的爪牙，所到之处一片狼藉，谁也躲不开他们。',
+        '这一次，你不必寻找任何部族，也无需与人交易：地图上的每个部族，包括普拉特兰人和高地人，都作为盟友参战。唯有并肩作战，才能拿下要塞！',
+        '维京部族之间可以借调人手：派几名维京人到同盟维京部族的圣火旁，穿过燃烧火圈的人从此便为那位盟友效力。普拉特兰人和高地人无法这样做。',
+        '开局时你有几封建筑书信。别拖太久，但要慎重挑选！',
       ],
     },
     rules: {
@@ -192,6 +196,7 @@ const TEXTS: Record<Language, LanguageText> = {
         '此外，还有一位强大的英雄镇守要塞：篡位领主。',
         '要塞有自己的建筑工重建被你摧毁的东西，还有搬运工把战场上的战利品清走。',
         '金矿、铁矿和蘑菇的产量是平常的三倍。',
+        '树木、石矿和黏土矿的产量也比平常高，普拉特兰人还多了一处黏土坑和一片树林。',
         '距下一次进攻还有多久，可在任务目标中查看。',
       ],
     },
@@ -208,10 +213,10 @@ const TEXTS: Record<Language, LanguageText> = {
     intro: {
       title: '黑暗城堡',
       paragraphs: [
-        '對維京人而言，這是個暗無天日的年代……\n來自國土正中央那座要塞的爪牙四處橫行，無人能逃過這些暴徒的魔掌。',
-        '這裡無需尋找任何部族，也沒有貿易往來：參戰的所有部族，包括普拉特蘭人和高地人，都是玩家，也都是盟友。只有齊心協力，才能攻下要塞！',
-        '維京部族之間可以互相轉交人手：命令幾名維京人前往同盟維京部族的聖火，跨過魔法火圈。從此刻起，他們將聽從盟友的命令。普拉特蘭人和高地人不參與這個儀式。',
-        '提示：你手中有幾封建築書信。要盡快明智地使用它們！',
+        '維京人迎來了艱難的歲月……\n國土中心的要塞不斷派出成群的爪牙，所到之處一片狼藉，誰也躲不開他們。',
+        '這一次，你不必尋找任何部族，也無需與人交易：地圖上的每個部族，包括普拉特蘭人和高地人，都作為盟友參戰。唯有並肩作戰，才能拿下要塞！',
+        '維京部族之間可以借調人手：派幾名維京人到同盟維京部族的聖火旁，穿過燃燒火圈的人從此便為那位盟友效力。普拉特蘭人和高地人無法這樣做。',
+        '開局時你有幾封建築書信。別拖太久，但要慎重挑選！',
       ],
     },
     rules: {
@@ -225,6 +230,7 @@ const TEXTS: Record<Language, LanguageText> = {
         '此外，還有一位強大的英雄鎮守要塞：篡位領主。',
         '要塞有自己的建築工重建被你摧毀的東西，還有搬運工把戰場上的戰利品清走。',
         '金礦、鐵礦和蘑菇的產量是平常的三倍。',
+        '樹木、石礦和黏土礦的產量也比平常高，普拉特蘭人還多了一處黏土坑和一片樹林。',
         '距下一次進攻還有多久，可在任務目標中查看。',
       ],
     },
