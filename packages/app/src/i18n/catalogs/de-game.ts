@@ -1455,11 +1455,11 @@ export const deGame = {
       },
       weapons: {
         label: 'Waffe',
-        tip: 'Ein Rekrut nimmt die Waffen nach Nummer: die erste vorrätige. Eine durchgestrichene überspringt er.',
+        tip: 'Ein Rekrut nimmt die Waffen von links nach rechts: die erste vorrätige. Eine durchgestrichene überspringt er.',
       },
       armor: {
         label: 'Rüstung',
-        tip: 'Ein Rekrut nimmt die Rüstung nach Nummer: die erste vorrätige. Ist keine vorrätig, geht er ohne.',
+        tip: 'Ein Rekrut nimmt die Rüstung von links nach rechts: die erste vorrätige. Ist keine vorrätig, geht er ohne.',
       },
       gearChip: {
         chip: '{name} (Wahl {rank})',

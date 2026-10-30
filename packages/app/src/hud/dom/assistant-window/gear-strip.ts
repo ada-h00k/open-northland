@@ -33,12 +33,11 @@ interface Chip {
   readonly goodId: string;
   readonly node: HTMLButtonElement;
   readonly count: HTMLElement;
-  readonly rank: HTMLElement;
 }
 
 /**
  * A weapon class's weapon or armor line: the goods left to right in the order its recruits shop them,
- * each with its rank and stock. A chip held down lifts and follows the pointer while the others stand
+ * each with its stock, over an arrow that runs from first choice to last. A chip held down lifts and follows the pointer while the others stand
  * still and a mark shows where it will land; the line is reordered when it is let go. Arrow keys move it
  * too. A click switches the good off for the class, crossed out in place, and back on.
  */
@@ -132,14 +131,13 @@ export function createGearStrip(deps: GearStripDeps): GearStrip {
     if (goodId === undefined) return null;
     const node = button(
       'on-asst-gear__chip',
-      `<span class="on-asst-art">${goodIconMarkup(CHIP_ICON_PX)}<b class="on-asst-art__count"></b></span><i class="on-asst-gear__rank"></i>`,
+      `<span class="on-asst-art">${goodIconMarkup(CHIP_ICON_PX)}<b class="on-asst-art__count"></b></span>`,
     );
     const frame = node.querySelector<HTMLElement>('.on-good__frame');
     const count = node.querySelector<HTMLElement>('.on-asst-art__count');
-    const rank = node.querySelector<HTMLElement>('.on-asst-gear__rank');
-    if (frame === null || count === null || rank === null) throw new Error('assistant: gear chip');
+    if (frame === null || count === null) throw new Error('assistant: gear chip');
     deps.paintGood(frame, goodId, CHIP_ICON_PX);
-    const chip: Chip = { good, goodId, node, count, rank };
+    const chip: Chip = { good, goodId, node, count };
 
     node.addEventListener('keydown', (event) => {
       if (!writable) return;
@@ -212,7 +210,6 @@ export function createGearStrip(deps: GearStripDeps): GearStrip {
       at += 1;
       const off = shown.off.includes(good);
       if (!off) rank += 1; // only the goods still on are counted
-      write(chip.rank, off ? '' : String(rank));
       chip.node.classList.toggle('is-off', off);
       chip.node.setAttribute('aria-disabled', String(!writable));
       chip.node.setAttribute('aria-pressed', String(!off));

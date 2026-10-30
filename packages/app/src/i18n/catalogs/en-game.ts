@@ -1340,11 +1340,11 @@ export const enGame = {
       },
       weapons: {
         label: 'Weapon',
-        tip: 'A recruit takes the weapons by number: the first one in stock. He skips a crossed-out one.',
+        tip: 'A recruit takes the weapons from left to right: the first one in stock. He skips a crossed-out one.',
       },
       armor: {
         label: 'Armour',
-        tip: 'A recruit takes the armour by number: the first one in stock. With none in stock he goes without.',
+        tip: 'A recruit takes the armour from left to right: the first one in stock. With none in stock he goes without.',
       },
       gearChip: {
         chip: '{name} (choice {rank})',

@@ -7192,9 +7192,9 @@ body.on-drag-scroll.on-drag-scroll-free * {
 .on-hud .on-asst-sub__text {
   flex: 1;
 }
-/* A class's weapon or armor line: the goods in the order its recruits shop them, each with its rank
-   in gold at its head; a chip held down lifts and follows the pointer over the others, a mark showing
-   where it lands, and a click crosses it out where it stands, without a rank. */
+/* A class's weapon or armor line: the goods in the order its recruits shop them over an order arrow;
+   a chip held down lifts and follows the pointer over the others, a mark showing where it lands, and
+   a click crosses it out where it stands. */
 .on-hud .on-asst-gear {
   position: relative;
 }
@@ -7221,6 +7221,7 @@ body.on-drag-scroll.on-drag-scroll-free * {
   min-width: 58px;
 }
 .on-hud .on-asst-gear__list {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px; /* room for the stock tag's overhang */
@@ -7248,18 +7249,22 @@ body.on-drag-scroll.on-drag-scroll-free * {
 .on-hud .on-asst-gear__chip[aria-disabled="true"] {
   cursor: default;
 }
-.on-hud .on-asst-gear__rank {
+/* The order arrow behind the chips: first choice at its green tail, last at its red head. */
+.on-hud .on-asst-gear__list::before {
+  content: "";
   position: absolute;
-  left: -5px;
-  top: -5px;
-  color: var(--bronze-hi);
-  font: 700 10px / 1 var(--font-body);
-  font-style: normal;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 2px #000,
-    0 1px 1px #000;
+  left: -6px;
+  right: -10px;
+  top: 50%;
+  height: 12px;
+  transform: translateY(-50%);
+  background: linear-gradient(to right, #6d9a5c, #a99a5e 55%, #a85a4c);
+  clip-path: polygon(0 40%, calc(100% - 8px) 40%, calc(100% - 8px) 8%, 100% 50%, calc(100% - 8px) 92%, calc(100% - 8px) 60%, 0 60%);
+  opacity: 0.26;
   pointer-events: none;
+}
+.on-hud .on-asst-gear__list:has(> :only-child)::before {
+  display: none;
 }
 .on-hud .on-asst-gear__chip.is-off .on-good__frame {
   opacity: 0.35;

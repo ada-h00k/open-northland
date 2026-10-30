@@ -1319,11 +1319,11 @@ export const plGame = {
       },
       weapons: {
         label: 'Broń',
-        tip: 'Rekrut bierze broń według numerów: pierwszą, która jest w magazynie. Przekreśloną pomija.',
+        tip: 'Rekrut bierze broń od lewej do prawej: pierwszą, która jest w magazynie. Przekreśloną pomija.',
       },
       armor: {
         label: 'Zbroja',
-        tip: 'Rekrut bierze zbroję według numerów: pierwszą, która jest w magazynie. Gdy żadnej nie ma, idzie bez zbroi.',
+        tip: 'Rekrut bierze zbroję od lewej do prawej: pierwszą, która jest w magazynie. Gdy żadnej nie ma, idzie bez zbroi.',
       },
       gearChip: {
         chip: '{name} (wybór {rank})',
