@@ -120,20 +120,6 @@ const LIGHT_ARMOR = ['armor_wool', 'armor_leather'];
 const HEAVY_ARMOR = ['armor_chain', 'armor_plate'];
 const COMBAT_AMULETS = ['amulet_strength', 'amulet_defense', 'amulet_speed', 'amulet_crithit'];
 const SECOND_AMULET_CHANCE_PCT = 30;
-/** What a fallen fortress-side soldier keeps with his bones (owner ruling): shoes, every amulet and every
- *  draught. His weapon and armor still drop. */
-const WITHHELD_DEATH_DROPS = [
-  'shoes',
-  'amulet_food',
-  'amulet_stamina',
-  ...COMBAT_AMULETS,
-  'potion_food_small',
-  'potion_food_big',
-  'potion_stamina_small',
-  'potion_stamina_big',
-  'potion_heal_small',
-  'potion_heal_big',
-];
 /** How long a lost fortress catapult stays gone. */
 const CATAPULT_RESPAWN_MINUTES = 10;
 
@@ -379,7 +365,8 @@ export const SPECJALNA_FORTECA_RAGNAROK: MapVariantInput = {
         },
       ],
     },
-    withheldDeathDrops: { seats: [FORTRESS_SEAT, ...RAIDER_SEATS], goods: WITHHELD_DEATH_DROPS },
+    // Owner ruling: nothing falls from the fortress side's men.
+    withheldDeathDrops: { seats: [FORTRESS_SEAT, ...RAIDER_SEATS], goods: 'all' },
     landings: {
       vehicle: 'ship_small',
       menPerShip: SHIP_MEN,

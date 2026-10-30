@@ -79,13 +79,6 @@ describe.runIf(hasRealIr())('Ragnarök on specjalna_forteca', () => {
     const gathered = new Set(GATHERERS.map((g) => g.id));
     expect(Object.keys(variant?.depositYield ?? {}).filter((good) => !gathered.has(good))).toEqual([]);
   });
-
-  it('withholds only content goods from a fallen fortress-side soldier', () => {
-    const withheld = findMapVariant(MAP_ID, 'ragnarok')?.escalation?.withheldDeathDrops;
-    const goods = new Set((rawIrUnderTest() as ContentIr).goods?.map((good) => good.id));
-    expect(withheld?.goods.length).toBeGreaterThan(0);
-    expect(withheld?.goods.filter((good) => !goods.has(good))).toEqual([]);
-  });
 });
 
 describe.runIf(hasRealIr())('a Ragnarök world on specjalna_forteca', () => {

@@ -268,10 +268,10 @@ describe('a fallen character drops its gear beside the bones', () => {
 describe("a map escalation's withheld death drops", () => {
   const FORTRESS_SIDE = 6;
   const PLAYER = 0;
-  const RULE = MapEscalation.parse({
-    ...ESCALATION,
-    withheldDeathDrops: { seats: [FORTRESS_SIDE], goods: ['shoes', 'amulet_strength', 'potion_heal_small'] },
-  });
+  const ruled = (goods: string[] | 'all') =>
+    MapEscalation.parse({ ...ESCALATION, withheldDeathDrops: { seats: [FORTRESS_SIDE], goods } });
+  const LISTED = ruled(['shoes', 'amulet_strength', 'potion_heal_small']);
+  const ALL = ruled('all');
   const FULL_KIT: Gear = {
     weapon: worn(SWORD),
     armor: worn(MAIL),
@@ -279,26 +279,33 @@ describe("a map escalation's withheld death drops", () => {
     misc: misc(worn(STRENGTH_AMULET), worn(HEAL_DRAUGHT)),
   };
 
-  function dropsOf(seat: number): Map<number, number> {
+  function dropsOf(seat: number, rule = LISTED): Map<number, number> {
     const sim = mappedSim();
     const soldier = doomedWearing(sim, FULL_KIT);
     sim.world.add(soldier, Owner, { player: seat });
-    cleanupSystem(sim.world, { ...ctxOf(sim), mapEscalation: RULE });
+    sim.world.add(soldier, Carrying, { goodType: STONE, amount: 1 });
+    cleanupSystem(sim.world, { ...ctxOf(sim), mapEscalation: rule });
     return droppedUnits(sim);
   }
 
-  it("leaves a ruled seat's shoes, amulet and draught with the bones and drops its weapon and armor", () => {
+  it("leaves a ruled seat's listed goods with the bones and drops its weapon, armor and load", () => {
     expect(dropsOf(FORTRESS_SIDE)).toEqual(
       new Map([
+        [STONE, 1],
         [SWORD, 1],
         [MAIL, 1],
       ]),
     );
   });
 
+  it('drops nothing of a seat whose rule withholds everything', () => {
+    expect(dropsOf(FORTRESS_SIDE, ALL)).toEqual(new Map());
+  });
+
   it("drops another seat's whole kit", () => {
-    expect(dropsOf(PLAYER)).toEqual(
+    expect(dropsOf(PLAYER, ALL)).toEqual(
       new Map([
+        [STONE, 1],
         [SHOES, 1],
         [SWORD, 1],
         [MAIL, 1],
