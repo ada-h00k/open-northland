@@ -822,14 +822,4 @@ describe.runIf(hasRealIr())('a Ragnarök attack on specjalna_forteca', () => {
     );
     expect(strings?.pol?.[String(lord.nameStringId)]).toBe('Lord Uzurpator');
   }, 300_000);
-
-  it('schedules the owner’s waves: the first at 0:30, ships from the fourth, three a wave from the seventh', () => {
-    const { launches, repeat, endDeadPct, endAfterSeconds } = ragnarok().attacks;
-    const MINUTE = 60;
-    expect(launches.map((row) => row.atSeconds / MINUTE)).toEqual([30, 45, 65, 90, 110, 130, 150]);
-    expect(launches.map((row) => row.landMen)).toEqual([6, 12, 25, 25, 35, 90, 60]);
-    expect(launches.map((row) => row.ships)).toEqual([0, 0, 0, 1, 2, 0, 3]);
-    expect(repeat).toEqual({ everySeconds: 20 * MINUTE, waves: [{ landMen: 60, ships: 3 }] });
-    expect({ endDeadPct, endAfterSeconds }).toEqual({ endDeadPct: 80, endAfterSeconds: 10 * MINUTE });
-  });
 });

@@ -25,8 +25,8 @@ import type { NightComposite } from '../world-renderer/offscreen-world.js';
  * a light-bearer marked lit (`lighting/night-mask.ts`) by {@link NIGHT_LIT_COLOUR}, so the settlers
  * and the lower walls of the houses keep part of their daylight colours with no light on the ground
  * round a walker, and each fire shows a flame. A siege attack darkens the script's grade into the
- * attack night (`data/lighting/attack-night.ts`) before any of this, so it lights the same lamps. Screen sprites, never a `Filter` on the world layer
- * (see `world-renderer/post-fx.ts`).
+ * attack night (`data/lighting/attack-night.ts`) before any of this, so it lights the same lamps.
+ * Screen sprites, never a `Filter` on the world layer (see `world-renderer/post-fx.ts`).
  */
 
 /** Share of a grade channel's excess over 1 the additive quad adds. Tuned by eye. */
