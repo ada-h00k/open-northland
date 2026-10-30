@@ -30,7 +30,9 @@ const RING_MIN_CANDIDATES = 256;
 
 /**
  * One pass's view of the shared {@link FoodSources}, caught up when the pass makes it: each seeker pays a
- * bounded ring search over it, with her own side, signpost gate and failed goals applied per query.
+ * bounded ring search over it, with her own side, signpost gate and failed goals applied per query. A
+ * placement mid-pass may destroy a listed pile; every read of a candidate tolerates that, and `accept`
+ * rejects it through its missing stock before any other read.
  */
 export class ExternalFoodIndex {
   private readonly sources: FoodSources;
@@ -147,7 +149,9 @@ export class ExternalFoodIndex {
     let best: Entity | null = null;
     let bestDist = 0;
     for (const e of candidates) {
-      const p = this.world.get(e, Position);
+      // A pile a placement earlier in this pass displaced is gone from the world but not from the list.
+      const p = this.world.tryGet(e, Position);
+      if (p === undefined) continue;
       const dist =
         Math.abs(nodeHxOfPosition(p.x, p.y) - from.hx) + Math.abs(nodeHyOfPosition(p.x, p.y) - from.hy);
       if (dist <= swept || (best !== null && dist >= bestDist)) continue;

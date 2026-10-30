@@ -264,6 +264,19 @@ describe('foodSourcesOf', () => {
     expect(search()).toEqual({ store: near, goodType: FOOD });
   });
 
+  it('passes over a pile a placement displaced after the pass caught its sources up', () => {
+    const sim = new Simulation({ seed: 1, content: foodContent() });
+    const home = storeAt(sim, 0, FOOD, 0, HOME);
+    const pile = storeAt(sim, 2, FOOD, 3);
+    const far = storeAt(sim, 9, FOOD, 3, WAREHOUSE);
+    const index = new ExternalFoodIndex(sim.world, ctxOf(sim), undefined, collectSupplyTally(sim.world));
+    // A footprint eviction re-creates the pile under a new id the held pass does not list.
+    sim.world.destroy(pile);
+    storeAt(sim, 3, FOOD, 3);
+
+    expect(index.nearest({ hx: 0, hy: 2 }, undefined, home, null)).toEqual({ store: far, goodType: FOOD });
+  });
+
   it('verifier reports a stock change that bypassed the mut seam', () => {
     const sim = new Simulation({ seed: 1, content: foodContent() });
     const wood = storeAt(sim, 1, WOOD, 1);

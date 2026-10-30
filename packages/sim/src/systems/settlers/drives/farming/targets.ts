@@ -33,7 +33,9 @@ export function nearestFarmSheaf(
   const { anchor, spec, claims, gates } = opts;
   return (
     nearestByCell(terrain, targets.groundDropsByGood.get(spec.goodType) ?? [], here, (e) => {
-      if (lowestStockedGood(world.get(e, Stockpile)) !== spec.goodType) return null; // not this farm's crop
+      const stock = world.tryGet(e, Stockpile);
+      // Gone when a placement earlier in the pass displaced it; otherwise not this farm's crop.
+      if (stock === undefined || lowestStockedGood(stock) !== spec.goodType) return null;
       // Radius prefilter on the drop's own anchor node before the interaction-cell resolve, which walks the
       // resource store per drop.
       const p = world.get(e, Position);

@@ -220,7 +220,9 @@ class TickTargets implements TargetCandidates {
       for (let i = 0; i < groundDrops.length; i++) {
         const pile = groundDrops[i];
         if (pile === undefined) continue;
-        const { amounts } = world.get(pile, Stockpile);
+        // A placement earlier in the pass may have displaced the pile, which re-creates it under a new id.
+        const amounts = world.tryGet(pile, Stockpile)?.amounts;
+        if (amounts === undefined) continue;
         // keys() plus get: destructured entries would allocate a pair per line of every drop.
         for (const good of amounts.keys()) {
           if ((amounts.get(good) ?? 0) > 0) pushTo(byGood, good, pile);

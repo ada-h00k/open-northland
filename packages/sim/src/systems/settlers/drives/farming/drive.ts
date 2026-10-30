@@ -126,7 +126,8 @@ export function planFarmer(plan: PlannerContext, claims: FarmClaims): boolean {
   for (let i = 0, count = own.length + near.length; i < count; i++) {
     const owned = i < own.length;
     const c = (owned ? own[i] : near[i - own.length]) as Entity;
-    const crop = owned ? world.get(c, Crop) : world.tryGet(c, Crop);
+    // A placement earlier in the pass may have cleared an owned field the farm's list still holds.
+    const crop = world.tryGet(c, Crop);
     if (crop === undefined || (!owned && crop.farm !== null)) continue;
     if (crop.goodType !== spec.goodType) continue;
     if (crop.farm === null) {

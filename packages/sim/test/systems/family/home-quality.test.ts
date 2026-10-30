@@ -535,6 +535,20 @@ describe('household quality goods', () => {
     expect(sim.world.verifyCaches()).toEqual([]);
   });
 
+  it('passes over a store destroyed after the pass caught its sources up', () => {
+    const { sim } = setup();
+    const stores = [1, 5].map((x) => {
+      const store = sim.world.create();
+      sim.world.add(store, Position, { x: fx.fromInt(x), y: fx.fromInt(0) });
+      sim.world.add(store, Stockpile, { amounts: new Map([[FURNITURE, 1]]) });
+      return store;
+    });
+    const index = new ExternalQualityIndex(sim.world, ctxOf(sim), undefined, collectSupplyTally(sim.world));
+    sim.world.destroy(stores[0] as Entity);
+
+    expect(index.nearest({ hx: 0, hy: 0 }, undefined, new Set([FURNITURE]), null)?.store).toBe(stores[1]);
+  });
+
   it('offers the lowest-id demanded quality good whatever order the store was stocked in', () => {
     const stocked: Array<[number, number]> = [
       [FURNITURE, 1],

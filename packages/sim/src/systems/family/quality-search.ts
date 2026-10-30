@@ -86,7 +86,9 @@ export class ExternalQualityIndex {
     let best: Entity | null = null;
     let bestDistance = 0;
     for (const store of candidates) {
-      const p = this.world.get(store, Position);
+      // A pile a placement earlier in this pass displaced is gone from the world but not from the list.
+      const p = this.world.tryGet(store, Position);
+      if (p === undefined) continue;
       const distance =
         Math.abs(nodeHxOfPosition(p.x, p.y) - from.hx) + Math.abs(nodeHyOfPosition(p.x, p.y) - from.hy);
       if (distance <= swept || (best !== null && distance >= bestDistance)) continue;
