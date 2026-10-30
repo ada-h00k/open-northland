@@ -7348,7 +7348,15 @@ body.on-drag-scroll.on-drag-scroll-free * {
   height: 12px;
   transform: translateY(-50%);
   background: linear-gradient(to right, #6d9a5c, #a99a5e 55%, #a85a4c);
-  clip-path: polygon(0 40%, calc(100% - 8px) 40%, calc(100% - 8px) 8%, 100% 50%, calc(100% - 8px) 92%, calc(100% - 8px) 60%, 0 60%);
+  clip-path: polygon(
+    0 40%,
+    calc(100% - 8px) 40%,
+    calc(100% - 8px) 8%,
+    100% 50%,
+    calc(100% - 8px) 92%,
+    calc(100% - 8px) 60%,
+    0 60%
+  );
   opacity: 0.26;
   pointer-events: none;
 }
