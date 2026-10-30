@@ -70,8 +70,8 @@ export const PLAYER_COLORS: readonly PlayerColorDef[] = [
   // Hue-rotated to fill the gaps between the shipped hues.
   { id: 10, name: 'spring', source: { kind: 'synthetic', hue: 140 } },
   { id: 11, name: 'teal', source: { kind: 'synthetic', hue: 168 } },
-  { id: 12, name: 'azure', source: { kind: 'synthetic', hue: 205 } },
-  { id: 13, name: 'indigo', source: { kind: 'synthetic', hue: 250 } },
+  { id: 12, name: 'azure', source: { kind: 'synthetic', hue: 205, emblem: LIGHT_GOLD } },
+  { id: 13, name: 'indigo', source: { kind: 'synthetic', hue: 250, emblem: LIGHT_GOLD } },
   { id: 14, name: 'magenta', source: { kind: 'synthetic', hue: 312, emblem: PALE_YELLOW } },
   { id: 15, name: 'pink', source: { kind: 'synthetic', hue: 336, emblem: PALE_YELLOW } },
   // Darker and lighter tones, apart from the hues above by brightness as well.
@@ -83,13 +83,13 @@ export const PLAYER_COLORS: readonly PlayerColorDef[] = [
   { id: 17, name: 'navy', source: { kind: 'synthetic', hue: 225, shade: -0.5, emblem: LIGHT_GOLD } },
   {
     id: 18,
-    name: 'olive',
+    name: 'khaki',
     source: {
       kind: 'synthetic',
-      hue: 58,
-      saturation: 0.85,
-      shade: -0.45,
-      emblem: { hue: 45, saturation: 0.15, shade: 0.65 },
+      hue: 55,
+      saturation: 0.45,
+      shade: 0.2,
+      emblem: { hue: 30, saturation: 0.9, shade: -0.5 },
     },
   },
   {
@@ -111,7 +111,7 @@ export const PLAYER_COLORS: readonly PlayerColorDef[] = [
   {
     id: 21,
     name: 'plum',
-    source: { kind: 'synthetic', hue: 295, saturation: 0.75, shade: -0.45, emblem: LIGHT_GOLD },
+    source: { kind: 'synthetic', hue: 305, saturation: 0.55, shade: -0.35, emblem: LIGHT_GOLD },
   },
   { id: 22, name: 'white', source: { kind: 'synthetic', hue: 0, saturation: 0, shade: 0.6 } },
   {

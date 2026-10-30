@@ -48,7 +48,7 @@ export const PLAYER_COLOR_NAMES = [
   'pink',
   'maroon',
   'navy',
-  'olive',
+  'khaki',
   'brown',
   'forest',
   'plum',
@@ -82,10 +82,10 @@ export const PLAYER_SWATCH_COLORS: readonly number[] = [
   0xe64887, // pink (hue 336)
   0x731726, // maroon
   0x172e73, // navy
-  0x7e7b28, // olive
+  0xc8c27a, // khaki
   0x734829, // brown
   0x207327, // forest
-  0x78327e, // plum
+  0x8c4a86, // plum
   0xf5f5f5, // white
   0xbc99ee, // lavender
 ];
