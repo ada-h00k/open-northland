@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { Position, Settler } from '../../../src/components/index.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import {
+  type FormationSlotGroup,
   formationNodes,
+  type HalfCellNode,
   MAX_UNIT_ORDER_MEMBERS,
   nodeOfPosition,
   pairBySpace,
@@ -29,6 +31,67 @@ function person(sim: Simulation, hx: number, hy: number) {
   sim.world.add(id, Settler, { tribe: 1, jobType: null });
   sim.world.add(id, Position, positionOfNode(hx, hy));
   return id;
+}
+
+/** Column of the closed gate {@link gateSplitSim} sets in its wall. */
+const GATE_X = 12;
+/** Enough soldiers that a two-row fan around the gate reaches past the default judged box. */
+const LARGE_ARMY = 200;
+const WALL_POST_GFX = 691;
+const CLOSED_GATE_GFX = 696;
+const OPEN_GATE_GFX = 700;
+const WOOD = 5;
+
+/** A `width` x `height` grass map split by a finished wall on half-row `row`, closed by a gate at
+ *  {@link GATE_X}. */
+function gateSplitSim(width: number, height: number, row: number): Simulation {
+  const wall = { maxHitpoints: 100, repairPerStrike: 1, construction: [{ goodType: WOOD, amount: 1 }] };
+  const span = [-2, -1, 0, 1, 2].map((dx) => ({ dx, dy: 0 }));
+  const post: ScriptLandscapeType = {
+    typeId: WALL_POST_GFX,
+    walk: [{ dx: 0, dy: 0 }],
+    build: [{ dx: 0, dy: 0 }],
+    groups: [],
+    wall,
+  };
+  const closedGate: ScriptLandscapeType = {
+    typeId: CLOSED_GATE_GFX,
+    walk: span,
+    build: span,
+    groups: [],
+    wall: { ...wall, gate: { open: false, counterpartGfxIndex: OPEN_GATE_GFX } },
+  };
+  const sim = new Simulation({
+    seed: 1,
+    content: testContent(),
+    map: { ...grassNodeMap(width, height), landscapes: { types: [post, closedGate], placements: [] } },
+  });
+  for (let hx = 0; hx < width; hx++) {
+    if (Math.abs(hx - GATE_X) <= 2) continue;
+    sim.enqueueSetup({
+      kind: 'placePalisade',
+      gfxIndex: WALL_POST_GFX,
+      x: hx,
+      y: row,
+      tribe: VIKING,
+      owner: 0,
+    });
+  }
+  sim.enqueueSetup({
+    kind: 'placePalisade',
+    gfxIndex: CLOSED_GATE_GFX,
+    x: GATE_X,
+    y: row,
+    tribe: VIKING,
+    owner: 0,
+  });
+  sim.step();
+  return sim;
+}
+
+function slotOf(groups: readonly FormationSlotGroup[] | null, member: Entity): HalfCellNode | undefined {
+  const group = groups?.find((g) => g.members.includes(member));
+  return group?.slots[group.members.indexOf(member)];
 }
 
 describe('fresh formation slots', () => {
@@ -90,61 +153,41 @@ describe('fresh formation slots', () => {
 
   it('gives each member a slot on its own side of a closed gate between two large regions', () => {
     // Each half holds about 750 nodes, past the route-region pocket cap.
-    const width = 24;
     const row = 32;
-    const gateX = 12;
-    const wall = { maxHitpoints: 100, repairPerStrike: 1, construction: [{ goodType: 5, amount: 1 }] };
-    const span = [-2, -1, 0, 1, 2].map((dx) => ({ dx, dy: 0 }));
-    const post: ScriptLandscapeType = {
-      typeId: 691,
-      walk: [{ dx: 0, dy: 0 }],
-      build: [{ dx: 0, dy: 0 }],
-      groups: [],
-      wall,
-    };
-    const closedGate: ScriptLandscapeType = {
-      typeId: 696,
-      walk: span,
-      build: span,
-      groups: [],
-      wall: { ...wall, gate: { open: false, counterpartGfxIndex: 700 } },
-    };
-    const sim = new Simulation({
-      seed: 1,
-      content: testContent(),
-      map: { ...grassNodeMap(width, 64), landscapes: { types: [post, closedGate], placements: [] } },
-    });
-    for (let hx = 0; hx < width; hx++) {
-      if (Math.abs(hx - gateX) <= 2) continue;
-      sim.enqueueSetup({ kind: 'placePalisade', gfxIndex: post.typeId, x: hx, y: row, tribe: 1, owner: 0 });
-    }
-    sim.enqueueSetup({
-      kind: 'placePalisade',
-      gfxIndex: closedGate.typeId,
-      x: gateX,
-      y: row,
-      tribe: 1,
-      owner: 0,
-    });
-    sim.step();
-    const north = person(sim, gateX, 4);
-    const south = person(sim, gateX, 60);
+    const sim = gateSplitSim(24, 64, row);
+    const north = person(sim, GATE_X, 4);
+    const south = person(sim, GATE_X, 60);
     // Pressed halfway into the gate from the node south of it, nearer the gate than any open node.
-    const pressed = person(sim, gateX, row + 1);
-    const below = positionOfNode(gateX, row + 1);
-    const onGate = positionOfNode(gateX, row);
+    const pressed = person(sim, GATE_X, row + 1);
+    const below = positionOfNode(GATE_X, row + 1);
+    const onGate = positionOfNode(GATE_X, row);
     sim.world.add(pressed, Position, {
       x: ((below.x + onGate.x) / 2) as typeof below.x,
       y: ((below.y + onGate.y) / 2) as typeof below.y,
     });
-    const groups = sim.formationSlots({ hx: gateX, hy: row }, [north, south, pressed]);
-    const slotOf = (member: Entity) => {
-      const group = groups?.find((g) => g.members.includes(member));
-      return group?.slots[group.members.indexOf(member)];
-    };
-    expect(slotOf(north)?.hy).toBeLessThan(row);
-    expect(slotOf(south)?.hy).toBeGreaterThan(row);
-    expect(slotOf(pressed)?.hy).toBeGreaterThan(row);
+    const groups = sim.formationSlots({ hx: GATE_X, hy: row }, [north, south, pressed]);
+    expect(slotOf(groups, north)?.hy).toBeLessThan(row);
+    expect(slotOf(groups, south)?.hy).toBeGreaterThan(row);
+    expect(slotOf(groups, pressed)?.hy).toBeGreaterThan(row);
+  });
+
+  it("keeps a military fan wider than the gate's surroundings on its own side", () => {
+    const width = 48;
+    const row = 64;
+    const sim = gateSplitSim(width, 2 * row, row);
+    const south = Array.from({ length: LARGE_ARMY }, (_, i) =>
+      person(sim, i % width, row + 8 + 2 * Math.floor(i / width)),
+    );
+    const groups = sim.formationSlots({ hx: GATE_X, hy: row }, south, 2);
+    for (const member of south) expect(slotOf(groups, member)?.hy).toBeGreaterThan(row);
+  });
+
+  it('lets an attack-move take slots past a closed gate, where its walkers breach', () => {
+    const row = 32;
+    const sim = gateSplitSim(24, 64, row);
+    const south = [0, 1, 2, 3, 4, 5].map((i) => person(sim, GATE_X - 3 + i, 60));
+    const groups = sim.formationSlots({ hx: GATE_X, hy: row }, south, 2, 'attackMove');
+    expect(south.some((member) => (slotOf(groups, member)?.hy ?? row) < row)).toBe(true);
   });
 
   it('ignores duplicate, unknown and positionless members and bounds malformed requests', () => {
@@ -161,6 +204,9 @@ describe('fresh formation slots', () => {
       sim.formationSlots({ hx: 0, hy: 0 }, Array(MAX_UNIT_ORDER_MEMBERS + 1).fill(member)),
     ).toThrow('invalid formation query');
     expect(() => sim.formationSlots({ hx: Number.NaN, hy: 0 }, [member])).toThrow('invalid formation query');
+    expect(() => sim.formationSlots({ hx: 0, hy: 0 }, [member], 1, 'charge' as never)).toThrow(
+      'invalid formation query',
+    );
     expect(
       new Simulation({ seed: 1, content: testContent() }).formationSlots({ hx: 0, hy: 0 }, [member]),
     ).toBeNull();

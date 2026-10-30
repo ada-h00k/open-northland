@@ -294,7 +294,7 @@ export {
   MISSION_LANDSCAPE_NAME_FIELD,
   SUCCESSFUL_IF,
 } from './systems/missions/index.js';
-export type { FormationSlotGroup } from './systems/orders/formation-slots.js';
+export type { FormationOrder, FormationSlotGroup } from './systems/orders/formation-slots.js';
 // The walk cadence (ticks per visual cell at cruise), exposed so render can tune animation cadence
 // independently without restating the sim's travel time.
 export type { PalisadeGateProbeResult } from './systems/palisades/index.js';

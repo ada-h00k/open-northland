@@ -152,7 +152,18 @@ function formationPlaces(
   }
   const rows = military ? 2 : 1;
   const occupancy = standingStrangers(ctx, held);
-  for (const group of formationSlotGroups(world, ctx.content, terrain, point, humans, rows, occupancy)) {
+  // A band with fighters attack-moves, so it takes slots past a wall as a player's attack-move does.
+  const order = military ? 'attackMove' : 'move';
+  for (const group of formationSlotGroups(
+    world,
+    ctx.content,
+    terrain,
+    point,
+    humans,
+    rows,
+    occupancy,
+    order,
+  )) {
     if (group.commandedVehicle !== undefined) continue;
     const members = group.members.map((e) => {
       const at = world.get(e, Position);

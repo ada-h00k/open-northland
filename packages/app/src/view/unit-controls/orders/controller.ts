@@ -6,6 +6,7 @@ import {
   type Entity,
   type EquipPickEntry,
   entityById,
+  type FormationOrder,
   type FormationSlotGroup,
   type HalfCellNode,
   MAX_UNIT_ORDER_MEMBERS,
@@ -55,6 +56,7 @@ export interface UnitOrderDeps {
         target: HalfCellNode,
         members: readonly Entity[],
         rowSpacing: 1 | 2,
+        order: FormationOrder,
       ) => Promise<readonly FormationSlotGroup[] | null>)
     | undefined;
   readonly pendingGroundOrders?: PendingGroundOrders | undefined;
@@ -276,6 +278,7 @@ export function createUnitOrderController(deps: UnitOrderDeps): UnitOrderControl
         { hx: seat.col, hy: seat.row },
         movers.map(({ ref }) => ref as Entity),
         military ? 2 : 1,
+        kind === 'moveUnit' ? 'move' : 'attackMove',
       ).then((groups) => {
         for (const group of groups ?? []) {
           if (group.commandedVehicle === undefined) continue;

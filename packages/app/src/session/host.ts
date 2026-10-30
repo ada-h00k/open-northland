@@ -13,6 +13,7 @@ import type {
   ExportSaveOptions,
   FogMode,
   FogView,
+  FormationOrder,
   FormationSlotGroup,
   HalfCellNode,
   InfoLineView,
@@ -180,6 +181,7 @@ export interface SessionHost {
     target: HalfCellNode,
     members: readonly Entity[],
     rowSpacing?: 1 | 2,
+    order?: FormationOrder,
   ): Promise<readonly FormationSlotGroup[] | null>;
   signpostProbe(player: number, area: NodeArea): Promise<NodeGridAnswer | null>;
   /** The wall rule over `area` and, for `player`, the ground a lobby peace keeps the seat off. */

@@ -68,12 +68,16 @@ export function structureRouteSealed(
   return true;
 }
 
-/** Half-width, in nodes, of the box around a click whose walls {@link clickSides} looks for. Authored:
- *  wider than the fan of slots a full group order takes around its click. */
-const CLICK_SIDES_RADIUS = 16;
+/** Default half-width, in nodes, of the box around a click whose walls {@link clickSides} looks for.
+ *  Authored: wider than the ring a single walker's goal search covers around its click. */
+export const CLICK_SIDES_RADIUS = 16;
 
 /** The sides structures cut around one clicked node, for picking a walker's goal on its own side. */
 export interface ClickSides {
+  /** Whether structures part the box into sides some walker may not reach. */
+  readonly split: boolean;
+  /** Whether `node` lies inside the box, where {@link reaches} judges it. */
+  contains(node: NodeId): boolean;
   /** Whether `node` lies on a side of the box joined to `from` around structures. True for a node outside
    *  the box or off standable ground, and for every node when no structure splits the box. */
   reaches(from: NodeId, node: NodeId): boolean;
@@ -94,28 +98,20 @@ export function clickSides(
   terrain: TerrainGraph,
   center: NodeId,
   blocked?: BlockOverlay,
+  radius = CLICK_SIDES_RADIUS,
 ): ClickSides {
   blocked ??= walkBlockMask(world, ctx, terrain).levelled();
   const cx = terrain.xOf(center);
   const cy = terrain.yOf(center);
   const inBox = (node: NodeId): boolean =>
-    Math.abs(terrain.xOf(node) - cx) <= CLICK_SIDES_RADIUS &&
-    Math.abs(terrain.yOf(node) - cy) <= CLICK_SIDES_RADIUS;
+    Math.abs(terrain.xOf(node) - cx) <= radius && Math.abs(terrain.yOf(node) - cy) <= radius;
   const pieceOf = new Map<NodeId, number>();
   const seeds: NodeId[] = [];
   const queue: NodeId[] = [];
   const steps = new StepBuffer();
   const reg = regionsOf(world, terrain);
-  for (
-    let y = Math.max(0, cy - CLICK_SIDES_RADIUS);
-    y <= Math.min(terrain.height - 1, cy + CLICK_SIDES_RADIUS);
-    y++
-  )
-    for (
-      let x = Math.max(0, cx - CLICK_SIDES_RADIUS);
-      x <= Math.min(terrain.width - 1, cx + CLICK_SIDES_RADIUS);
-      x++
-    ) {
+  for (let y = Math.max(0, cy - radius); y <= Math.min(terrain.height - 1, cy + radius); y++)
+    for (let x = Math.max(0, cx - radius); x <= Math.min(terrain.width - 1, cx + radius); x++) {
       const seed = terrain.nodeAt(x, y);
       if (pieceOf.has(seed) || !reg.standable(blocked, seed)) continue;
       const piece = seeds.length;
@@ -133,7 +129,7 @@ export function clickSides(
         }
       }
     }
-  if (seeds.length <= 1) return { reaches: () => true, keyOf: () => '' };
+  if (seeds.length <= 1) return { split: false, contains: inBox, reaches: () => true, keyOf: () => '' };
   const pockets = routeRegions(world, ctx, terrain);
   /** classOf[piece]: the piece's class, or -1 for a proven sealed pocket. */
   const classOf: number[] = [];
@@ -172,6 +168,8 @@ export function clickSides(
     return held;
   };
   return {
+    split: classSeeds.length > 1 || classOf.includes(-1),
+    contains: inBox,
     reaches: (from, node) => {
       const piece = pieceOf.get(node);
       return piece === undefined || verdictsOf(from)[piece] === true;

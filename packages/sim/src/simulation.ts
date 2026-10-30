@@ -114,7 +114,11 @@ import {
   type OpenTribute,
   openTributes,
 } from './systems/missions/index.js';
-import { type FormationSlotGroup, formationSlotsFor } from './systems/orders/formation-slots.js';
+import {
+  type FormationOrder,
+  type FormationSlotGroup,
+  formationSlotsFor,
+} from './systems/orders/formation-slots.js';
 import {
   ownPalisadeNodes,
   type PalisadeGateProbeResult,
@@ -456,8 +460,9 @@ export class Simulation {
     target: HalfCellNode,
     members: readonly Entity[],
     rowSpacing: 1 | 2 = 1,
+    order: FormationOrder = 'move',
   ): readonly FormationSlotGroup[] | null {
-    return formationSlotsFor(this.world, this.content, this.terrain, target, members, rowSpacing);
+    return formationSlotsFor(this.world, this.content, this.terrain, target, members, rowSpacing, order);
   }
 
   /** {@link placementProbe}'s verdict over every node of `area`, as plain data. */

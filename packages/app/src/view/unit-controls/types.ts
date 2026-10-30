@@ -17,6 +17,7 @@ import type {
   Entity,
   EquipPickEntry,
   EquipSelectionPick,
+  FormationOrder,
   FormationSlotGroup,
   HalfCellNode,
   PlayerCommand,
@@ -59,6 +60,7 @@ export interface UnitControlsOptions {
     target: HalfCellNode,
     members: readonly Entity[],
     rowSpacing: 1 | 2,
+    order: FormationOrder,
   ) => Promise<readonly FormationSlotGroup[] | null>;
   readonly technologyStatus?: TechnologyStatusRead;
   /** Bumped when a `technologyStatus` answer changes, which rebuilds the school dialog under one
