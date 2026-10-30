@@ -2,6 +2,7 @@ import {
   type CharacterPalette,
   createHumanPaletteIdentity,
   type HumanPaletteIdentity,
+  UNARMORED_TIER,
 } from '../../../data/palettes/human-palettes.js';
 import type { DrawItem } from '../../../data/scene/index.js';
 import { HUMAN_HEAD_ROW_OFFSET } from '../../textures/human-palette-lut.js';
@@ -12,9 +13,6 @@ import type { ResolvedLayer } from './resolved-layer.js';
 
 /** The look of a character loaded without palette data: the book's fallback base alone. */
 const BASE_ONLY: CharacterPalette = { body: '', head: '', random: [] };
-
-/** `human_armor_000`'s tier, which a soldier wearing no armor applies. */
-const UNARMORED_TIER = 0;
 
 /**
  * Write the palette identity `item` draws with into `out`: an indexed settler's own, or a driven cart's
