@@ -1,6 +1,13 @@
 import { BUILDING_KIND } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
-import { JOB_CARRIER, JOB_COLLECTOR } from '../../../src/catalog/jobs.js';
+import {
+  JOB_ARCHER,
+  JOB_ARCHER_LONG,
+  JOB_CARRIER,
+  JOB_COLLECTOR,
+  JOB_SOLDIER_BROADSWORD,
+  JOB_SOLDIER_UNARMED,
+} from '../../../src/catalog/jobs.js';
 import { rebaseSlotJob } from '../../../src/game/sandbox/ids/index.js';
 import {
   assignmentPriority,
@@ -113,7 +120,7 @@ describe('assignmentPriorityFor keeps the settler`s current trade', () => {
 
   it('a soldier sent to the headquarters or a storehouse gets no slot, whatever his class', () => {
     // stock_00..02 and the headquarters share these slots in the pack; none is a soldier post.
-    const soldiers = [31, 35, 40, 41]; // soldier_unarmed, soldier_sword_long, soldier_bow_short/long
+    const soldiers = [JOB_SOLDIER_UNARMED, JOB_SOLDIER_BROADSWORD, JOB_ARCHER, JOB_ARCHER_LONG];
     expect(soldiers.map((job) => assignmentPriorityFor(job, WAREHOUSE_SLOTS))).toEqual(
       soldiers.map(() => []),
     );

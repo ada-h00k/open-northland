@@ -79,6 +79,7 @@ function settler(
 const WOODCUTTER = 1;
 const CARRIER = 36; // the twin mill's transport slot - the hauler fallback in the priority list
 const SOLDIER_UNARMED = 31; // `jobtypes.ini` soldier_unarmed, a soldier trade in the fixture
+const TEST_AXE = 7; // the fixture's `test_axe` weapon
 const TWIN_MILL = 8; // building type: two carpenter slots + one carrier slot
 const WOOD_TRACK = 1; // the woodcutter-wood experience track (factor 10)
 const WOOD_FACTOR = 10;
@@ -291,7 +292,7 @@ describe('assignWorker - bind an owned settler to a chosen building', () => {
     const mill = placeBuilding(sim, TWIN_MILL, 5, 5);
     const soldier = settler(sim);
     setSettlerJob(sim.world, soldier, SOLDIER_UNARMED);
-    sim.world.add(soldier, Weapon, { weaponTypeId: 7 });
+    sim.world.add(soldier, Weapon, { weaponTypeId: TEST_AXE });
 
     assignWorker(sim.world, ctxOf(sim), {
       kind: 'assignWorker',
@@ -301,7 +302,7 @@ describe('assignWorker - bind an owned settler to a chosen building', () => {
     });
 
     expect(sim.world.get(soldier, Settler).jobType).toBe(SOLDIER_UNARMED);
-    expect(sim.world.get(soldier, Weapon).weaponTypeId).toBe(7);
+    expect(sim.world.get(soldier, Weapon).weaponTypeId).toBe(TEST_AXE);
     expect(sim.world.has(soldier, JobAssignment)).toBe(false);
   });
 
