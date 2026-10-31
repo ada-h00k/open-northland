@@ -37,6 +37,7 @@ import { atOrWalk, EXERCISE_ATOMIC_ID, startAtomic } from '../atomics/start.js';
 import { enterBuilding, stepOut } from '../indoors.js';
 import type { PlannerContext } from '../planner/context.js';
 import type { IdleStands } from '../planner/idle-replan.js';
+import { armRecruitInPlace } from '../planner/recruit-arming.js';
 import type { PlannerSpacing } from '../planner/spacing.js';
 import { interactionCell } from '../targets/index.js';
 import { isUnreachableGoal, unreachableGoals } from '../unreachable-goals.js';
@@ -48,7 +49,8 @@ import { loiterCell } from './spacing.js';
 /**
  * How long a recruit stays inside the barracks before it comes back out a soldier: 15 s of game time,
  * drawn down per completed repetition, so the last one always overruns. Every recruit serves this one
- * standard drill and exits unarmed; arming is a separate later step. Source basis: authored.
+ * standard drill; a weapon-class recruit takes what gear it can from the barracks' stock on the way out,
+ * the rest in a later arming errand. Source basis: authored.
  */
 export const BARRACKS_DRILL_TICKS = 15 * TICKS_PER_SECOND;
 
@@ -88,7 +90,11 @@ export function planTraining(
   if (order.drillTicksLeft <= 0) {
     abandonDrill(world, e);
     if (order.lesson === undefined) {
-      const jobType = keepingOrderQueue(world, e, () => enlist(world, ctx, e));
+      const jobType = keepingOrderQueue(world, e, () => {
+        const enlisted = enlist(world, ctx, e);
+        armRecruitInPlace(plan, e, order.house);
+        return enlisted;
+      });
       if (jobType !== null)
         ctx.events.emit({
           kind: 'settlerTrained',

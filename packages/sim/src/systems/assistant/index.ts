@@ -297,8 +297,8 @@ function dispatchTraining(
       houses.find((h) => hasUnclaimedSeat(world, ctx, h) && mayDrillAt(world, ctx, e, h)) ??
       houses.find((h) => mayDrillAt(world, ctx, e, h));
     if (house === undefined) continue;
-    // Every recruit serves the one standard drill and exits unarmed; the arming pass dresses the class
-    // recruits later.
+    // Every recruit serves the one standard drill; a class recruit leaves it wearing what gear the barracks
+    // holds, and the arming pass fetches the rest.
     startDrill(world, ctx, e, house, BARRACKS_DRILL_TICKS);
     world.add(e, AssistantRecruit, { intent, armed: false, barracks: house });
     remaining.set(intent, (remaining.get(intent) ?? 1) - 1);

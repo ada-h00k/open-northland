@@ -249,6 +249,13 @@ function barracksAt(sim: Simulation, x: number, y: number): Entity {
   return e;
 }
 
+/** A barracks whose own stock holds one unit of each good. */
+function stockedBarracksAt(sim: Simulation, x: number, y: number, goods: readonly number[]): Entity {
+  const e = barracksAt(sim, x, y);
+  sim.world.add(e, Stockpile, { amounts: new Map(goods.map((good) => [good, 1])) });
+  return e;
+}
+
 function terrainOf(sim: Simulation): TerrainGraph {
   if (sim.terrain === undefined) throw new Error('setup: terrain missing');
   return sim.terrain;
@@ -552,6 +559,52 @@ describe('the training queue', () => {
       2 * ASSISTANT_SCAN_PERIOD_TICKS,
       'booking released',
     );
+  });
+
+  it('a recruit steps out of the drill dressed when the barracks holds his weapon and armor', () => {
+    const sim = trainSim();
+    const barracks = stockedBarracksAt(sim, 6, 3, [SWORD_LONG_GOOD, ARMOR_CHAIN_GOOD]);
+    const recruit = settlerAt(sim, CIVILIST, 3, 3);
+
+    setCounter(sim, 'trainSword', 1);
+    run(sim, BEAT_TICKS);
+    runUntil(sim, () => !sim.world.has(recruit, TrainingOrder), 3000, 'drill served');
+
+    expect(sim.world.get(recruit, Settler).jobType).toBe(SWORDSMAN_LONG);
+    expect(sim.world.tryGet(recruit, Equipment)?.armor?.goodType).toBe(ARMOR_CHAIN_GOOD);
+    expect(sim.world.has(recruit, AssistantRecruit)).toBe(false);
+    expect(sim.assistantCounters(PLAYER).trainSword.value).toBe(0);
+    expect(sim.world.get(barracks, Stockpile).amounts.get(SWORD_LONG_GOOD)).toBe(0);
+  });
+
+  it('puts on the armor the barracks holds and fetches the missing weapon elsewhere', () => {
+    const sim = trainSim();
+    stockedBarracksAt(sim, 6, 3, [ARMOR_CHAIN_GOOD]);
+    const recruit = settlerAt(sim, CIVILIST, 3, 3);
+    pileAt(sim, 9, 3, new Map([[SWORD_LONG_GOOD, 1]]));
+
+    setCounter(sim, 'trainSword', 1);
+    run(sim, BEAT_TICKS);
+    runUntil(sim, () => !sim.world.has(recruit, TrainingOrder), 3000, 'drill served');
+
+    expect(sim.world.get(recruit, Settler).jobType).toBe(SOLDIER);
+    expect(sim.world.tryGet(recruit, Equipment)?.armor?.goodType).toBe(ARMOR_CHAIN_GOOD);
+    runUntil(sim, () => sim.world.get(recruit, Settler).jobType === SWORDSMAN_LONG, 3000, 'swordsman');
+  });
+
+  it('leaves a weaker sword in the barracks while a better one lies in reach elsewhere', () => {
+    const sim = trainSim();
+    const barracks = stockedBarracksAt(sim, 6, 3, [SWORD_SHORT_GOOD]);
+    const recruit = settlerAt(sim, CIVILIST, 3, 3);
+    pileAt(sim, 9, 3, new Map([[SWORD_LONG_GOOD, 1]]));
+
+    setCounter(sim, 'trainSword', 1);
+    run(sim, BEAT_TICKS);
+    runUntil(sim, () => !sim.world.has(recruit, TrainingOrder), 3000, 'drill served');
+
+    expect(sim.world.tryGet(recruit, Equipment)?.weapon ?? null).toBe(null);
+    runUntil(sim, () => sim.world.get(recruit, Settler).jobType === SWORDSMAN_LONG, 3000, 'swordsman');
+    expect(sim.world.get(barracks, Stockpile).amounts.get(SWORD_SHORT_GOOD)).toBe(1);
   });
 
   it('ends the outing at the store once the barracks he drilled at is gone', () => {

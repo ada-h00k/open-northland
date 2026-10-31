@@ -30,6 +30,7 @@ import { buildingBlockedCells } from '../../footprint/index.js';
 import { isTravelling } from '../../movement/nav-state.js';
 import {
   armorGoodsByProtection,
+  isBarracks,
   isBarracksOrFoundation,
   isSoldierJob,
   weaponDamageVsMaterial,
@@ -38,9 +39,9 @@ import {
 import type { NavigationLimit } from '../../signposts/index.js';
 import { goodsSearchLimitAt } from '../../signposts/reach.js';
 import { entityNode } from '../../spatial/nodes.js';
-import type { SupplyTally } from '../../stores/index.js';
+import { mayFetchGoodFrom, type SupplyTally } from '../../stores/index.js';
 import { anotherSystemOwns } from '../action-owner.js';
-import { EQUIP_FETCH_UNITS } from '../atomics/effects/goods/index.js';
+import { EQUIP_FETCH_UNITS, equipFromStore } from '../atomics/effects/goods/index.js';
 import { INTENT_WEAPON_CLASS } from '../atomics/effects/goods/weapon-class.js';
 import {
   FetchableStock,
@@ -50,6 +51,7 @@ import {
   storeHoldingMayLieIn,
   storeYieldsGood,
   type TargetCandidates,
+  unclaimedStockOf,
 } from '../targets/index.js';
 import { unreachableGoalVeto } from '../unreachable-goals.js';
 import { ASSISTANT_SCAN_PERIOD_TICKS } from './assistant-grants.js';
@@ -229,6 +231,9 @@ function inSeatOrder(preference: readonly number[], order: readonly number[]): r
   return [...preference].sort((a, b) => rank(a) - rank(b));
 }
 
+/** What a store search for a recruit's gear reads: a {@link PlannerPass} or one settler's planner context. */
+type ArmingSearch = Pick<PlannerPass, 'world' | 'ctx' | 'terrain' | 'targets' | 'supply'>;
+
 /** Send the recruit for the first reachable weapon of its intent's class in the seat's order, the
  *  strongest first by default. */
 function dispatchWeaponFetch(
@@ -239,47 +244,66 @@ function dispatchWeaponFetch(
   barracks: Entity,
   owner: number,
 ): void {
-  const { world, ctx, targets } = pass;
+  const { world, supply } = pass;
+  let route: FetchRoute | undefined;
+  const routeOf = (): FetchRoute => (route ??= fetchRouteFor(pass, e, owner));
+  const pick = pickReachableWeapon(pass, settler.tribe, intent, owner, routeOf, null);
+  if (pick === null) return;
+  supply.stampPickupClaim(e, { ...pick, amount: EQUIP_FETCH_UNITS });
+  world.add(e, EquipOrder, {
+    group: 'weapon',
+    slot: 0,
+    goodType: pick.goodType,
+    returnTo: barracksDoor(pass, e, barracks, routeOf().here),
+    stage: 'acquire',
+    issuer: 'assistant-recruit',
+    queued: [],
+  });
+  wakeIdle(world, e); // planned onto the errand this pass
+}
+
+/** The weapon policy: the first good of the seat's order for the recruit's class that a reachable store
+ *  lends, with its nearest source, `prefer` when it lends the good; null when none does. The route is
+ *  resolved only once some store of the side lends a wanted row. */
+function pickReachableWeapon(
+  search: ArmingSearch,
+  tribe: number,
+  intent: keyof typeof INTENT_WEAPON_CLASS,
+  owner: number,
+  routeOf: () => FetchRoute,
+  prefer: Entity | null,
+): ArmingSource | null {
+  const { world, ctx, targets, supply } = search;
   let route: FetchRoute | undefined;
   // The route's signpost network met with the goods-search limit at its node, read once for every row.
   let gate: SpatialGate | undefined;
   const vetoed = playerGoodList(world, AssistantWeaponVetoes, owner);
-  const preference = armingGoodPreference(ctx.content, settler.tribe, intent, vetoed);
+  const preference = armingGoodPreference(ctx.content, tribe, intent, vetoed);
   // Without a seat order, the content-wide default the assistant window shows.
   const order =
     assistantWeaponOrder(world, owner, intent) ??
     weaponGoodsByStrength(ctx.content, INTENT_WEAPON_CLASS[intent]);
   for (const goodType of inSeatOrder(preference, order)) {
+    if (prefer !== null && lendsGood(search, prefer, goodType)) return { goodType, source: prefer };
     // No store of the side lends this row: the route is not worth resolving.
-    if (!storeHoldingMayLieIn(targets.bands, world, goodType, owner, pass.supply, undefined)) continue;
+    if (!storeHoldingMayLieIn(targets.bands, world, goodType, owner, supply, undefined)) continue;
     if (route === undefined) {
-      route = fetchRouteFor(pass, e, owner);
+      route = routeOf();
       gate = targets.bands.goodsGate(route.here, owner, route.limit ?? undefined);
     }
-    const src = nearestStoreHoldingWithin(
+    const source = nearestStoreHoldingWithin(
       targets.bands,
       world,
       route.here,
       goodType,
       owner,
-      pass.supply,
+      supply,
       gate,
       route.veto,
     );
-    if (src === null) continue; // nothing reachable holds this row; a weaker one still may
-    pass.supply.stampPickupClaim(e, { source: src, goodType, amount: EQUIP_FETCH_UNITS });
-    world.add(e, EquipOrder, {
-      group: 'weapon',
-      slot: 0,
-      goodType,
-      returnTo: barracksDoor(pass, e, barracks, route.here),
-      stage: 'acquire',
-      issuer: 'assistant-recruit',
-      queued: [],
-    });
-    wakeIdle(world, e); // planned onto the errand this pass
-    return;
+    if (source !== null) return { goodType, source }; // else a weaker row still may be reachable
   }
+  return null;
 }
 
 /**
@@ -305,6 +329,7 @@ function dispatchArmorFetch(
     intent,
     route.limit,
     route.veto,
+    null,
   );
   if (pick === null) return false;
   pass.supply.stampPickupClaim(e, { ...pick, amount: EQUIP_FETCH_UNITS });
@@ -346,7 +371,18 @@ export function chainRecruitArmor(
     return null;
   }
   const limit = goodsSearchLimitAt(world, ctx.content, terrain, owner, terrain.xOf(here), terrain.yOf(here));
-  const pick = pickReachableArmor(world, ctx, targets, supply, here, owner, booking.intent, limit, veto);
+  const pick = pickReachableArmor(
+    world,
+    ctx,
+    targets,
+    supply,
+    here,
+    owner,
+    booking.intent,
+    limit,
+    veto,
+    null,
+  );
   if (pick === null) {
     world.remove(e, AssistantRecruit); // no armor it may take is reachable: released unarmored
     return null;
@@ -354,14 +390,14 @@ export function chainRecruitArmor(
   return pick.goodType;
 }
 
-interface ArmorSource {
+interface ArmingSource {
   readonly goodType: number;
   readonly source: Entity;
 }
 
 /** The armor policy: the first good of the seat's order for the recruit's class (strongest protection
- *  first by default) that is not off and that a reachable store holds, with its nearest source; null
- *  when none is, so a recruit may complete unarmored. */
+ *  first by default) that is not off and that a reachable store holds, with its nearest source, `prefer`
+ *  when it holds the good; null when none does, so a recruit may complete unarmored. */
 function pickReachableArmor(
   world: World,
   ctx: SystemContext,
@@ -372,10 +408,13 @@ function pickReachableArmor(
   intent: AssistantArmingIntent,
   limit: NavigationLimit | null,
   veto: ((cell: NodeId) => boolean) | undefined,
-): ArmorSource | null {
+  prefer: Entity | null,
+): ArmingSource | null {
   const choice = assistantArmorOrder(world, owner, intent);
   for (const goodType of choice?.order ?? armorGoodsByProtection(ctx.content)) {
     if (choice?.off.includes(goodType)) continue;
+    if (prefer !== null && lendsGood({ world, ctx, supply }, prefer, goodType))
+      return { goodType, source: prefer };
     const source = nearestStoreHolding(
       targets.bands,
       world,
@@ -389,6 +428,52 @@ function pickReachableArmor(
     if (source !== null) return { goodType, source };
   }
   return null;
+}
+
+/** Whether a fetcher may lift a unit of `goodType` out of `store` now, past the walkers' claims there. */
+function lendsGood(
+  search: Pick<ArmingSearch, 'world' | 'ctx' | 'supply'>,
+  store: Entity,
+  goodType: number,
+): boolean {
+  const { world, ctx, supply } = search;
+  return (
+    unclaimedStockOf(world, ctx, supply, store, goodType) > 0 && mayFetchGoodFrom(world, ctx, store, goodType)
+  );
+}
+
+/**
+ * Dress a weapon-class recruit stepping out of its drill from the barracks' own stock, each slot on its
+ * own: the weapon, and the armor, the arming pass would send him for, when the barracks holds that good.
+ * A better-ranked good another reachable store holds still wins, and that slot is left to the pass's
+ * errand. Owner's ruling, authored.
+ */
+export function armRecruitInPlace(search: ArmingSearch, e: Entity, barracks: Entity): void {
+  const { world, ctx, targets, supply } = search;
+  const booking = world.tryGet(e, AssistantRecruit);
+  if (booking === undefined || booking.armed || booking.intent === 'trainSoldiers') return;
+  const settler = world.get(e, Settler);
+  const owner = ownerOf(world, e);
+  if (owner === undefined || !isSoldierJob(ctx.content, settler.jobType)) return;
+  if (!isBarracks(world, ctx, barracks) || !sameSide(world, e, barracks)) return;
+  const { intent } = booking;
+  let route: FetchRoute | undefined;
+  const routeOf = (): FetchRoute => (route ??= fetchRouteFor(search, e, owner));
+  if ((world.tryGet(e, Equipment)?.weapon ?? null) === null) {
+    const weapon = pickReachableWeapon(search, settler.tribe, intent, owner, routeOf, barracks);
+    if (weapon?.source === barracks) equipFromStore(world, ctx, e, barracks, weapon.goodType, 'weapon', 0);
+  }
+  if ((world.tryGet(e, Equipment)?.armor ?? null) === null) {
+    const { here, limit, veto } = routeOf();
+    const armor = pickReachableArmor(world, ctx, targets, supply, here, owner, intent, limit, veto, barracks);
+    if (armor?.source === barracks) equipFromStore(world, ctx, e, barracks, armor.goodType, 'armor', 0);
+  }
+  // Both slots filled here: the booking has nothing left for the arming pass.
+  if (
+    world.tryGet(e, AssistantRecruit)?.armed === true &&
+    (world.tryGet(e, Equipment)?.armor ?? null) !== null
+  )
+    world.remove(e, AssistantRecruit);
 }
 
 /** The unarmored damage column (`damagevalue 0`), the strength axis the weapon preference sorts on. */
@@ -412,8 +497,8 @@ interface FetchRoute {
   readonly veto: ((cell: NodeId) => boolean) | undefined;
 }
 
-function fetchRouteFor(pass: PlannerPass, e: Entity, owner: number): FetchRoute {
-  const { world, ctx, terrain } = pass;
+function fetchRouteFor(search: ArmingSearch, e: Entity, owner: number): FetchRoute {
+  const { world, ctx, terrain } = search;
   const p = world.get(e, Position);
   const n = nodeOfPosition(p.x, p.y);
   return {
