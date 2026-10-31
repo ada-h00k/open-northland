@@ -1,6 +1,12 @@
 import { ONE, systems, type WorkStatus, type WorldSnapshot } from '@open-northland/sim';
 import { describe, expect, it } from 'vitest';
-import { JOB_CARRIER, JOB_CIVILIST, JOB_SOLDIER, JOB_WOMAN } from '../../../../src/catalog/jobs.js';
+import {
+  JOB_CARRIER,
+  JOB_CIVILIST,
+  JOB_SOLDIER,
+  JOB_SOLDIER_SWORD,
+  JOB_WOMAN,
+} from '../../../../src/catalog/jobs.js';
 import {
   createMessageFeed,
   type MessageFeed,
@@ -140,7 +146,15 @@ describe('note retirement', () => {
   });
 
   it('leaves an event note to its lifetime whether or not its settler is lost', () => {
-    expect(isNoteOver(note(USER_MESSAGE_TYPE.canDoNewJob), world(RELEASED, 'lost'))).toBe(false);
+    expect(isNoteOver(note(USER_MESSAGE_TYPE.canProduceNewGood), world(RELEASED, 'lost'))).toBe(false);
+  });
+
+  it('ends a course note once the settler leaves the trade it taught', () => {
+    const taught = { ...note(USER_MESSAGE_TYPE.canDoNewJob), jobType: JOB_SOLDIER };
+    const holding = (jobType: number) => subjectWorld({ Settler: { tribe: 1, jobType } });
+    expect(isNoteOver(taught, holding(JOB_SOLDIER))).toBe(false);
+    expect(isNoteOver(taught, holding(JOB_SOLDIER_SWORD))).toBe(true);
+    expect(isNoteOver(taught, holding(JOB_CIVILIST))).toBe(true);
   });
 
   it('ends a grown-up note once a grown man takes up a trade or the player sends him to learn one, or a grown woman has a home', () => {

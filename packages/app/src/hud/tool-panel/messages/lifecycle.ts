@@ -19,6 +19,7 @@ const LIFECYCLE: Readonly<Record<UserMessageTypeName, NoticeLifecycle>> = {
   storageFull: 'state',
   experienceUnlocks: 'event',
   canProduceNewGood: 'event',
+  // Retires early once the settler leaves the trade the course taught (`retire.ts`).
   canDoNewJob: 'event',
   hungry: 'state',
   tired: 'state',

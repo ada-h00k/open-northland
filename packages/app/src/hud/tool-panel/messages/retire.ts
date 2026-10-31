@@ -205,6 +205,10 @@ export class NoteRetirement {
         return marriageOf(e) !== undefined;
       case USER_MESSAGE_TYPE.grewUp:
         return isGrownUpSettled(e);
+      case USER_MESSAGE_TYPE.canDoNewJob:
+        // A course's note has had its say once the trade it taught is gone: the player retrained him, or a
+        // new soldier took up arms.
+        return settlerJobType(e) !== m.jobType;
       case USER_MESSAGE_TYPE.vehicleNoCommander:
         return vehicleCommanderOf(e) !== undefined;
       case USER_MESSAGE_TYPE.vehicleNoAnimal:
