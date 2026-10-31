@@ -11,6 +11,8 @@ import {
   DEBUG_MIN_ZOOM,
   EDGE_SCROLL_MARGIN,
   HUD_EDGE_SCROLL_REACH,
+  MAP_EDGE_MARGIN,
+  MAP_TOP_MARGIN,
   MIN_ZOOM,
 } from '../../../src/view/camera/index.js';
 
@@ -581,39 +583,44 @@ describe('createCameraController suspension', () => {
 });
 
 describe('createCameraController map bounds', () => {
-  /** A map whose projected bounds sit inside the 800x600 view at scale 1. */
-  const BOUNDS = { minX: -100, minY: -100, width: 800, height: 600 };
-  /** The world point the view centres on. */
-  const centreOf = (cam: Camera): { x: number; y: number } => {
+  /** A map a screen's worth larger than the 800x600 view on each axis, even at the widest zoom. */
+  const BOUNDS = { minX: -100, minY: -100, width: 4000, height: 3000 };
+  const LEFT_LIMIT = BOUNDS.minX - MAP_EDGE_MARGIN;
+  const RIGHT_LIMIT = BOUNDS.minX + BOUNDS.width + MAP_EDGE_MARGIN;
+  const TOP_LIMIT = BOUNDS.minY - MAP_TOP_MARGIN;
+  const BOTTOM_LIMIT = BOUNDS.minY + BOUNDS.height + MAP_EDGE_MARGIN;
+  /** The world box the camera shows. */
+  const viewOf = (cam: Camera): { left: number; top: number; right: number; bottom: number } => {
     const scale = cam.scale ?? 1;
-    return { x: (CANVAS_W / 2 - cam.offsetX) / scale, y: (CANVAS_H / 2 - cam.offsetY) / scale };
+    const left = -cam.offsetX / scale;
+    const top = -cam.offsetY / scale;
+    return { left, top, right: left + CANVAS_W / scale, bottom: top + CANVAS_H / scale };
   };
-  /** The stored offset is exact at the bound; deriving the centre back out rounds at a non-unit scale. */
-  const CENTRE_EPSILON_PX = 1e-6;
-  const insideBounds = (cam: Camera): boolean => {
-    const { x, y } = centreOf(cam);
+  /** Deriving the box back out of a stored offset rounds at a non-unit scale. */
+  const VIEW_EPSILON_PX = 1e-6;
+  const insideLimits = (cam: Camera): boolean => {
+    const { left, top, right, bottom } = viewOf(cam);
     return (
-      x >= BOUNDS.minX - CENTRE_EPSILON_PX &&
-      x <= BOUNDS.minX + BOUNDS.width + CENTRE_EPSILON_PX &&
-      y >= BOUNDS.minY - CENTRE_EPSILON_PX &&
-      y <= BOUNDS.minY + BOUNDS.height + CENTRE_EPSILON_PX
+      left >= LEFT_LIMIT - VIEW_EPSILON_PX &&
+      top >= TOP_LIMIT - VIEW_EPSILON_PX &&
+      right <= RIGHT_LIMIT + VIEW_EPSILON_PX &&
+      bottom <= BOTTOM_LIMIT + VIEW_EPSILON_PX
     );
   };
 
   it('clamps a jump that lands outside the map', () => {
     const { ctl } = install();
     ctl.setMapBounds(BOUNDS);
-    ctl.jumpTo({ offsetX: -5000, offsetY: -4000 });
-    expect(insideBounds(ctl.camera())).toBe(true);
-    expect(centreOf(ctl.camera())).toEqual({ x: BOUNDS.minX + BOUNDS.width, y: BOUNDS.minY + BOUNDS.height });
+    ctl.jumpTo({ offsetX: -50000, offsetY: -40000 });
+    expect(viewOf(ctl.camera())).toMatchObject({ right: RIGHT_LIMIT, bottom: BOTTOM_LIMIT });
     ctl.dispose();
   });
 
   it('clamps a camera already outside when the bounds arrive', () => {
     const { ctl } = install();
-    ctl.jumpTo({ offsetX: -5000, offsetY: -4000 });
+    ctl.jumpTo({ offsetX: -50000, offsetY: -40000 });
     ctl.setMapBounds(BOUNDS);
-    expect(insideBounds(ctl.camera())).toBe(true);
+    expect(insideLimits(ctl.camera())).toBe(true);
     ctl.dispose();
   });
 
@@ -623,7 +630,7 @@ describe('createCameraController map bounds', () => {
     move(LEFT_BAND_X, CENTRE_Y);
     for (let i = 0; i < 120; i++) ctl.update(16);
     const pinned = ctl.camera();
-    expect(centreOf(pinned).x).toBe(BOUNDS.minX);
+    expect(viewOf(pinned).left).toBe(LEFT_LIMIT);
     for (let i = 0; i < 10; i++) ctl.update(16);
     expect(ctl.camera()).toEqual(pinned);
     ctl.dispose();
@@ -636,11 +643,11 @@ describe('createCameraController map bounds', () => {
     // Steps under the drag jump filter's floor, like a hand drag; the total overshoots the map.
     for (let i = 1; i <= 12; i++) move(400 + i * 200, 300);
     win.emit('mouseup', { button: 1 });
-    expect(centreOf(ctl.camera()).x).toBe(BOUNDS.minX);
+    expect(viewOf(ctl.camera()).left).toBe(LEFT_LIMIT);
     ctl.dispose();
   });
 
-  it('keeps the centre inside a wheel zoom-out about a screen corner', () => {
+  it('keeps the view inside a wheel zoom-out about a screen corner', () => {
     const { ctl, canvasEvents } = install();
     ctl.setMapBounds(BOUNDS);
     for (let i = 0; i < WHEEL_OUT_NOTCHES; i++) {
@@ -652,7 +659,7 @@ describe('createCameraController map bounds', () => {
       });
     }
     for (let i = 0; i < GLIDE_FRAMES; i++) ctl.update(FRAME_MS);
-    expect(insideBounds(ctl.camera())).toBe(true);
+    expect(insideLimits(ctl.camera())).toBe(true);
     ctl.dispose();
   });
 

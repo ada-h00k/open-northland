@@ -143,14 +143,32 @@ export function panCamera(cam: Camera, dx: number, dy: number): Camera {
   return { ...cam, offsetX: cam.offsetX + dx, offsetY: cam.offsetY + dy };
 }
 
+/** Original behavior: world px the view rectangle may pass the map's sides and bottom, at any zoom. */
+export const MAP_EDGE_MARGIN = 100;
+/** Original behavior: the same allowance past the map's top edge. */
+export const MAP_TOP_MARGIN = 200;
+
+/** One axis of {@link clampCameraToBounds}; `screen = world*scale + offset` solved for the offset. */
+function clampAxis(
+  offset: number,
+  viewSize: number,
+  scale: number,
+  mapMin: number,
+  mapSize: number,
+  marginBefore: number,
+  marginAfter: number,
+): number {
+  const lo = viewSize - (mapMin + mapSize + marginAfter) * scale;
+  const hi = (marginBefore - mapMin) * scale;
+  // Approximation: the original's zoom never shows more than the map; ours centres it.
+  if (lo > hi) return (viewSize - (2 * mapMin + mapSize) * scale) / 2;
+  return Math.min(Math.max(offset, lo), hi);
+}
+
 /**
- * Clamp the camera so the viewport centre stays inside `bounds`, the same projected `WorldBounds` the
- * minimap reads, whatever pan, zoom or jump produced it. Solved for the offset rather than the centre,
- * so a camera pinned at an edge is a fixed point instead of hunting the bound by float rounding. Returns
- * the same object when already inside.
- *
- * Approximation: the original's allowance for viewing past the map edge is unrecorded; the limit is the
- * bounds rectangle with no margin.
+ * Clamp the camera so the view rectangle stays inside `bounds`, the projected `WorldBounds` the minimap
+ * reads, plus the original's margins, whatever pan, zoom or jump produced it. Solved for the offset so a
+ * camera pinned at an edge is a fixed point. Returns the same object when already inside.
  */
 export function clampCameraToBounds(
   cam: Camera,
@@ -159,13 +177,24 @@ export function clampCameraToBounds(
   viewHeight: number,
 ): Camera {
   const scale = cam.scale ?? 1;
-  // centre = (view/2 - offset)/scale ∈ [minX, minX + width] solved for the offset.
-  const loX = viewWidth / 2 - (bounds.minX + bounds.width) * scale;
-  const hiX = viewWidth / 2 - bounds.minX * scale;
-  const loY = viewHeight / 2 - (bounds.minY + bounds.height) * scale;
-  const hiY = viewHeight / 2 - bounds.minY * scale;
-  const offsetX = Math.min(Math.max(cam.offsetX, loX), hiX);
-  const offsetY = Math.min(Math.max(cam.offsetY, loY), hiY);
+  const offsetX = clampAxis(
+    cam.offsetX,
+    viewWidth,
+    scale,
+    bounds.minX,
+    bounds.width,
+    MAP_EDGE_MARGIN,
+    MAP_EDGE_MARGIN,
+  );
+  const offsetY = clampAxis(
+    cam.offsetY,
+    viewHeight,
+    scale,
+    bounds.minY,
+    bounds.height,
+    MAP_TOP_MARGIN,
+    MAP_EDGE_MARGIN,
+  );
   if (offsetX === cam.offsetX && offsetY === cam.offsetY) return cam;
   return { ...cam, offsetX, offsetY };
 }

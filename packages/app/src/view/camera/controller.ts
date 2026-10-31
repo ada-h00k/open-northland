@@ -54,8 +54,8 @@ export interface CameraController {
   /** Apply camera input preferences immediately, including to an in-flight middle drag. */
   setInputSettings(settings: CameraInputSettings): void;
   /**
-   * Set the map's projected bounds (render's `WorldBounds`, as the minimap reads them) the view centre
-   * clamps to, and clamp the current camera at once; `null` removes the limit.
+   * Set the map's projected bounds (render's `WorldBounds`, as the minimap reads them) the view clamps
+   * to, and clamp the current camera at once; `null` removes the limit.
    */
   setMapBounds(bounds: WorldBounds | null): void;
   /** Apply changed shortcuts immediately and release any key held under the previous mapping. */

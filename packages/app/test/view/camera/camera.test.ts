@@ -11,6 +11,8 @@ import {
   edgeExitPoint,
   edgePanVelocity,
   integerZoomLevels,
+  MAP_EDGE_MARGIN,
+  MAP_TOP_MARGIN,
   MAX_ZOOM,
   MIN_ZOOM,
   nearestZoomLevel,
@@ -117,69 +119,52 @@ describe('panCamera', () => {
 });
 
 describe('clampCameraToBounds', () => {
-  const BOUNDS = { minX: 0, minY: 0, width: 1000, height: 800 };
+  const BOUNDS = { minX: 0, minY: 0, width: 3000, height: 2400 };
   const VIEW_W = 800;
   const VIEW_H = 600;
-  /** The world point the camera puts at the viewport centre. */
-  const centreOf = (cam: Camera): { x: number; y: number } => {
+  /** The world box the camera shows. */
+  const viewOf = (cam: Camera): { left: number; top: number; right: number; bottom: number } => {
     const scale = cam.scale ?? 1;
-    return { x: (VIEW_W / 2 - cam.offsetX) / scale, y: (VIEW_H / 2 - cam.offsetY) / scale };
-  };
-  /** The stored offset is exact at the bound; deriving the centre back out rounds at a non-unit scale. */
-  const CENTRE_EPSILON_PX = 1e-6;
-  const insideBounds = (cam: Camera): boolean => {
-    const { x, y } = centreOf(cam);
-    return (
-      x >= BOUNDS.minX - CENTRE_EPSILON_PX &&
-      x <= BOUNDS.minX + BOUNDS.width + CENTRE_EPSILON_PX &&
-      y >= BOUNDS.minY - CENTRE_EPSILON_PX &&
-      y <= BOUNDS.minY + BOUNDS.height + CENTRE_EPSILON_PX
-    );
+    const left = -cam.offsetX / scale;
+    const top = -cam.offsetY / scale;
+    return { left, top, right: left + VIEW_W / scale, bottom: top + VIEW_H / scale };
   };
 
-  it('returns the same camera when the centre is inside the bounds', () => {
-    const cam: Camera = cameraCenteredOnWorld(500, 400, 1, VIEW_W, VIEW_H);
+  it('returns the same camera when the view is inside the bounds', () => {
+    const cam: Camera = cameraCenteredOnWorld(1500, 1200, 1, VIEW_W, VIEW_H);
     expect(clampCameraToBounds(cam, BOUNDS, VIEW_W, VIEW_H)).toBe(cam);
   });
 
-  it('pins the centre to the bounds edge, preserving scale', () => {
-    const cam: Camera = cameraCenteredOnWorld(1200, 400, 1, VIEW_W, VIEW_H);
-    const clamped = clampCameraToBounds(cam, BOUNDS, VIEW_W, VIEW_H);
-    expect(clamped.scale).toBe(1);
-    expect(centreOf(clamped)).toEqual({ x: BOUNDS.minX + BOUNDS.width, y: 400 });
+  it('stops the view rectangle at the margin past each edge, preserving scale', () => {
+    const north = clampCameraToBounds({ offsetX: 1e6, offsetY: 1e6, scale: 1 }, BOUNDS, VIEW_W, VIEW_H);
+    expect(north.scale).toBe(1);
+    expect(viewOf(north)).toMatchObject({ left: -MAP_EDGE_MARGIN, top: -MAP_TOP_MARGIN });
+    const south = clampCameraToBounds({ offsetX: -1e6, offsetY: -1e6, scale: 1 }, BOUNDS, VIEW_W, VIEW_H);
+    expect(viewOf(south)).toMatchObject({
+      right: BOUNDS.width + MAP_EDGE_MARGIN,
+      bottom: BOUNDS.height + MAP_EDGE_MARGIN,
+    });
+  });
+
+  it('keeps the margin in world px at any zoom', () => {
+    const zoomedOut = clampCameraToBounds({ offsetX: 1e6, offsetY: 0, scale: 0.5 }, BOUNDS, VIEW_W, VIEW_H);
+    expect(viewOf(zoomedOut).left).toBe(-MAP_EDGE_MARGIN);
   });
 
   it('is a fixed point for a camera pinned at the edge', () => {
-    const cam: Camera = cameraCenteredOnWorld(1200, 400, 0.35, VIEW_W, VIEW_H);
+    const cam: Camera = cameraCenteredOnWorld(5000, 1200, MIN_ZOOM, VIEW_W, VIEW_H);
     const clamped = clampCameraToBounds(cam, BOUNDS, VIEW_W, VIEW_H);
     expect(clampCameraToBounds(clamped, BOUNDS, VIEW_W, VIEW_H)).toBe(clamped);
   });
 
-  it('clamps at a non-unit scale', () => {
-    const cam: Camera = cameraCenteredOnWorld(1200, -400, 2, VIEW_W, VIEW_H);
-    const clamped = clampCameraToBounds(cam, BOUNDS, VIEW_W, VIEW_H);
-    expect(clamped.scale).toBe(2);
-    expect(insideBounds(clamped)).toBe(true);
-  });
-
-  it('keeps the centre inside after a zoom about a corner leaves the bounds', () => {
-    let cam: Camera = cameraCenteredOnWorld(500, 400, 1, VIEW_W, VIEW_H);
-    // Two zoom-outs anchored at the screen's top-left corner push the centre past the map.
-    cam = zoomCameraAt(cam, 0.5, 0, 0);
-    cam = zoomCameraAt(cam, 0.5, 0, 0);
-    const clamped = clampCameraToBounds(cam, BOUNDS, VIEW_W, VIEW_H);
-    expect(insideBounds(clamped)).toBe(true);
-  });
-
-  it('keeps the centre inside when the view is larger than the map', () => {
-    const cam: Camera = cameraCenteredOnWorld(500, 400, MIN_ZOOM, VIEW_W, VIEW_H);
-    const tiny = { minX: 0, minY: 0, width: 200, height: 150 };
+  it('centres a map smaller than the view, as a fixed point', () => {
+    const tiny = { minX: -50, minY: 0, width: 200, height: 150 };
+    const cam: Camera = cameraCenteredOnWorld(900, 900, 1, VIEW_W, VIEW_H);
     const clamped = clampCameraToBounds(cam, tiny, VIEW_W, VIEW_H);
-    const { x, y } = centreOf(clamped);
-    expect(x).toBeGreaterThanOrEqual(tiny.minX);
-    expect(x).toBeLessThanOrEqual(tiny.minX + tiny.width);
-    expect(y).toBeGreaterThanOrEqual(tiny.minY);
-    expect(y).toBeLessThanOrEqual(tiny.minY + tiny.height);
+    const { left, right, top, bottom } = viewOf(clamped);
+    expect((left + right) / 2).toBe(tiny.minX + tiny.width / 2);
+    expect((top + bottom) / 2).toBe(tiny.minY + tiny.height / 2);
+    expect(clampCameraToBounds(clamped, tiny, VIEW_W, VIEW_H)).toBe(clamped);
   });
 });
 

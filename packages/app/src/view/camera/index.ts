@@ -15,6 +15,8 @@ export {
   edgePanVelocity,
   HUD_EDGE_SCROLL_REACH,
   integerZoomLevels,
+  MAP_EDGE_MARGIN,
+  MAP_TOP_MARGIN,
   MAX_ZOOM,
   MIN_ZOOM,
   nearestZoomLevel,
