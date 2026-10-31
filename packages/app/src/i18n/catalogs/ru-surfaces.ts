@@ -517,6 +517,10 @@ export const ruSurfaces = {
           name: 'Сообщество CulturesNation.pl',
           detail: 'За многолетнюю поддержку серии и собранные знания об игре.',
         },
+        contributors: {
+          name: 'Все участники',
+          detail: 'За код, переводы и исправления, присланные в репозиторий.\nПолный список на GitHub.',
+        },
       },
       communityTitle: 'Сообщество',
       discordDetail: 'Вопросы, общение и сообщения об ошибках.',

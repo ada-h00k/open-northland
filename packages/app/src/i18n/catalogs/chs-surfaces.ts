@@ -470,6 +470,10 @@ export const chsSurfaces = {
           name: 'CulturesNation.pl 社区',
           detail: '感谢他们多年来让这个系列保持生机，并积累了关于游戏的丰富知识。',
         },
+        contributors: {
+          name: '所有贡献者',
+          detail: '感谢大家为仓库贡献的代码、翻译和修正。\n完整名单见 GitHub。',
+        },
       },
       communityTitle: '社区',
       discordDetail: '提问、交流和报告错误。',

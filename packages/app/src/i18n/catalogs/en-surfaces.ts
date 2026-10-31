@@ -485,6 +485,10 @@ export const enSurfaces = {
           detail:
             'For keeping the series alive over the years and for the knowledge gathered about the game.',
         },
+        contributors: {
+          name: 'All contributors',
+          detail: 'For the code, translations and fixes sent to the repository.\nThe full list is on GitHub.',
+        },
       },
       communityTitle: 'Community',
       discordDetail: 'Questions, conversations and bug reports.',

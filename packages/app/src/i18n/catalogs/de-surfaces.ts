@@ -523,6 +523,11 @@ export const deSurfaces = {
           name: 'Die CulturesNation.pl-Community',
           detail: 'Für den jahrelangen Einsatz für die Reihe und das gesammelte Wissen rund um das Spiel.',
         },
+        contributors: {
+          name: 'Alle Mitwirkenden',
+          detail:
+            'Für Code, Übersetzungen und Korrekturen im Repository.\nDie vollständige Liste steht auf GitHub.',
+        },
       },
       communityTitle: 'Community',
       discordDetail: 'Fragen, Austausch und Fehlerberichte.',

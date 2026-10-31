@@ -481,6 +481,10 @@ export const plSurfaces = {
           name: 'Społeczność CulturesNation.pl',
           detail: 'Za lata podtrzymywania serii przy życiu i zebraną wiedzę o grze.',
         },
+        contributors: {
+          name: 'Wszyscy kontrybutorzy',
+          detail: 'Za kod, tłumaczenia i poprawki zgłoszone w repozytorium.\nPełna lista na GitHubie.',
+        },
       },
       communityTitle: 'Społeczność',
       discordDetail: 'Pytania, rozmowy i zgłaszanie błędów.',

@@ -14,6 +14,7 @@ const COPYRIGHT_YEARS = '2026';
 const CONTACT_EMAIL = 'contact@opennorthland.org';
 const REPO_URL = 'https://github.com/s-nems/open-northland';
 const ISSUES_URL = `${REPO_URL}/issues`;
+const CONTRIBUTORS_URL = `${REPO_URL}/graphs/contributors`;
 const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
 /** The notices of the third-party code and media in the program; the builds also ship them as `licenses/`. */
 const THIRD_PARTY_URL = `${REPO_URL}/blob/main/packages/app/public/licenses/THIRD-PARTY-NOTICES.txt`;
@@ -94,11 +95,12 @@ function thanksPanel(): HTMLElement {
   const copy = messages().mainMenu.credits;
   const box = panel(copy.thanksTitle);
   const list = node('ul', 'main-menu__about-thanks-list');
-  const { funatics, cnmod, community } = copy.thanks;
+  const { funatics, cnmod, community, contributors } = copy.thanks;
   list.append(
     thanksEntry(funatics.name, funatics.detail),
     thanksEntry(cnmod.name, cnmod.detail),
     thanksEntry(community.name, community.detail, CULTURES_NATION_URL),
+    thanksEntry(contributors.name, contributors.detail, CONTRIBUTORS_URL),
   );
   box.append(list);
   return box;

@@ -470,6 +470,10 @@ export const chtSurfaces = {
           name: 'CulturesNation.pl 社群',
           detail: '感謝他們多年來讓這個系列延續下去，並累積了關於遊戲的知識。',
         },
+        contributors: {
+          name: '所有貢獻者',
+          detail: '感謝大家為儲存庫貢獻的程式碼、翻譯和修正。\n完整名單請見 GitHub。',
+        },
       },
       communityTitle: '社群',
       discordDetail: '提問、交流與回報錯誤。',
