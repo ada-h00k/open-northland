@@ -164,6 +164,8 @@ export async function guardCamera(page, camera, { pointerMoves = false, panning 
     ({ expectedCamera, pointerMoves, panning }) => {
       const d = window.__opennorthland;
       d.cameraCtl.setSuspended(true);
+      // A window may frame a view past the map on purpose, as `empty` does.
+      d.cameraCtl.setMapBounds(null);
       d.cameraCtl.jumpTo(expectedCamera);
       const canvas = d.renderer.app.canvas;
       const guard = {

@@ -144,8 +144,8 @@ export function panCamera(cam: Camera, dx: number, dy: number): Camera {
 }
 
 /**
- * Clamp the camera so the viewport centre stays inside `bounds` — the same projected `WorldBounds` the
- * minimap reads — whatever pan, zoom or jump produced it. Solved for the offset rather than the centre,
+ * Clamp the camera so the viewport centre stays inside `bounds`, the same projected `WorldBounds` the
+ * minimap reads, whatever pan, zoom or jump produced it. Solved for the offset rather than the centre,
  * so a camera pinned at an edge is a fixed point instead of hunting the bound by float rounding. Returns
  * the same object when already inside.
  *
