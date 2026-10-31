@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   terrain: vi.fn(),
   haltOnMissingContent: vi.fn(),
   haltOnFailedRestore: vi.fn(),
+  realContent: vi.fn(),
 }));
 vi.mock('@open-northland/render', async (original) => ({
   ...(await original<typeof import('@open-northland/render')>()),
@@ -28,7 +29,7 @@ vi.mock('../../../src/content/map/terrain.js', async (original) => ({
   loadRealTerrain: mocks.terrain,
 }));
 vi.mock('../../../src/view/runtime/world-bootstrap.js', () => ({
-  loadLocalizedRealContent: async () => null,
+  loadLocalizedRealContent: mocks.realContent,
   createWorldRenderer: () => {
     throw new Error('the early exits never reach the renderer');
   },
@@ -36,6 +37,7 @@ vi.mock('../../../src/view/runtime/world-bootstrap.js', () => ({
   haltOnFailedRestore: mocks.haltOnFailedRestore,
 }));
 
+import { StaleContentError } from '@open-northland/data';
 import { MissingTerrainError } from '../../../src/content/map/terrain.js';
 import { assembleMapWorld } from '../../../src/entries/map/boot.js';
 
@@ -80,6 +82,7 @@ describe('assembleMapWorld with the world hosted during the art load', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.terrain.mockResolvedValue({});
+    mocks.realContent.mockResolvedValue(null);
   });
 
   it('stops after the sprites when the staged save failed to restore, with one notice', async () => {
@@ -128,6 +131,15 @@ describe('assembleMapWorld with the world hosted during the art load', () => {
     hosting.reject(new Error('restore failed'));
     expect(await assembled).toBeNull();
     expect(mocks.haltOnFailedRestore).not.toHaveBeenCalled();
+  });
+
+  it('halts on content another build generated before hosting the world', async () => {
+    const hostWorld = vi.fn(async () => HOSTED);
+    mocks.realContent.mockRejectedValue(new StaleContentError('generated content reports IR 1'));
+    expect(await assemble(plan(hostWorld, false))).toBeNull();
+    expect(mocks.haltOnMissingContent).toHaveBeenCalledTimes(1);
+    expect(hostWorld).not.toHaveBeenCalled();
+    expect(mocks.appDestroy).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces a sprite failure only once the worker it started has stood up', async () => {

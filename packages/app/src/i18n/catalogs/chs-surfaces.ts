@@ -569,6 +569,8 @@ export const chsSurfaces = {
     missingContentTitle: '解码内容不可用',
     missingTerrainDetail:
       '此世界需要绘制真实的解码地形，但 content/ 中没有可提供的地形。请运行 npm run build:content 进行构建，然后重新加载。',
+    staleContentDetail:
+      'content/ 由其他版本的游戏构建。请运行 npm run build:content 重新构建，或重新启动 npm run dev，然后重新加载。',
     loadFailedTitle: '载入存档失败',
     loadFailedDetail:
       '此世界无法接受该存档。这通常意味着存档是在不同的游戏内容或旧版地图上创建的；再次载入也会同样失败。',

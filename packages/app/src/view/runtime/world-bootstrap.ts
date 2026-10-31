@@ -1,3 +1,4 @@
+import { StaleContentError } from '@open-northland/data';
 import type { SpriteSheet, TerrainTextureSet } from '@open-northland/render';
 import { WorldRenderer } from '@open-northland/render';
 import type { Application } from 'pixi.js';
@@ -68,14 +69,17 @@ export async function createWorldRenderer(
   });
 }
 
-/** Halt a playable boot on a missing-terrain error, offering the way back to the menu, which boots
- *  without `content/`. */
+/** Halt a playable boot on missing terrain or content another build generated, offering the way back
+ *  to the menu, which boots without `content/`. */
 export function haltOnMissingContent(err: Error): void {
   const copy = messages().common;
-  diag.warn('content', `real terrain unavailable: ${err.message}`);
+  const stale = err instanceof StaleContentError;
+  diag.warn('content', `real content unavailable: ${err.message}`);
   dismissBootProgress();
   releaseDocument();
-  mountMessage(copy.missingContentTitle, copy.missingTerrainDetail, [navButton(copy.backToMenu, false, '')]);
+  mountMessage(copy.missingContentTitle, stale ? copy.staleContentDetail : copy.missingTerrainDetail, [
+    navButton(copy.backToMenu, false, ''),
+  ]);
 }
 
 /** Halt a boot whose staged save failed to restore. The staged bytes are already consumed, so the

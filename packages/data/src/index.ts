@@ -27,7 +27,7 @@ export * from './schema/report/report.js';
 export * from './technology.js';
 
 import { validateCrossReferences } from './cross-references/validate.js';
-import { ContentSet, TerrainMapFile } from './schema/index.js';
+import { ContentSet, IR_VERSION, TerrainMapFile } from './schema/index.js';
 
 /** Parse and validate one assembled content set; throws a zod error with a readable path. */
 export function parseContentSet(raw: unknown): ContentSet {
@@ -36,16 +36,35 @@ export function parseContentSet(raw: unknown): ContentSet {
   return set;
 }
 
-/** Parse the content set the pipeline generated (`content/ir.json`). The pipeline writes every lane, so
- *  a document missing one was written by another build and is rejected rather than loaded without it. */
+/** Generated content written by another build: regenerating `content/` fixes it, unlike a schema break. */
+export class StaleContentError extends Error {}
+
+/** Parse the content set the pipeline generated (`content/ir.json`). A document stamped with another IR
+ *  version, or missing a lane the pipeline always writes, was written by another build and is rejected
+ *  with {@link StaleContentError} rather than loaded. */
 export function parseGeneratedContentSet(raw: unknown): ContentSet {
   if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+    const version = generatedVersion(raw);
+    if (version !== undefined && version !== IR_VERSION) {
+      throw new StaleContentError(
+        `generated content reports IR ${String(version)}, this build reads ${IR_VERSION}: regenerate it with this build`,
+      );
+    }
     const missing = Object.keys(ContentSet.shape).filter((lane) => !Object.hasOwn(raw, lane));
     if (missing.length > 0) {
-      throw new Error(`generated content lacks ${missing.join(', ')}: regenerate it with this build`);
+      throw new StaleContentError(
+        `generated content lacks ${missing.join(', ')}: regenerate it with this build`,
+      );
     }
   }
   return parseContentSet(raw);
+}
+
+/** The document's numeric `manifest.version`; any other shape is left to the schema error. */
+function generatedVersion(raw: object): number | undefined {
+  const manifest = 'manifest' in raw ? raw.manifest : undefined;
+  if (typeof manifest !== 'object' || manifest === null || !('version' in manifest)) return undefined;
+  return typeof manifest.version === 'number' ? manifest.version : undefined;
 }
 
 /**

@@ -589,6 +589,8 @@ export const enSurfaces = {
     missingContentTitle: 'Decoded content is unavailable',
     missingTerrainDetail:
       'This world draws the real decoded terrain, and content/ has none to serve. Build it with npm run build:content, then reload.',
+    staleContentDetail:
+      'content/ was built by another version of the game. Rebuild it with npm run build:content, or restart npm run dev, then reload.',
     loadFailedTitle: 'Loading the save failed',
     loadFailedDetail:
       'This world could not take the saved game. It usually means the save was made on different game content or an older map; loading it again will fail the same way.',

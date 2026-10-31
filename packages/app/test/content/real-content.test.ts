@@ -1,4 +1,4 @@
-import { type ContentSet, IR_VERSION, parseContentSet } from '@open-northland/data';
+import { type ContentSet, IR_VERSION, parseContentSet, StaleContentError } from '@open-northland/data';
 import { describe, expect, it } from 'vitest';
 import { loadRealContent } from '../../src/content/real-content.js';
 
@@ -42,7 +42,7 @@ describe('loadRealContent', () => {
   });
 
   it('rejects that same document under another stamp instead of degrading to null', async () => {
-    await expect(loadRealContent(irFetchStamped(IR_VERSION + 1))).rejects.toThrow('IR version mismatch');
+    await expect(loadRealContent(irFetchStamped(IR_VERSION + 1))).rejects.toThrow(StaleContentError);
   });
 
   it('rejects a document another build generated without a lane instead of defaulting it', async () => {

@@ -1,4 +1,4 @@
-import { isMultiplayerMapType, type MapScript, mapLobbySlots } from '@open-northland/data';
+import { isMultiplayerMapType, type MapScript, mapLobbySlots, StaleContentError } from '@open-northland/data';
 import { type GameSession, seatColourOf } from '@open-northland/lockstep';
 import {
   createWindowPixiApp,
@@ -29,6 +29,7 @@ import {
 import { loadRealTerrain, MissingTerrainError } from '../../content/map/terrain.js';
 import { mapFetch } from '../../content/map-source/index.js';
 import { loadMapObjects } from '../../content/object-gfx/objects.js';
+import type { RealContentMerge } from '../../content/real-content.js';
 import { resolveSpriteSheet } from '../../content/sprite-sheet/index.js';
 import { readVerifiedMapDocuments, type VerifiedMapDocuments } from '../../content/transfer/index.js';
 import { contentFetch } from '../../content/url.js';
@@ -275,7 +276,14 @@ export async function assembleMapWorld<H extends HostedMapWorld>(
     // Started before the content await rather than after it: the sheet cannot pick its tribes until the
     // IR lands, so serialising the two documents would push every atlas fetch back by one round trip.
     const irLoad = loadIr();
-    const realContent = await loadLocalizedRealContent(params);
+    let realContent: RealContentMerge | null;
+    try {
+      realContent = await loadLocalizedRealContent(params);
+    } catch (err) {
+      if (!(err instanceof StaleContentError)) throw err;
+      haltOnMissingContent(err);
+      return null;
+    }
     const ir = await irLoad;
     // Every civilization the map fields brings its own building and settler pages, so the sheet loads
     // exactly the seats' and the authored entities' tribes.

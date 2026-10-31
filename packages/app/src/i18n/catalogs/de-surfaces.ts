@@ -631,6 +631,8 @@ export const deSurfaces = {
     missingContentTitle: 'Dekodierte Inhalte fehlen',
     missingTerrainDetail:
       'Diese Welt nutzt das dekodierte Originalgelände, doch unter content/ sind keine Geländedaten vorhanden. Erzeuge sie mit npm run build:content und lade anschließend neu.',
+    staleContentDetail:
+      'content/ wurde von einer anderen Spielversion erzeugt. Erzeuge es mit npm run build:content neu oder starte npm run dev neu und lade anschließend neu.',
     loadFailedTitle: 'Spielstand konnte nicht geladen werden',
     loadFailedDetail:
       'Diese Welt konnte den Spielstand nicht übernehmen. Meist wurde er mit anderen Spieldaten oder einer älteren Karte erstellt. Ein erneuter Ladeversuch führt zum selben Fehler.',

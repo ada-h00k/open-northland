@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { IR_VERSION, parseContentSet, parseGeneratedContentSet } from '../../src/index.js';
+import { IR_VERSION, parseContentSet, parseGeneratedContentSet, StaleContentError } from '../../src/index.js';
+
+function manifest(version: unknown) {
+  return { version, generatedFrom: { data: 'synthetic-test-fixture' }, locale: 'eng' };
+}
 
 function contentSet(version: unknown): Record<string, unknown> {
   return {
-    manifest: { version, generatedFrom: { data: 'synthetic-test-fixture' }, locale: 'eng' },
+    manifest: manifest(version),
     goods: [],
     jobs: [],
     buildings: [],
@@ -45,8 +49,23 @@ describe('the generated-content lane gate', () => {
   it('rejects a document missing a lane instead of defaulting it', () => {
     const { tribes: _tribes, sounds: _sounds, ...older } = generated;
     expect(() => parseGeneratedContentSet(older)).toThrow(
-      'generated content lacks tribes, sounds: regenerate',
+      new StaleContentError('generated content lacks tribes, sounds: regenerate it with this build'),
     );
+  });
+
+  it('rejects a document from an earlier pipeline as stale content, before its lanes', () => {
+    const { tribes: _tribes, ...older } = generated;
+    const stamped = { ...older, manifest: manifest(IR_VERSION - 1) };
+    expect(() => parseGeneratedContentSet(stamped)).toThrow(StaleContentError);
+    expect(() => parseGeneratedContentSet(stamped)).toThrow(
+      `reports IR ${IR_VERSION - 1}, this build reads ${IR_VERSION}`,
+    );
+  });
+
+  it('leaves a malformed stamp to the schema error', () => {
+    const unstamped = { ...generated, manifest: manifest(String(IR_VERSION)) };
+    expect(() => parseGeneratedContentSet(unstamped)).not.toThrow(StaleContentError);
+    expect(() => parseGeneratedContentSet(unstamped)).toThrow('IR version mismatch');
   });
 
   it('leaves a non-object to the schema error', () => {

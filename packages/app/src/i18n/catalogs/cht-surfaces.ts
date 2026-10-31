@@ -570,6 +570,8 @@ export const chtSurfaces = {
     missingContentTitle: '無法使用已解碼的內容',
     missingTerrainDetail:
       '這個世界會繪製實際解碼的地形，但 content/ 中沒有可提供的地形。請用 npm run build:content 建置，然後重新載入。',
+    staleContentDetail:
+      'content/ 由其他版本的遊戲建置。請用 npm run build:content 重新建置，或重新啟動 npm run dev，然後重新載入。',
     loadFailedTitle: '載入存檔失敗',
     loadFailedDetail:
       '這個世界無法接受該存檔。這通常表示存檔是在不同的遊戲內容或較舊的地圖上建立的；再次載入也會以同樣方式失敗。',

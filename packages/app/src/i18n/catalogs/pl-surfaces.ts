@@ -586,6 +586,8 @@ export const plSurfaces = {
     missingContentTitle: 'Zdekodowana zawartość jest niedostępna',
     missingTerrainDetail:
       'Ten świat rysuje prawdziwy zdekodowany teren, ale content/ jest pusty lub niekompletny. Zbuduj go poleceniem npm run build:content i odśwież stronę.',
+    staleContentDetail:
+      'content/ zbudowała inna wersja gry. Przebuduj go poleceniem npm run build:content albo uruchom ponownie npm run dev i odśwież stronę.',
     loadFailedTitle: 'Wczytywanie zapisu nie powiodło się',
     loadFailedDetail:
       'Ten świat nie przyjął zapisanej gry. Zwykle znaczy to, że zapis powstał przy innej zawartości gry albo starszej wersji mapy; kolejna próba skończy się tak samo.',

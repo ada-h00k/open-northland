@@ -1,3 +1,4 @@
+import { StaleContentError } from '@open-northland/data';
 import { LockstepDriver, LoopbackTransport } from '@open-northland/lockstep';
 import type { TerrainTextureSet } from '@open-northland/render';
 import {
@@ -12,6 +13,7 @@ import { loadIr } from '../../content/ir/load.js';
 import { loadMinimapCellColours } from '../../content/map/minimap-ground.js';
 import { loadRealTerrain, MissingTerrainError } from '../../content/map/terrain.js';
 import { loadFellingClips } from '../../content/object-gfx/felling-clips.js';
+import type { RealContentMerge } from '../../content/real-content.js';
 import { resolveSpriteSheet } from '../../content/sprite-sheet/index.js';
 import { diag, hashTraceFor, setDiagGameSession } from '../../diag/index.js';
 import type { MissionBriefSource } from '../../game/map/mission-brief.js';
@@ -117,7 +119,14 @@ export async function renderSceneMode(canvas: HTMLCanvasElement, params: URLSear
   await boot.begin('content');
   // Served real content makes the browser scene collide and place exactly like the live map view. The
   // headless twin never loads it, so copyrighted content stays out of tests.
-  const realContent = await loadLocalizedRealContent(params);
+  let realContent: RealContentMerge | null;
+  try {
+    realContent = await loadLocalizedRealContent(params);
+  } catch (err) {
+    if (!(err instanceof StaleContentError)) throw err;
+    haltOnMissingContent(err);
+    return;
+  }
   const ir = await loadIr();
   // Empty on a bare checkout.
   const footprints = buildingFootprints(ir);
