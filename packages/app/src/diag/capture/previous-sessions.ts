@@ -160,6 +160,7 @@ export async function reportPreviousSessions(own: OwnPage, previous: PreviousPag
       const hangs = quietFreeze ? matched.filter((fault) => fault.trigger === 'renderer-unresponsive') : [];
       dismissed.push(...hangs);
       const log = readLogTail(marker.id);
+      const firstFaultMs = Math.min(...matched.map((fault) => Date.parse(fault.at)));
       groups.push({
         ids: matched.filter((fault) => !hangs.includes(fault)).map((fault) => fault.id),
         extras: {
@@ -168,6 +169,9 @@ export async function reportPreviousSessions(own: OwnPage, previous: PreviousPag
           route: contextRoute(marker.context),
           facts: {
             ...contextFacts(marker.context),
+            // Without a freeze record, these tell a page hidden before it hung from one silent unseen.
+            visible: marker.visible,
+            lastBeatBeforeFaultMs: firstFaultMs - marker.beatAt,
             ...(freeze === null ? {} : { freezeMs: lastedMs(freeze) }),
           },
         },

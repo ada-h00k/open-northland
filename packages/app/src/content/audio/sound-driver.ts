@@ -8,6 +8,7 @@ import {
   type SoundIndex,
 } from '@open-northland/audio';
 import type { SoundBank, SoundQuality } from '@open-northland/data';
+import { timedAudioContext } from '../../diag/audio-context.js';
 import type { ContentIr } from '../ir/rows.js';
 import { contentUrl } from '../url.js';
 
@@ -24,7 +25,7 @@ const CONTENT_AUDIO_URLS = {
 
 /** The engine options of this page's content tree, loading its sound banks at `soundQuality`. */
 export function contentAudioOptions(soundQuality: SoundQuality): AudioEngineOptions {
-  return { ...CONTENT_AUDIO_URLS, soundQuality };
+  return { ...CONTENT_AUDIO_URLS, soundQuality, createContext: timedAudioContext() };
 }
 
 /**

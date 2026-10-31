@@ -196,6 +196,23 @@ describe('reportPreviousSessions', () => {
     ).toEqual([['gpu-gone', freeze.seenAt - freeze.frozenAt, 'map']]);
   });
 
+  it('tells whether a page the shell saw hang was visible and how long before the hang it last beat', async () => {
+    const tab = '4'.repeat(32);
+    const playing = { ...BOOTING, inGame: true, booting: false };
+    const beatAt = LONG_AGO;
+    const silentMs = MARKER_STALE_MS - 1000;
+    writeMarker({ id: tab, startedAt: beatAt - 1000, beatAt, visible: false, context: playing });
+    shellWith([hang('5'.repeat(32), beatAt + silentMs)]);
+    await reportPreviousSessions(OWN, null);
+    expect(
+      problems.map((problem) => [
+        problem.trigger,
+        problem.facts?.visible,
+        problem.facts?.lastBeatBeforeFaultMs,
+      ]),
+    ).toEqual([['renderer-unresponsive', false, silentMs]]);
+  });
+
   it('tells how the shell run that served a page ended, and keeps quiet about a shutdown', async () => {
     const playing = { ...BOOTING, inGame: true, booting: false };
     const served = { id: '2'.repeat(32), startedAt: LONG_AGO, beatAt: LONG_AGO + 30_000, visible: true };

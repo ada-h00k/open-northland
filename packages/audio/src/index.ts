@@ -333,6 +333,7 @@ export {
 // Impure Web Audio sink (browser-only). The default-tuning constants stay exported as the documented
 // knobs behind the options; the platform function types are the injectable test seams.
 export type { ContextFactory, FetchBytes, RandomFn, WallClock } from './web/platform.js';
+export { webAudioContextFactory } from './web/platform.js';
 export {
   type MusicMap,
   SoundDriver,
