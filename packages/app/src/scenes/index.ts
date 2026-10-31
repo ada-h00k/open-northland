@@ -13,6 +13,7 @@ import { armyControlScene } from './army/army-control.js';
 import { armyPassageScene } from './army/army-passage.js';
 import { attackMoveScene } from './army/attack-move.js';
 import { barracksScene } from './army/barracks.js';
+import { barracksArmoryScene } from './army/barracks-armory.js';
 import { barracksExitScene } from './army/barracks-exit.js';
 import { battleScene } from './army/battle.js';
 import { battleWearyScene } from './army/battle-weary.js';
@@ -234,6 +235,7 @@ export const SCENES: readonly SceneDefinition[] = [
   netPanelScene,
   amuletsScene,
   barracksScene,
+  barracksArmoryScene,
   barracksExitScene,
   armorScene,
   towerGarrisonScene,

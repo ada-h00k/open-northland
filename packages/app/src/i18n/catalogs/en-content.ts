@@ -877,6 +877,11 @@ export const enContent = {
       summary:
         'A civilian sent to the barracks drills inside for 15 seconds and walks out an unarmed soldier; beside him a serving soldier who only drills, and a civilian for whom the soldier profession stays shut.',
     },
+    'barracks-armory': {
+      title: 'Barracks armory',
+      summary:
+        'Two colonists drill for the sword counter in a barracks that stocks one long sword, one short sword and two chain armors. The first walks out a long-swordsman in chain armor. The second puts on the other armor at the door, leaves the weaker short sword in the barracks and walks to the armory by the headquarters for the long sword lying there.',
+    },
     'barracks-exit': {
       title: 'Barracks exit',
       summary:

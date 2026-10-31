@@ -884,6 +884,11 @@ export const deContent = {
       summary:
         'Ein Siedler wird in die Kaserne geschickt, übt dort 15 Sekunden und kommt als unbewaffneter Soldat heraus. Daneben stehen ein bereits dienender Soldat, der nur übt, und ein Siedler, dem der Soldatenberuf verwehrt bleibt.',
     },
+    'barracks-armory': {
+      title: 'Kasernenwaffenkammer',
+      summary:
+        'Zwei Siedler üben für den Schwertzähler in einer Kaserne, die ein Langschwert, ein Kurzschwert und zwei Kettenrüstungen lagert. Der erste kommt als Langschwertkämpfer in Kettenrüstung heraus. Der zweite legt an der Tür die andere Rüstung an, lässt das schwächere Kurzschwert in der Kaserne und holt das Langschwert, das beim Hauptquartier liegt.',
+    },
     'barracks-exit': {
       title: 'Auszug aus der Kaserne',
       summary:

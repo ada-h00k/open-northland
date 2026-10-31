@@ -874,6 +874,11 @@ export const plContent = {
       summary:
         'Osadnik wysłany do koszar ćwiczy w środku 15 sekund i wychodzi jako żołnierz bez broni; obok żołnierz, który tylko trenuje, i cywil, dla którego zawód żołnierza pozostaje zamknięty.',
     },
+    'barracks-armory': {
+      title: 'Zbrojownia koszar',
+      summary:
+        'Dwóch osadników ćwiczy na licznik mieczników w koszarach, które mają jeden długi miecz, jeden krótki miecz i dwie kolczugi. Pierwszy wychodzi jako długi miecznik w kolczudze. Drugi zakłada przy wyjściu drugą kolczugę, zostawia w koszarach słabszy krótki miecz i idzie po długi miecz leżący przy siedzibie.',
+    },
     'barracks-exit': {
       title: 'Wyjście z koszar',
       summary:
