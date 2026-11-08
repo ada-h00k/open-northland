@@ -6,6 +6,7 @@ import {
   hasMissionBehaviour,
   JobAssignment,
   MISSION_BEHAVIOUR,
+  MoveGoal,
   noteSettlerProgress,
   ownerOf,
   Settler,
@@ -20,10 +21,13 @@ import { TICKS_PER_SECOND } from '../../../core/loop.js';
 import type { Entity, World } from '../../../ecs/world.js';
 import type { NodeId, TerrainGraph } from '../../../nav/terrain/index.js';
 import { postGraduate } from '../../assistant/graduates.js';
+import { guardPost } from '../../conflict/chase.js';
 import type { SystemContext } from '../../context.js';
 import { heldGatherGood, holdToGatherGood, jobGathersGood } from '../../economy/gather-goods.js';
+import { moveAnchor } from '../../orders/combat.js';
 import { isSchoolOrFoundation, schoolMethodJob } from '../../orders/education.js';
 import { keepingOrderQueue } from '../../orders/guards.js';
+import { rallyNodeOf } from '../../orders/rally-point.js';
 import { takeTrainingSeat } from '../../orders/training-seats.js';
 import { reidleAsJob } from '../../orders/work/index.js';
 import { typeAllowed } from '../../progression/unlocks.js';
@@ -35,6 +39,7 @@ import {
   jobChangesProduction,
 } from '../../readviews/index.js';
 import type { NavigationLimit } from '../../signposts/index.js';
+import { entityNode } from '../../spatial/nodes.js';
 import { atOrWalk, EXERCISE_ATOMIC_ID, startAtomic } from '../atomics/start.js';
 import { enterBuilding, stepOut } from '../indoors.js';
 import type { PlannerContext } from '../planner/context.js';
@@ -106,6 +111,7 @@ export function planTraining(
     if (order.lesson === undefined) {
       const jobType = keepingOrderQueue(world, e, () => {
         const enlisted = enlist(world, ctx, e);
+        if (enlisted !== null) sendToRallyPoint(world, ctx, e, order.house);
         armRecruitInPlace(plan, e, order.house);
         return enlisted;
       });
@@ -261,6 +267,23 @@ function abandonDrill(world: World, e: Entity): boolean {
   world.remove(e, TrainingOrder);
   stepOut(world, e);
   return false;
+}
+
+/**
+ * Post a fresh soldier at its barracks' rally point: the point becomes the anchor its guard walk-back holds,
+ * so it leaves the door for the point instead of standing where it stepped out. A barracks with no rally
+ * point leaves the soldier anchored at its feet.
+ */
+function sendToRallyPoint(world: World, ctx: SystemContext, e: Entity, barracks: Entity): void {
+  if (ctx.terrain === undefined) return;
+  const rally = rallyNodeOf(world, ctx.terrain, barracks);
+  if (rally === undefined) return;
+  moveAnchor(world, ctx.content, e, rally);
+  // Combat's walk-back only runs while a fight is possible, so the first walk is set here. The post is
+  // the anchor, or the open node beside it when something stands on the anchor.
+  const here = entityNode(world, ctx.terrain, e);
+  const post = guardPost(world, ctx, ctx.terrain, rally, here);
+  if (post !== here) world.add(e, MoveGoal, { cell: post });
 }
 
 /**

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addPerson,
   Building,
+  DeliveryFlag,
   EquipOrder,
   Female,
   Fleeing,
@@ -13,6 +14,7 @@ import {
   Owner,
   PlayerOrder,
   Position,
+  RallyPoint,
   Resting,
   Settler,
   SettlerProgress,
@@ -29,10 +31,13 @@ import { fx, ONE, type SimEvent, Simulation } from '../../../../src/index.js';
 import { hexDistanceBetween, nodeOfPosition } from '../../../../src/nav/halfcell.js';
 import type { NodeId, TerrainGraph } from '../../../../src/nav/terrain/index.js';
 import { needSubjectOf, plannerSystem, settlerMeetsNeed } from '../../../../src/systems/index.js';
+import { removeBuildingSilently } from '../../../../src/systems/lifecycle/cleanup.js';
+import { WORK_FLAG_SNAP_MAX_RADIUS } from '../../../../src/systems/orders/work/selection.js';
 import { MILITARY_MODE } from '../../../../src/systems/readviews/index.js';
 import { BARRACKS_DRILL_TICKS } from '../../../../src/systems/settlers/drives/training.js';
 import { interactionCell } from '../../../../src/systems/settlers/targets/index.js';
 import { noteUnreachableGoal } from '../../../../src/systems/settlers/unreachable-goals.js';
+import { entityNode } from '../../../../src/systems/spatial/nodes.js';
 import { testContent } from '../../../fixtures/content.js';
 import { ctxOf, grassMap } from '../../../fixtures/needs.js';
 import { setNeeds } from '../../../fixtures/settler.js';
@@ -233,6 +238,67 @@ describe('trainSoldier - the barracks drill', () => {
     expect(qualifiesAsSoldier(sim, recruit)).toBe(false);
     expect(sim.world.has(recruit, TrainingOrder)).toBe(false);
     expect(sim.world.has(recruit, Resting)).toBe(false); // back outside
+  });
+
+  it('sends soldiers trained after a rally point is set to it, and none before', () => {
+    const sim = simWithBarracks();
+    const house = barracksAt(sim, 6, 3);
+    const early = settlerAt(sim, CIVILIST_JOB, 2, 3);
+    sim.enqueueSetup({ kind: 'trainSoldier', entity: early, house });
+    run(sim, RUN_TICKS);
+    expect(jobOf(sim, early)).toBe(SOLDIER_JOB);
+    const earlyAnchor = sim.world.get(early, Stance).anchorCell;
+
+    const rally = { x: 4, y: 12 };
+    sim.enqueueSetup({ kind: 'setRallyPoint', building: house, ...rally });
+    const late = settlerAt(sim, CIVILIST_JOB, 2, 4);
+    sim.enqueueSetup({ kind: 'trainSoldier', entity: late, house });
+    run(sim, RUN_TICKS + 2 * WALK_TICKS);
+
+    const flag = sim.world.get(house, RallyPoint).flag;
+    expect(sim.world.has(flag, DeliveryFlag)).toBe(true);
+    const node = entityNode(sim.world, terrainOf(sim), flag);
+    const flagAt = sim.world.get(flag, Position);
+    const planted = nodeOfPosition(flagAt.x, flagAt.y);
+    expect(hexDistanceBetween(planted.hx, planted.hy, rally.x, rally.y)).toBeLessThanOrEqual(
+      WORK_FLAG_SNAP_MAX_RADIUS,
+    );
+    expect(jobOf(sim, late)).toBe(SOLDIER_JOB);
+    expect(sim.world.get(late, Stance).anchorCell).toBe(node);
+    const at = sim.world.get(late, Position);
+    const here = nodeOfPosition(at.x, at.y);
+    expect(hexDistanceBetween(here.hx, here.hy, planted.hx, planted.hy)).toBeLessThanOrEqual(1);
+    expect(sim.world.get(early, Stance).anchorCell).toBe(earlyAnchor); // the soldier trained before stays put
+
+    // A second click moves the same flag instead of minting another.
+    sim.enqueueSetup({ kind: 'setRallyPoint', building: house, x: 6, y: 12 });
+    sim.step();
+    expect(sim.world.get(house, RallyPoint).flag).toBe(flag);
+
+    sim.enqueueSetup({ kind: 'clearRallyPoint', building: house });
+    sim.step();
+    expect(sim.world.has(house, RallyPoint)).toBe(false);
+    expect(sim.world.isAlive(flag)).toBe(false);
+  });
+
+  it('takes the rally flag down with a barracks that is razed', () => {
+    const sim = simWithBarracks();
+    const house = barracksAt(sim, 6, 3);
+    sim.enqueueSetup({ kind: 'setRallyPoint', building: house, x: 4, y: 12 });
+    sim.step();
+    const flag = sim.world.get(house, RallyPoint).flag;
+    removeBuildingSilently(sim.world, ctxOf(sim), house);
+    expect(sim.world.isAlive(flag)).toBe(false);
+  });
+
+  it('refuses a rally point on a barracks foundation', () => {
+    const sim = simWithBarracks();
+    const house = barracksAt(sim, 6, 3);
+    sim.world.add(house, UnderConstruction, { labor: fx.fromInt(0) });
+    sim.world.mut(house, Building).built = fx.fromInt(0);
+    sim.enqueueSetup({ kind: 'setRallyPoint', building: house, x: 4, y: 12 });
+    sim.step();
+    expect(sim.world.has(house, RallyPoint)).toBe(false);
   });
 
   it('a Shift-queued drill waits for the walk ahead, and the next walk waits for the drill', () => {

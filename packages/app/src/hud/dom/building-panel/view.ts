@@ -12,6 +12,7 @@ import { createHomeSection } from './home.js';
 import { createOffersSection } from './offers.js';
 import { createPortraitSection } from './portrait.js';
 import { createProductionSection } from './production.js';
+import { createRallySection } from './rally.js';
 import { createStaffSection } from './staff.js';
 import { createStockSection } from './stock.js';
 import { warmBuildingModel } from './warm-model.js';
@@ -76,6 +77,7 @@ export function createBuildingPanel(deps: BuildingPanelDeps): BuildingPanel {
 
   const portrait = createPortraitSection(deps, current);
   const alarm = createAlarmSection(deps, current);
+  const rally = createRallySection(deps, current);
   const construction = createConstructionSection(deps);
   const crew = createStaffSection(deps, (model) => model.crew);
   const staff = createStaffSection(deps, (model) => model.staff);
@@ -86,6 +88,7 @@ export function createBuildingPanel(deps: BuildingPanelDeps): BuildingPanel {
   frame.body.append(
     portrait.element,
     alarm.element,
+    rally.element,
     construction.element,
     crew.element,
     staff.element,
@@ -112,6 +115,7 @@ export function createBuildingPanel(deps: BuildingPanelDeps): BuildingPanel {
     frame.body,
     portrait.element,
     alarm.element,
+    rally.element,
     construction.element,
     crew.element,
     staff.element,
@@ -125,6 +129,7 @@ export function createBuildingPanel(deps: BuildingPanelDeps): BuildingPanel {
   const sections = (model: BuildingPanelModel, fresh: boolean): void => {
     portrait.update(model);
     alarm.update(model);
+    rally.update(model);
     construction.update(model);
     crew.update(model);
     staff.update(model);

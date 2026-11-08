@@ -7050,6 +7050,31 @@ body.on-drag-scroll.on-drag-scroll-free * {
   width: 14px;
   height: 14px;
 }
+.on-hud .on-rally-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+  margin-top: 6px;
+}
+.on-hud .on-rally-bar[hidden],
+.on-hud .on-rally[hidden] {
+  display: none;
+}
+.on-hud .on-rally {
+  justify-content: center;
+  gap: 6px;
+}
+.on-hud .on-rally .on-glyph {
+  width: 18px;
+  height: 18px;
+}
+.on-hud .on-rally--clear {
+  padding: 0 8px;
+}
+.on-hud .on-rally--clear .on-glyph {
+  width: 12px;
+  height: 12px;
+}
 .on-hud .on-alarm--on {
   border-color: #9a3f2c;
   background: radial-gradient(circle at 45% 35%, #6e3527, #47201a 60%, #26110d 95%);

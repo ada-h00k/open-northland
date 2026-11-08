@@ -65,7 +65,7 @@ export function bindFreshFlag(
   } else world.add(e, WorkFlag, { flag, radius });
 }
 
-function mintFlagMarker(world: World, pos: { x: Fixed; y: Fixed }): Entity {
+export function mintFlagMarker(world: World, pos: { x: Fixed; y: Fixed }): Entity {
   const flag = world.create();
   world.add(flag, Position, { x: pos.x, y: pos.y });
   world.add(flag, DeliveryFlag, {});
