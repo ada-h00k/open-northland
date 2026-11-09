@@ -26,7 +26,7 @@ export interface BuildingPanelActions {
   readonly setStorageMinimum: (player: number, goodType: number, amount: number) => void;
   /** Mark or unmark `goodType` as priority in `building`, whose porters then fetch it. */
   readonly setStorePriority: (building: number, goodType: number, priority: boolean) => void;
-  /** Rank the construction site `building` among its owner's others: `high` first, `low` last. */
+  /** Prioritize the construction site `building`; `normal` clears its priority. */
   readonly setConstructionPriority: (building: number, priority: ConstructionPriority) => void;
 }
 
