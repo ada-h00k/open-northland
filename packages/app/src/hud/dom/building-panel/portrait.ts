@@ -75,11 +75,11 @@ export function orderViews(
       : [
           {
             order: 'prioritize' as const,
-          glyph: GLYPH.star,
-          label: copy.orders.prioritize,
-          tooltip: copy.buildPriorityTooltip,
-          enabled: true,
-          danger: false,
+            glyph: GLYPH.star,
+            label: copy.orders.prioritize,
+            tooltip: copy.buildPriorityTooltip,
+            enabled: true,
+            danger: false,
             pressed: model.construction.priority === 'high',
           },
         ]),
