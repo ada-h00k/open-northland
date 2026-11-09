@@ -50,13 +50,13 @@ const SITE_TIER = {
 const PRIORITY_BAND = 10;
 
 /**
- * A site's pick rank: its standing tier, shifted a whole {@link PRIORITY_BAND} per priority step, so a
- * `high` site is worked before every unrated one and a `low` one after them all, whatever its standing;
- * the nearest site wins inside a band. Unset reads as `normal`.
+ * A site's pick rank: its standing tier, shifted by {@link PRIORITY_BAND} when prioritized, so it is
+ * worked before every unrated site, whatever its standing; the nearest site wins within each band.
+ * Unset reads as `normal`.
  */
 function siteRank(world: World, site: Entity, tier: number): number {
   const priority = world.tryGet(site, UnderConstruction)?.priority;
-  const band = priority === 'high' ? 1 : priority === 'low' ? -1 : 0;
+  const band = priority === 'high' ? 1 : 0;
   return tier + band * PRIORITY_BAND;
 }
 
