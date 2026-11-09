@@ -55,9 +55,12 @@ const PRIORITY_BAND = 10;
  * Unset reads as `normal`.
  */
 function siteRank(world: World, site: Entity, tier: number): number {
-  const priority = world.tryGet(site, UnderConstruction)?.priority;
-  const band = priority === 'high' ? 1 : 0;
-  return tier + band * PRIORITY_BAND;
+  return tier + (isPrioritizedSite(world, site) ? PRIORITY_BAND : 0);
+}
+
+/** Whether the player has prioritized the construction site `site`. */
+export function isPrioritizedSite(world: World, site: Entity): boolean {
+  return world.tryGet(site, UnderConstruction)?.priority === 'high';
 }
 
 /** Builders a ready or nearly done site draws before it ranks like any other: enough to finish it fast
