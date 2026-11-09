@@ -66,9 +66,8 @@ export function consumeGoods(world: World, store: Entity, cost: readonly GoodsLi
   }
 }
 
-/** The ranks a player can give one of their construction sites, the order their builders pick sites in:
- *  a `high` site is worked before every unrated one and a `low` one after. Our rule, not the original's. */
-export const CONSTRUCTION_PRIORITIES = ['low', 'normal', 'high'] as const;
+/** A construction site the player has raised is worked before every unrated site. Our rule, not the original's. */
+export const CONSTRUCTION_PRIORITIES = ['normal', 'high'] as const;
 
 export type ConstructionPriority = (typeof CONSTRUCTION_PRIORITIES)[number];
 
