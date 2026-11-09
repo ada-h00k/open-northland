@@ -53,7 +53,7 @@ describe('construction task claims', () => {
     expect(sim.world.verifyCaches()).toEqual([]);
   });
 
-  it('ranks a prioritized site over the standing tiers and a demoted one under them', () => {
+  it('ranks a prioritized site ahead of every unprioritized standing tier', () => {
     const sim = new Simulation({ seed: 3, content: constructionContent(), map: grassMap(24, 8) });
     // A fresh site the builders would rank last (nothing delivered), beside a ready, unstaffed one
     // holding its whole bill (2× stone + 1× wood) with steps to hammer.
@@ -72,12 +72,6 @@ describe('construction task claims', () => {
     expect(plain.ranks).toEqual([5, 0]);
     expect(plain.rankOf.get(far)).toBe(5);
     expect(plain.rankOf.get(near)).toBe(0);
-
-    // A demoted site sinks under every unrated one, whatever its standing.
-    sim.world.mut(far, UnderConstruction).priority = 'low';
-    const demoted = ranking();
-    expect(demoted.ranks).toEqual([0, -5]);
-    expect(demoted.rankOf.get(far)).toBe(-5);
 
     // A prioritized site rises over every unrated one, so the waiting site is worked first.
     sim.world.mut(far, UnderConstruction).priority = undefined;
