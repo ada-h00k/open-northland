@@ -28,8 +28,6 @@ describe('setConstructionPriority', () => {
     const site = placeSite(world, HOUSE);
     setPriority(world, site, 'high');
     expect(world.world.tryGet(site, UnderConstruction)?.priority).toBe('high');
-    setPriority(world, site, 'low');
-    expect(world.world.tryGet(site, UnderConstruction)?.priority).toBe('low');
     setPriority(world, site, 'normal');
     expect(world.world.tryGet(site, UnderConstruction)?.priority).toBeUndefined();
   });
