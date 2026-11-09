@@ -464,6 +464,7 @@ export const enGame = {
       workArea: 'Work area',
       placeSignpost: 'Place signpost',
       bombard: 'Bombard',
+      rallyPoint: 'Set rally point',
       tooManyUnits: 'Too many units',
       noFreePlaces: 'No free places',
       noRoom: 'No room',
@@ -1065,7 +1066,8 @@ export const enGame = {
       alarmOffTooltip: 'Stop defence mode: the sheltered go back to work',
       alarmOnEverywhereTooltip: 'Start defence mode in every defence building · {key}',
       alarmOffEverywhereTooltip: 'Stop defence mode in every defence building · {key}',
-      rallySetTooltip: 'Plant a flag: soldiers trained here walk to it',
+      rallySetTooltip:
+        'Plant a flag: soldiers trained here walk to it. A right click on the ground plants it too while the barracks stays selected',
       rallyClearTooltip: 'Take the rally flag away: new soldiers stay at the door',
       demolishTitle: 'Demolish building',
       demolishQuestion: 'Demolish “{name}”?',

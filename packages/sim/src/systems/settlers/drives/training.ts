@@ -111,8 +111,9 @@ export function planTraining(
     if (order.lesson === undefined) {
       const jobType = keepingOrderQueue(world, e, () => {
         const enlisted = enlist(world, ctx, e);
-        if (enlisted !== null) sendToRallyPoint(world, ctx, e, order.house);
+        // Arming first: the rally walk would only fight the fetch errand a booking still owes.
         armRecruitInPlace(plan, e, order.house);
+        if (enlisted !== null) sendToRallyPoint(world, ctx, e, order.house);
         return enlisted;
       });
       if (jobType !== null)
@@ -272,13 +273,16 @@ function abandonDrill(world: World, e: Entity): boolean {
 /**
  * Post a fresh soldier at its barracks' rally point: the point becomes the anchor its guard walk-back holds,
  * so it leaves the door for the point instead of standing where it stepped out. A barracks with no rally
- * point leaves the soldier anchored at its feet.
+ * point leaves the soldier anchored at its feet. A recruit the arming pass still owes gear starts no walk
+ * here: the fetch errand owns it, and its outing ends on the post (`recruit-arming.ts`), so the first walk
+ * to the flag is the one that outing closes with.
  */
 function sendToRallyPoint(world: World, ctx: SystemContext, e: Entity, barracks: Entity): void {
   if (ctx.terrain === undefined) return;
   const rally = rallyNodeOf(world, ctx.terrain, barracks);
   if (rally === undefined) return;
   moveAnchor(world, ctx.content, e, rally);
+  if (world.has(e, AssistantRecruit)) return;
   // Combat's walk-back only runs while a fight is possible, so the first walk is set here. The post is
   // the anchor, or the open node beside it when something stands on the anchor.
   const here = entityNode(world, ctx.terrain, e);

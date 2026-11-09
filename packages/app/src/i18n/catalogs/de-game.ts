@@ -499,6 +499,7 @@ export const deGame = {
       workArea: 'Arbeitsbereich',
       placeSignpost: 'Wegweiser setzen',
       bombard: 'Beschießen',
+      rallyPoint: 'Sammelpunkt setzen',
       tooManyUnits: 'Zu viele Einheiten',
       noFreePlaces: 'Keine freien Plätze',
       noRoom: 'Kein Platz',
@@ -1152,7 +1153,8 @@ export const deGame = {
         'Verteidigungsmodus stoppen: Die hier untergebrachten Zivilisten kehren zur Arbeit zurück',
       alarmOnEverywhereTooltip: 'Verteidigungsmodus in allen Verteidigungsgebäuden starten · {key}',
       alarmOffEverywhereTooltip: 'Verteidigungsmodus in allen Verteidigungsgebäuden beenden · {key}',
-      rallySetTooltip: 'Flagge setzen: Hier ausgebildete Soldaten laufen dorthin',
+      rallySetTooltip:
+        'Flagge setzen: Hier ausgebildete Soldaten laufen dorthin. Ein Rechtsklick auf den Boden setzt sie ebenfalls, solange die Kaserne ausgewählt bleibt',
       rallyClearTooltip: 'Sammelflagge entfernen: Neue Soldaten bleiben an der Tür',
       demolishTitle: 'Gebäude abreißen',
       demolishQuestion: '„{name}“ abreißen?',

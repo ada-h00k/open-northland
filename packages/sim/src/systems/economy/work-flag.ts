@@ -26,9 +26,11 @@ import { isFisherJob, isHunterJob } from '../readviews/index.js';
 import { canonicalById, entityNode } from '../spatial/nodes.js';
 
 // The work-flag lifecycle, for a field worker's `WorkFlag` and a posted worker's `HaulFlag`. Minting and
-// removal go through `bindFreshFlag`, `bindHaulFlag` and `removeWorkFlag`, so a `DeliveryFlag` exists exactly
-// while a live worker references it. Authored: auto-planting a flag the moment a settler becomes a gatherer is a
-// convention of this engine rather than observed behavior.
+// removal go through `bindFreshFlag`, `bindHaulFlag` and `removeWorkFlag`, so a worker's `DeliveryFlag`
+// exists exactly while a live worker references it. A barracks rally point mints its marker through
+// `mintFlagMarker` too, but holds the binding itself (RallyPoint on the building, `orders/rally-point.ts`),
+// so its flag answers to no worker and dies with the barracks. Authored: auto-planting a flag the moment a
+// settler becomes a gatherer is a convention of this engine rather than observed behavior.
 
 /** The field worker's flag while its marker entity still exists; a stale binding reads as undefined. */
 export function liveWorkFlag(world: World, e: Entity): { flag: Entity; radius: number } | undefined {

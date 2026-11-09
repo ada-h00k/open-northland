@@ -457,6 +457,7 @@ export const plGame = {
       workArea: 'Obszar pracy',
       placeSignpost: 'Postaw drogowskaz',
       bombard: 'Ostrzelaj',
+      rallyPoint: 'Ustaw punkt zbiórki',
       tooManyUnits: 'Za dużo jednostek',
       noFreePlaces: 'Brak wolnych miejsc',
       noRoom: 'Brak miejsca',
@@ -1046,7 +1047,8 @@ export const plGame = {
       alarmOffTooltip: 'Odwołaj alarm: schowani wracają do pracy',
       alarmOnEverywhereTooltip: 'Bij na alarm we wszystkich budynkach obronnych · {key}',
       alarmOffEverywhereTooltip: 'Odwołaj alarm we wszystkich budynkach obronnych · {key}',
-      rallySetTooltip: 'Postaw flagę: żołnierze wyszkoleni tutaj pójdą w to miejsce',
+      rallySetTooltip:
+        'Postaw flagę: żołnierze wyszkoleni tutaj pójdą w to miejsce. Prawy przycisk na ziemi też ją stawia, dopóki koszary są wybrane',
       rallyClearTooltip: 'Zabierz flagę zbiórki: nowi żołnierze zostają przy drzwiach',
       demolishTitle: 'Zburz budynek',
       demolishQuestion: 'Zburzyć budynek „{name}”?',

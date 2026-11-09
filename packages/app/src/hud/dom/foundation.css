@@ -7050,9 +7050,13 @@ body.on-drag-scroll.on-drag-scroll-free * {
   width: 14px;
   height: 14px;
 }
+/* A barracks' rally row under the portrait, beside the alarm row's full-width one: the point is set once
+   and left alone, so both tiles size to their words - the set tile's amber tells a flag stands, and the
+   clear one only shows while it does. A right click on the ground does the set tile's work directly. */
 .on-hud .on-rally-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto auto;
+  justify-content: start;
   gap: 4px;
   margin-top: 6px;
 }
@@ -7062,11 +7066,11 @@ body.on-drag-scroll.on-drag-scroll-free * {
 }
 .on-hud .on-rally {
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
 }
 .on-hud .on-rally .on-glyph {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
 }
 .on-hud .on-rally--clear {
   padding: 0 8px;
@@ -7074,6 +7078,18 @@ body.on-drag-scroll.on-drag-scroll-free * {
 .on-hud .on-rally--clear .on-glyph {
   width: 12px;
   height: 12px;
+}
+/* A flag stands: the same amber the flag wears on the map (the ghost's and the outline's 0xffc020). */
+.on-hud .on-rally--on {
+  border-color: #7a5c22;
+  background: radial-gradient(circle at 45% 35%, #6e5322, #4d3a17 60%, #2a1f0c 95%);
+  box-shadow:
+    inset 0 1px #fff1,
+    0 0 6px #c2a53b55;
+  color: #f3e6c4;
+}
+.on-hud .on-rally--on .on-glyph {
+  color: #ffc020;
 }
 .on-hud .on-alarm--on {
   border-color: #9a3f2c;

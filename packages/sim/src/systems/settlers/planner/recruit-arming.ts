@@ -26,8 +26,10 @@ import { nodeOfPosition } from '../../../nav/halfcell.js';
 import type { SpatialGate } from '../../../nav/node-circle.js';
 import type { NodeId, TerrainGraph } from '../../../nav/terrain/index.js';
 import type { SystemContext } from '../../context.js';
+import { guardPost } from '../../conflict/chase.js';
 import { buildingBlockedCells } from '../../footprint/index.js';
 import { isTravelling } from '../../movement/nav-state.js';
+import { rallyNodeOf } from '../../orders/rally-point.js';
 import {
   armorGoodsByProtection,
   isBarracks,
@@ -62,7 +64,8 @@ import type { PlannerPass } from './pass.js';
  * The assistant's arming pass: dress each enlisted weapon-class recruit, a drilled one or a bare-handed
  * soldier its counter booked, from any reachable store. Authored: one outing, so the weapon is fetched
  * first and the equip drive chains the armor want at the store before the single walk back to the
- * recruit's barracks (owner's ruling: armed soldiers gather there, not at the store). Runs on the grants
+ * recruit's barracks - its rally post when one stands, else the door (owner's ruling: armed soldiers
+ * gather there, not at the store). Runs on the grants
  * pass's stride beat with the same one-errand rule. A dispatch claims its unit at once, so a recruit on the same beat shops for
  * another; the recruit's own plan re-claims it.
  */
@@ -294,7 +297,7 @@ function dispatchWeaponFetch(
     group: 'weapon',
     slot: 0,
     goodType: pick.goodType,
-    returnTo: barracksDoor(pass, e, barracks, routeOf().here),
+    returnTo: armingReturnNode(pass, e, barracks, routeOf().here),
     stage: 'acquire',
     issuer: 'assistant-recruit',
     queued: [],
@@ -377,7 +380,7 @@ function dispatchArmorFetch(
     group: 'armor',
     slot: 0,
     goodType: pick.goodType,
-    returnTo: barracksDoor(pass, e, barracks, route.here),
+    returnTo: armingReturnNode(pass, e, barracks, route.here),
     stage: 'acquire',
     issuer: 'assistant-recruit',
     queued: [],
@@ -519,12 +522,15 @@ export function armRecruitInPlace(search: ArmingSearch, e: Entity, barracks: Ent
 /** The unarmored damage column (`damagevalue 0`), the strength axis the weapon preference sorts on. */
 const BARE_TARGET = 0;
 
-/** Where an arming outing ends: the door of the booking's barracks, or where the outing leaves him (null)
- *  when that barracks is gone or another side's at dispatch. A barracks lost later still draws him to its
- *  old door. */
-function barracksDoor(pass: PlannerPass, e: Entity, barracks: Entity, here: NodeId): NodeId | null {
+/** Where an arming outing ends: the booking barracks' rally post when its owner planted one, else the
+ *  door (owner's ruling: armed soldiers gather at the barracks). `null` when that barracks is gone or
+ *  another side's at dispatch; a barracks lost later still draws him to the node stamped here. A rally
+ *  post only stands at a finished barracks, so a foundation's outing ends at its door. */
+function armingReturnNode(pass: PlannerPass, e: Entity, barracks: Entity, here: NodeId): NodeId | null {
   const { world, ctx, terrain } = pass;
   if (!isBarracksOrFoundation(world, ctx, barracks) || !sameSide(world, e, barracks)) return null;
+  const rally = rallyNodeOf(world, terrain, barracks);
+  if (rally !== undefined) return guardPost(world, ctx, terrain, rally, here);
   return interactionCell(world, ctx, terrain, barracks, here);
 }
 

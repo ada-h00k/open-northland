@@ -326,6 +326,35 @@ describe('trainSoldier - the barracks drill', () => {
     expect(sim.world.has(recruit, PlayerOrder)).toBe(true);
   });
 
+  it('a Shift-queued walk stays ahead of the rally walk the finished drill ends in', () => {
+    const sim = simWithBarracks();
+    const house = barracksAt(sim, 6, 3);
+    sim.enqueueSetup({ kind: 'setRallyPoint', building: house, x: 4, y: 12 });
+    sim.step();
+    const flag = sim.world.get(house, RallyPoint).flag;
+    const rallyNode = entityNode(sim.world, terrainOf(sim), flag);
+    const flagAt = sim.world.get(flag, Position);
+    const planted = nodeOfPosition(flagAt.x, flagAt.y);
+    const recruit = settlerAt(sim, CIVILIST_JOB, 2, 3);
+    sim.enqueueSetup({ kind: 'trainSoldier', entity: recruit, house });
+    sim.enqueueSetup({ kind: 'moveUnit', entity: recruit, x: 2, y: 2, queued: true });
+    sim.step();
+    expect(sim.world.get(recruit, OrderQueue).orders).toHaveLength(1); // queued behind the drill
+
+    for (let i = 0; i < 2 * RUN_TICKS && sim.world.has(recruit, TrainingOrder); i++) sim.step();
+    expect(jobOf(sim, recruit)).toBe(SOLDIER_JOB);
+    // The flag takes the fresh soldier as its guard anchor even so.
+    expect(sim.world.get(recruit, Stance).anchorCell).toBe(rallyNode);
+    // The queue starts where the rally walk would: the player's walk takes the road first.
+    for (let i = 0; i < WALK_TICKS && !sim.world.has(recruit, PlayerOrder); i++) sim.step();
+    expect(sim.world.has(recruit, PlayerOrder)).toBe(true);
+    // And it ends at the queued destination, not at the flag.
+    for (let i = 0; i < 2 * WALK_TICKS && sim.world.has(recruit, PlayerOrder); i++) sim.step();
+    const at = nodeOfPosition(sim.world.get(recruit, Position).x, sim.world.get(recruit, Position).y);
+    expect(hexDistanceBetween(at.hx, at.hy, 2, 2)).toBeLessThanOrEqual(1);
+    expect(hexDistanceBetween(at.hx, at.hy, planted.hx, planted.hy)).toBeGreaterThan(2);
+  });
+
   it('spreads recruits leaving one barracks door onto their own nodes, each anchored where it stands', () => {
     const sim = simWithBarracks();
     const house = barracksAt(sim, 6, 3);

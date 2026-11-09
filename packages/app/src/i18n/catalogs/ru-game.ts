@@ -494,6 +494,7 @@ export const ruGame = {
       workArea: 'Рабочая область',
       placeSignpost: 'Поставить указатель',
       bombard: 'Обстрелять',
+      rallyPoint: 'Назначить место сбора',
       tooManyUnits: 'Слишком много юнитов',
       noFreePlaces: 'Нет свободных мест',
       noRoom: 'Нет места',
@@ -1140,7 +1141,8 @@ export const ruGame = {
       alarmOffTooltip: 'Выключить режим обороны: укрывшиеся возвращаются к работе',
       alarmOnEverywhereTooltip: 'Включить режим обороны во всех оборонительных зданиях · {key}',
       alarmOffEverywhereTooltip: 'Выключить режим обороны во всех оборонительных зданиях · {key}',
-      rallySetTooltip: 'Поставить флаг: обученные здесь солдаты пойдут к нему',
+      rallySetTooltip:
+        'Поставить флаг: обученные здесь солдаты пойдут к нему. Щелчок правой кнопкой по земле тоже ставит его, пока казарма выбрана',
       rallyClearTooltip: 'Убрать флаг сбора: новые солдаты остаются у двери',
       demolishTitle: 'Снести здание',
       demolishQuestion: 'Снести здание «{name}»?',

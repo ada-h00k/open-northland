@@ -9,8 +9,10 @@ export interface RallySection {
   update(model: BuildingPanelModel): void;
 }
 
-/** The rally row of a barracks, in the alarm row's look: a wide labelled tile that arms the planting of the
- *  rally flag (it reads "Move" while one stands) and, only while one stands, a small tile that takes it away. */
+/** The rally row of a barracks: a compact labelled tile that arms the planting of the rally flag (it reads
+ *  "Move" while one stands) and, only while one stands, a small tile that takes it away - sized to their
+ *  words, not the alarm row's width, since the point is set once and left alone. The ground right click a
+ *  selected barracks takes does the same, which the tooltip names. */
 export function createRallySection(
   deps: BuildingPanelDeps,
   current: () => BuildingPanelModel | null,
