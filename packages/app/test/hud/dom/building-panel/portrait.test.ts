@@ -2,8 +2,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type { BuildingPanelModel } from '../../../../src/hud/details-panel/model/index.js';
-import { createPortraitSection, orderViews } from '../../../../src/hud/dom/building-panel/portrait.js';
 import type { BuildingPanelDeps } from '../../../../src/hud/dom/building-panel/actions.js';
+import { createPortraitSection, orderViews } from '../../../../src/hud/dom/building-panel/portrait.js';
 import { warmBuildingModel } from '../../../../src/hud/dom/building-panel/warm-model.js';
 import { messages } from '../../../../src/i18n/index.js';
 
