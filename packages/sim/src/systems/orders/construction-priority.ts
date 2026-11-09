@@ -3,9 +3,9 @@ import type { Command } from '../../core/commands/index.js';
 import type { World } from '../../ecs/world.js';
 import type { SystemContext } from '../context.js';
 
-/** Rank one owned construction site against the owner's others - see the command doc. Only a raised
- *  building site takes a rank, so a wall segment, a road site and a standing building refuse; setting
- *  `normal` clears the rank. Never refused into an error, only ignored. */
+/** Prioritize one owned construction site - see the command doc. Only a raised building site takes
+ *  a rank, so a wall segment, a road site and a standing building refuse; `normal` clears the rank.
+ *  Never refused into an error, only ignored. */
 export function setConstructionPriority(
   world: World,
   _ctx: SystemContext,
