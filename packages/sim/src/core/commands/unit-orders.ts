@@ -670,9 +670,9 @@ export type UnitOrderCommand =
     }
   | {
       /**
-       * Rank one owned construction site against the owner's others: their builders work a `high` site
-       * before every unrated one and a `low` one after, whatever the sites' standing. `normal` clears the
-       * rank. Only a raised site takes one, so a wall segment, a road site and a standing building refuse.
+       * Prioritize one owned construction site: its builders work it before every unrated site,
+       * whatever the sites' standing. `normal` clears the rank. Only a raised site takes one, so a wall
+       * segment, a road site and a standing building refuse.
        */
       readonly kind: 'setConstructionPriority';
       readonly building: Entity;
