@@ -1180,6 +1180,12 @@ export const deGame = {
       billInbound: 'Unterwegs: {count}',
       billUnsourced: 'Nicht vorrätig',
       billUnsourcedMark: 'Keine',
+      buildPriority: 'Baupriorität',
+      buildPriorityLow: 'Niedrig',
+      buildPriorityNormal: 'Normal',
+      buildPriorityHigh: 'Hoch',
+      buildPriorityTooltip:
+        'Der Rang, in dem deine Bauarbeiter diese Baustelle abarbeiten: Hoch vor jeder nicht eingestuften Baustelle, Niedrig erst danach.',
       workers: 'Arbeiter',
       residents: 'Bewohner',
       crew: 'Bauarbeiter',

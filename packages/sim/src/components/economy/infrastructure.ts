@@ -66,6 +66,12 @@ export function consumeGoods(world: World, store: Entity, cost: readonly GoodsLi
   }
 }
 
+/** The ranks a player can give one of their construction sites, the order their builders pick sites in:
+ *  a `high` site is worked before every unrated one and a `low` one after. Our rule, not the original's. */
+export const CONSTRUCTION_PRIORITIES = ['low', 'normal', 'high'] as const;
+
+export type ConstructionPriority = (typeof CONSTRUCTION_PRIORITIES)[number];
+
 /**
  * Marks a {@link Building} that is a construction site - a placed foundation that already collides while
  * builders carry material and hammer it up. It rides on the plain `Building + Stockpile` shape, whose
@@ -75,11 +81,18 @@ export function consumeGoods(world: World, store: Entity, cost: readonly GoodsLi
  * `Building.built` is `min(labor, deliveredFraction)`, so a site rises only as fast as both the hammering
  * and the arriving material allow.
  *
+ * `priority` is the player's build rank (`setConstructionPriority`); unset means `normal`, and the field
+ * dies with the site, so no finished building keeps a stale rank.
+ *
  * The site-then-build flow and the material cost (`construction`, extracted `LogicConstructionGoods`) are
  * faithful; the builder-driven pace is an approximation, since the original offers no oracle for
  * construction speed.
  */
-export const UnderConstruction = defineComponent<{ labor: Fixed }>('UnderConstruction', 'economy');
+export const UnderConstruction = defineComponent<{
+  labor: Fixed;
+  /** The player's build rank among their sites; unset reads as `normal`. */
+  priority?: ConstructionPriority | undefined;
+}>('UnderConstruction', 'economy');
 
 /**
  * Marks a {@link Building} being upgraded into a higher tier of its chain. It rides beside

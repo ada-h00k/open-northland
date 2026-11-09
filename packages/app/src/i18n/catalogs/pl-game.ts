@@ -1074,6 +1074,12 @@ export const plGame = {
       billInbound: 'w drodze {count}',
       billUnsourced: 'nie ma w zapasach',
       billUnsourcedMark: 'brak',
+      buildPriority: 'Priorytet budowy',
+      buildPriorityLow: 'Niski',
+      buildPriorityNormal: 'Normalny',
+      buildPriorityHigh: 'Wysoki',
+      buildPriorityTooltip:
+        'Kolejność, w której budowniczowie pracują na tej budowie: wysoki przed każdą nieoznaczoną budową, niski dopiero po nich.',
       workers: 'Pracownicy',
       residents: 'Mieszkańcy',
       crew: 'Budowniczowie',

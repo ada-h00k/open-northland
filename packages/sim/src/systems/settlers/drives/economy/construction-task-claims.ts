@@ -44,6 +44,22 @@ const SITE_TIER = {
   readyUnstaffed: 5,
 } as const;
 
+/** The band width one priority step shifts a site's pick rank by, wider than the whole tier span
+ *  (0..`readyUnstaffed`), so the player's rank outweighs every standing. Owner ruling: the original
+ *  ranks sites by standing and distance alone. */
+const PRIORITY_BAND = 10;
+
+/**
+ * A site's pick rank: its standing tier, shifted a whole {@link PRIORITY_BAND} per priority step, so a
+ * `high` site is worked before every unrated one and a `low` one after them all, whatever its standing;
+ * the nearest site wins inside a band. Unset reads as `normal`.
+ */
+function siteRank(world: World, site: Entity, tier: number): number {
+  const priority = world.tryGet(site, UnderConstruction)?.priority;
+  const band = priority === 'high' ? 1 : priority === 'low' ? -1 : 0;
+  return tier + band * PRIORITY_BAND;
+}
+
 /** Builders a ready or nearly done site draws before it ranks like any other: enough to finish it fast
  *  without emptying the other sites. Owner ruling. */
 const PRIORITY_CREW = 3;
@@ -256,16 +272,16 @@ export class ConstructionTaskClaims {
   }
 
   /**
-   * Rank `owner`'s building sites among `sites`, in ascending id, for `builder`'s pick, by tier. The ranks
-   * are read as the crews stand at this moment; a site another builder joins later in the pass re-ranks on
-   * its own pick.
+   * Rank `owner`'s building sites among `sites`, in ascending id, for `builder`'s pick, by the player's
+   * priority first and the site's tier within a rank. The ranks are read as the crews stand at this
+   * moment; a site another builder joins later in the pass re-ranks on its own pick.
    */
   rankBuildingSites(owner: number | undefined, sites: readonly Entity[], builder: Entity): SiteRanking {
     const rankOf = new Map<Entity, number>();
     const sitesByRank = new Map<number, Entity[]>();
     for (const site of sites) {
       if (!ownersCompatible(owner, ownerOf(this.world, site))) continue;
-      const rank = this.siteTier(site, builder);
+      const rank = siteRank(this.world, site, this.siteTier(site, builder));
       rankOf.set(site, rank);
       const ranked = sitesByRank.get(rank);
       if (ranked === undefined) sitesByRank.set(rank, [site]);

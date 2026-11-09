@@ -5029,6 +5029,30 @@ body.on-drag-scroll.on-drag-scroll-free * {
   padding: 0;
   list-style: none;
 }
+/* Under a site's bill: the build priority label over its low/normal/high strip. */
+.on-hud .on-construction-priority {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid #c9a26233;
+  font-size: 13px;
+}
+.on-hud .on-construction-priority__label {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font: 700 10px / 1.2 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.on-hud .on-construction-priority .on-segmented {
+  justify-self: stretch;
+}
+.on-hud .on-construction-priority .on-segmented > button {
+  flex: 1;
+}
 /* Eight 25 px lines; a longer manifest scrolls inside the panel rather than pushing it off screen. */
 .on-hud .on-manifest--lines {
   max-height: 200px;
