@@ -1075,8 +1075,7 @@ export const plGame = {
       billInbound: 'w drodze {count}',
       billUnsourced: 'nie ma w zapasach',
       billUnsourcedMark: 'brak',
-      buildPriorityTooltip:
-        'Budowniczowie pracują na tej budowie przed każdą budową bez priorytetu.',
+      buildPriorityTooltip: 'Budowniczowie pracują na tej budowie przed każdą budową bez priorytetu.',
       workers: 'Pracownicy',
       residents: 'Mieszkańcy',
       crew: 'Budowniczowie',
