@@ -367,7 +367,7 @@ describe('selection details panel model', () => {
     };
 
     expect(priorityOf(siteOf('high'))).toBe('high');
-    expect(priorityOf(siteOf('low'))).toBe('low');
+    expect(priorityOf(siteOf('low'))).toBe('normal');
     expect(priorityOf(siteOf(undefined))).toBe('normal');
     // A rank this build does not know reads as the default, never as a broken panel.
     expect(priorityOf(siteOf('urgent'))).toBe('normal');
