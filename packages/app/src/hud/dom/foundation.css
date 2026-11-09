@@ -6946,7 +6946,9 @@ body.on-drag-scroll.on-drag-scroll-free * {
 /* A selected Prioritize order keeps its state visible after the press. */
 .on-hud .on-order--tile[aria-pressed="true"] {
   border-color: var(--active);
-  box-shadow: 0 0 0 1px var(--active), 0 0 8px #e3b86888;
+  box-shadow:
+    0 0 0 1px var(--active),
+    0 0 8px #e3b86888;
   color: #fff6de;
 }
 /* The Upgrade tile's grid place, which also holds the level rail. A corner notch on the tile tells that
