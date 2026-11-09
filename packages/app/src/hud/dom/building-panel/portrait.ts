@@ -72,15 +72,17 @@ export function orderViews(
     },
     ...(model.construction === null
       ? []
-      : [{
-          order: 'prioritize' as const,
+      : [
+          {
+            order: 'prioritize' as const,
           glyph: GLYPH.star,
           label: copy.orders.prioritize,
           tooltip: copy.buildPriorityTooltip,
           enabled: true,
           danger: false,
-          pressed: model.construction.priority === 'high',
-        }]),
+            pressed: model.construction.priority === 'high',
+          },
+        ]),
     ...(tier === null ? [] : [tier]),
   ];
 }
