@@ -1094,8 +1094,7 @@ export const enGame = {
       billInbound: 'on the way {count}',
       billUnsourced: 'none in stock',
       billUnsourcedMark: 'none',
-      buildPriorityTooltip:
-        'Builders work this site before every unprioritized site.',
+      buildPriorityTooltip: 'Builders work this site before every unprioritized site.',
       workers: 'Workers',
       residents: 'Residents',
       crew: 'Builders',
