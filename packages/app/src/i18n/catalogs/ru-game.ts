@@ -1169,8 +1169,7 @@ export const ruGame = {
       billInbound: 'В пути: {count}',
       billUnsourced: 'Нет в запасах',
       billUnsourcedMark: 'Нет',
-      buildPriorityTooltip:
-        'Строители работают на этой стройке раньше всех строек без приоритета.',
+      buildPriorityTooltip: 'Строители работают на этой стройке раньше всех строек без приоритета.',
       workers: 'Работники',
       residents: 'Жильцы',
       crew: 'Строители',
