@@ -1,7 +1,7 @@
 import { entityById, MAX_UNIT_ORDER_MEMBERS, ONE, systems } from '@open-northland/sim';
 import { buildingTypeOf, isSettler, isVehicle, num, ownerPlayerOf } from '../../../game/snapshot/index.js';
-import type { Tile } from '../../picking.js';
 import { ownedByAnotherSeat, pickableSeat } from '../../../game/viewer-seat.js';
+import type { Tile } from '../../picking.js';
 import type { DoorMarkerHit } from '../click-hits.js';
 import type { FormationUnit } from '../orders/formation.js';
 import {

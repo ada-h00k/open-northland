@@ -21,10 +21,8 @@ import {
   Owner,
   PickupClaim,
   Position,
-  RallyPoint,
   Residence,
   Settler,
-  Stance,
   Stockpile,
   setMissionBehaviour,
   setNeedsEnabled,
@@ -1036,25 +1034,6 @@ describe('the training queue', () => {
     run(sim, 4 * BEAT_TICKS);
     expect(sim.world.get(recruit, Settler).jobType).toBe(SOLDIER);
     expect(sim.world.tryGet(recruit, Equipment)?.weapon ?? null).toBe(null);
-  });
-
-  it('arms a plain-counter soldier a rally flag gathers once the arming beat sees the post', () => {
-    const sim = trainSim();
-    const house = barracksAt(sim, 6, 3);
-    const recruit = settlerAt(sim, CIVILIST, 3, 3);
-    pileAt(sim, 9, 3, new Map([[SWORD_LONG_GOOD, 1]]));
-    sim.enqueueSetup({ kind: 'setRallyPoint', building: house, x: 12, y: 2 });
-    sim.step();
-    const flag = sim.world.get(house, RallyPoint).flag;
-
-    setCounter(sim, 'trainSoldiers', 1);
-    runUntil(sim, () => sim.world.get(recruit, Settler).jobType === SOLDIER, 2000, 'enlistment');
-    run(sim, 2 * BEAT_TICKS);
-    // The enlist beat leaves him naked (the counter's own rule), but the flag holds his post: the
-    // posted-waiter walk arms him from the pile, and the class he takes is the weapon's.
-    expect(sim.world.get(recruit, Stance).anchorCell).toBe(nodeOf(sim, flag));
-    runUntil(sim, () => (sim.world.tryGet(recruit, Equipment)?.weapon ?? null) !== null, 4000, 'arming');
-    expect(sim.world.get(recruit, Settler).jobType).toBe(SWORDSMAN_LONG);
   });
 });
 

@@ -277,11 +277,9 @@ function abandonDrill(world: World, e: Entity): boolean {
 /**
  * Post a fresh soldier at its barracks' rally point: the point becomes the anchor its guard walk-back holds,
  * so it leaves the door for the point instead of standing where it stepped out. A barracks with no rally
- * point leaves the soldier anchored at its feet. A soldier the arming still owes its weapon starts no walk
- * here: the fetch errand a booking dispatches owns him, and its outing ends on the post
- * (`recruit-arming.ts`), so the first walk to the flag is the one that outing closes with - and a bare
- * recruit with no booking waits by the door for the same reason, armed by the player's hand or a later
- * booking, the walk-back then holding him to the post. A soldier wearing his weapon starts the walk at once.
+ * point leaves the soldier anchored at its feet. An assistant recruit starts no walk here: the fetch
+ * errand his booking dispatches owns him, and its outing ends on the post (`recruit-arming.ts`). A soldier
+ * the player drilled by hand walks to the post at once, armed or not (owner's ruling).
  */
 function sendToRallyPoint(world: World, ctx: SystemContext, e: Entity, barracks: Entity): void {
   if (ctx.terrain === undefined) return;
@@ -289,12 +287,6 @@ function sendToRallyPoint(world: World, ctx: SystemContext, e: Entity, barracks:
   if (rally === undefined) return;
   moveAnchor(world, ctx.content, e, rally);
   if (world.has(e, AssistantRecruit)) return;
-  // A recruit still bare owes his weapon first: the arming pass's fetch errand - booked now or later, its
-  // outing ends on the post - is the walk that first carries him to the flag.
-  if ((world.tryGet(e, Equipment)?.weapon ?? null) === null) return;
-  // The walk-back alone does not hold this line for him: a live map keeps the combat dormancy gate awake
-  // (a rival seat, hostile wildlife), and that pass sends a DEFEND guard off its anchor home the very
-  // tick - it defers to a soldier still owed his weapon (`conflict/chase.ts`), and so does this beat.
   // The post is the anchor, or the open node beside it when something stands on the anchor.
   const here = entityNode(world, ctx.terrain, e);
   const post = guardPost(world, ctx, ctx.terrain, rally, here);

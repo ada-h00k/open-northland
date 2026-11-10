@@ -1,4 +1,5 @@
 import {
+  AssistantRecruit,
   AttackOrder,
   Building,
   Engagement,
@@ -100,14 +101,12 @@ function marchRestTicks(world: World, e: Entity): number {
   return player !== undefined && isMachinePlayer(world, player) ? MACHINE_MARCH_REST_TICKS : REPATH_CADENCE;
 }
 
-/** Whether soldier `e` still owes the weapon his class fights by: a soldier trade that holds neither the
- *  combat {@link Weapon} his take-up stamped nor a worn weapon good - the unarmed base class a fresh drill
- *  enlists, or a class disarmed since. His arming - the assistant's fetch errand or the player's hand -
- *  owns the walk that first ends on the post (`recruit-arming.ts`), so the walk-back holds while none of
- *  the two stands. A hero is passed over, keeping its own post walks; either marker alone arms a class
- *  soldier, as a spawn's class weapon lands in the slot and a dressed recruit's take-up stamps the
- *  {@link Weapon}. */
-function awaitsRecruitWeapon(world: World, ctx: SystemContext, e: Entity): boolean {
+/** Whether `e` is an assistant-booked soldier still owed the weapon his class fights by: no combat
+ *  {@link Weapon} stamped and no weapon good worn. The arming errand owns the walk that first ends on his
+ *  post (`recruit-arming.ts`), so the walk-back holds until then. A soldier drilled by hand has no booking
+ *  and walks to his post bare. */
+export function awaitsRecruitWeapon(world: World, ctx: SystemContext, e: Entity): boolean {
+  if (world.tryGet(e, AssistantRecruit)?.armed !== false) return false;
   const { jobType } = world.get(e, Settler);
   if (!isSoldierJob(ctx.content, jobType)) return false;
   if (world.has(e, Weapon)) return false;
@@ -118,9 +117,8 @@ function awaitsRecruitWeapon(world: World, ctx: SystemContext, e: Entity): boole
  *  fight. The {@link Engagement} always drops here, or the planner's Engagement gate would bench the unit for
  *  good; the walk home defers to a live equip errand, whose end re-holds the unchanged anchor, and to a
  *  pressing need, which the planner answers above the DEFEND hold. Without that, a guard facing an enemy it
- *  cannot reach is turned back from every meal and starves beside the store. It defers to a soldier still
- *  owed his weapon too: the arming errand or the player's hand owns the walk that first carries him to the
- *  post (`recruit-arming.ts`), so a walk-back started now would march him there bare. */
+ *  cannot reach is turned back from every meal and starves beside the store. It defers to a booked recruit
+ *  still owed his weapon too ({@link awaitsRecruitWeapon}), or the walk-back would march him there bare. */
 function returnToAnchor(world: World, ctx: SystemContext, e: Entity, here: NodeId, anchorCell: NodeId): void {
   world.remove(e, Engagement);
   world.remove(e, HuntFocus); // a post-holder holds no prey
