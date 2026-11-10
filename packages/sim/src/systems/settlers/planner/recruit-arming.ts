@@ -10,13 +10,15 @@ import {
   Carrying,
   Equipment,
   EquipOrder,
+  MoveGoal,
   ownerOf,
   ownersCompatible,
   PickupClaim,
   Position,
   playerGoodList,
+  RallyPoint,
   Settler,
-  type SettlerIdentity,
+  Stance,
   SupplyRun,
   sameSide,
   TrainingOrder,
@@ -25,8 +27,8 @@ import type { Entity, World } from '../../../ecs/world.js';
 import { nodeOfPosition } from '../../../nav/halfcell.js';
 import type { SpatialGate } from '../../../nav/node-circle.js';
 import type { NodeId, TerrainGraph } from '../../../nav/terrain/index.js';
-import type { SystemContext } from '../../context.js';
 import { guardPost } from '../../conflict/chase.js';
+import type { SystemContext } from '../../context.js';
 import { buildingBlockedCells } from '../../footprint/index.js';
 import { isTravelling } from '../../movement/nav-state.js';
 import { rallyNodeOf } from '../../orders/rally-point.js';
@@ -35,6 +37,7 @@ import {
   isBarracks,
   isBarracksOrFoundation,
   isSoldierJob,
+  MILITARY_MODE,
   weaponDamageVsMaterial,
   weaponGoodsByStrength,
 } from '../../readviews/index.js';
@@ -56,7 +59,7 @@ import {
   unclaimedStockOf,
 } from '../targets/index.js';
 import { unreachableGoalVeto } from '../unreachable-goals.js';
-import { ASSISTANT_SCAN_PERIOD_TICKS } from './assistant-grants.js';
+import { ASSISTANT_SCAN_PERIOD_TICKS, assistantScanDue } from './assistant-grants.js';
 import { wakeIdle } from './idle-replan.js';
 import type { PlannerPass } from './pass.js';
 
@@ -68,11 +71,13 @@ import type { PlannerPass } from './pass.js';
  * gather there, not at the store). Runs on the grants
  * pass's stride beat with the same one-errand rule. A dispatch claims its unit at once, so a recruit on the same beat shops for
  * another; the recruit's own plan re-claims it.
+ *
+ * The pass also serves the recruits no counter booked ({@link dispatchPostedWaiters}): a soldier the
+ * drill enlisted bare walks his weapon errand the same way, so a rally flag never gathers him unarmed.
  */
 export function dispatchRecruitArming(pass: PlannerPass): void {
   const { world, ctx } = pass;
   const recruits = world.canonicalQuery(AssistantRecruit);
-  if (recruits.length === 0) return; // no bookings: the pass costs one empty query
 
   for (const e of recruits) {
     if ((e + ctx.tick) % ASSISTANT_SCAN_PERIOD_TICKS !== 0) continue;
@@ -101,21 +106,93 @@ export function dispatchRecruitArming(pass: PlannerPass): void {
       // someone else instead of skipping forever.
       if ((eq?.weapon ?? null) !== null) {
         world.remove(e, AssistantRecruit);
+        releaseToPost(pass, e, booking.barracks);
         continue;
       }
-      dispatchWeaponFetch(pass, e, settler, booking.intent, booking.barracks, owner);
+      dispatchWeaponFetch(
+        pass,
+        e,
+        classRecruitWant(pass, settler.tribe, booking.intent, owner),
+        booking.barracks,
+        owner,
+        null,
+      );
       continue;
     }
     // The fallback armor outing: the weapon errand normally chains the armor at the store, so this
     // only re-dispatches a recruit left armed but bare when that chained errand was lost.
     if ((eq?.armor ?? null) !== null) {
       world.remove(e, AssistantRecruit);
+      releaseToPost(pass, e, booking.barracks);
       continue;
     }
     if (!dispatchArmorFetch(pass, e, booking.intent, booking.barracks, owner)) {
       world.remove(e, AssistantRecruit);
+      // Armed and released with no armor reachable: nothing owns his feet now, so the walk the booking
+      // was holding back starts here - his barracks' rally post, the end its errands close on.
+      releaseToPost(pass, e, booking.barracks);
     }
   }
+
+  dispatchPostedWaiters(pass);
+}
+
+/**
+ * The recruits the counters never booked, yet a rally flag gathers: a soldier the drill enlisted bare
+ * with no booking stands posted at its barracks' rally point with an empty weapon slot, and nothing of
+ * the booking flow ever owns its feet. On its scan beat this walk dispatches the same fetch errand a
+ * booked recruit shops for, for the class-generic want ({@link soldierWeaponWant}) with the seat's
+ * vetoes read - the barracks' own stock first, else the nearest reachable store, and the walk ends on
+ * the post (`armingReturnNode`), so the march to the flag still waits for the weapon. A beat with no
+ * wanted weapon reachable leaves him standing by the door; one where the stock arrived dispatches the
+ * fetch, as the pass re-shops every beat while the slot stays empty. A plain-counter soldier the flag
+ * gathers arms here too: the naked rule is the counter flow's enlist beat, not the flag's - a bare
+ * soldier standing nowhere near a rally post is left to the counters and the player's hand.
+ */
+function dispatchPostedWaiters(pass: PlannerPass): void {
+  const { world, ctx, terrain } = pass;
+  const due = assistantScanDue(world, ctx.tick);
+  let rallyNodes: Map<NodeId, Entity> | undefined;
+  for (let d = 0; d < due.length; d++) {
+    const e = due[d] as Entity;
+    if (world.has(e, AssistantRecruit)) continue; // the booking loop owns him
+    if (world.has(e, TrainingOrder) || world.has(e, EquipOrder) || world.has(e, Age)) continue;
+    if (anotherSystemOwns(world, e)) continue;
+    // A soldier with his hands or his walk spoken for is left to finish, as a booked recruit is.
+    if (
+      world.has(e, Carrying) ||
+      world.has(e, SupplyRun) ||
+      world.has(e, PickupClaim) ||
+      isTravelling(world, e)
+    )
+      continue;
+    const settler = world.get(e, Settler);
+    if (!isSoldierJob(ctx.content, settler.jobType)) continue;
+    // Armed or not a rally soldier: a worn weapon means the walk-back and the walk home own him.
+    if ((world.tryGet(e, Equipment)?.weapon ?? null) !== null) continue;
+    // Posted where a rally flag stands: the anchor the enlist beat or the walk-back holds him on.
+    const stance = world.tryGet(e, Stance);
+    if (stance === undefined || stance.mode !== MILITARY_MODE.DEFEND || stance.anchorCell === null) continue;
+    const owner = ownerOf(world, e);
+    if (owner === undefined) continue;
+    rallyNodes ??= postedRallyNodes(world, terrain);
+    const barracks = rallyNodes.get(stance.anchorCell);
+    if (barracks === undefined || !sameSide(world, e, barracks)) continue;
+    const vetoed = playerGoodList(world, AssistantWeaponVetoes, owner);
+    const want = soldierWeaponWant(ctx.content, settler.tribe).filter((good) => !vetoed.includes(good));
+    if (want.length === 0) continue;
+    dispatchWeaponFetch(pass, e, want, barracks, owner, barracks);
+  }
+}
+
+/** The rally node each rally-flagged barracks holds, built once for the pass's first posted waiter. */
+function postedRallyNodes(world: World, terrain: TerrainGraph): Map<NodeId, Entity> {
+  const nodes = new Map<NodeId, Entity>();
+  for (const barracks of world.canonicalQuery(RallyPoint)) {
+    const rally = rallyNodeOf(world, terrain, barracks);
+    if (rally !== undefined) nodes.set(rally, barracks);
+  }
+  return nodes;
 }
 
 /**
@@ -170,6 +247,55 @@ function unvetoedPreference(
   const goods = [...new Set(rows.map((w) => w.goodType))];
   byIntent.set(intent, goods);
   return goods;
+}
+
+/**
+ * Every weapon good the tribe's soldier-class rows bind, strongest bare-target damage first, the good
+ * id breaking a tie: the want a recruit with no class booking shops for, since the class he takes is
+ * the one the weapon he lifts binds (`takeUpWeaponGood`). The list is shared: read it, never edit it.
+ */
+function soldierWeaponWant(content: ContentSet, tribe: number): readonly number[] {
+  let byTribe = wantTables.get(content);
+  if (byTribe === undefined) {
+    byTribe = new Map();
+    wantTables.set(content, byTribe);
+  }
+  const held = byTribe.get(tribe);
+  if (held !== undefined) return held;
+  const rows = content.weapons.filter(
+    (w): w is WeaponType & { goodType: number } =>
+      w.tribeType === tribe && w.goodType !== undefined && w.jobType !== undefined,
+  );
+  rows.sort(
+    (a, b) =>
+      weaponDamageVsMaterial(b, BARE_TARGET) - weaponDamageVsMaterial(a, BARE_TARGET) ||
+      a.goodType - b.goodType,
+  );
+  const goods = [...new Set(rows.map((w) => w.goodType))];
+  byTribe.set(tribe, goods);
+  return goods;
+}
+
+/** {@link soldierWeaponWant} per content and tribe: content-static. */
+const wantTables = new WeakMap<ContentSet, Map<number, readonly number[]>>();
+
+/**
+ * The want a class booking shops for: the intent's unvetoed goods in the seat's weapon order, strongest
+ * first without one (the content-wide default the assistant window shows).
+ */
+function classRecruitWant(
+  search: ArmingSearch,
+  tribe: number,
+  intent: keyof typeof INTENT_WEAPON_CLASS,
+  owner: number,
+): readonly number[] {
+  const { world, ctx } = search;
+  const vetoed = playerGoodList(world, AssistantWeaponVetoes, owner);
+  const preference = armingGoodPreference(ctx.content, tribe, intent, vetoed);
+  const order =
+    assistantWeaponOrder(world, owner, intent) ??
+    weaponGoodsByStrength(ctx.content, INTENT_WEAPON_CLASS[intent]);
+  return inSeatOrder(preference, order);
 }
 
 /**
@@ -277,27 +403,27 @@ function inSeatOrder(preference: readonly number[], order: readonly number[]): r
 /** What a store search for a recruit's gear reads: a {@link PlannerPass} or one settler's planner context. */
 type ArmingSearch = Pick<PlannerPass, 'world' | 'ctx' | 'terrain' | 'targets' | 'supply'>;
 
-/** Send the recruit for the first reachable weapon of its intent's class in the seat's order, the
- *  strongest first by default. */
+/** Send the recruit for the first reachable weapon of `want`, the seat's order, strongest first by
+ *  default; `prefer` wins when it lends a wanted good. */
 function dispatchWeaponFetch(
-  pass: PlannerPass,
+  search: ArmingSearch,
   e: Entity,
-  settler: SettlerIdentity,
-  intent: keyof typeof INTENT_WEAPON_CLASS,
+  want: readonly number[],
   barracks: Entity,
   owner: number,
+  prefer: Entity | null,
 ): void {
-  const { world, supply } = pass;
+  const { world, supply } = search;
   let route: FetchRoute | undefined;
-  const routeOf = (): FetchRoute => (route ??= fetchRouteFor(pass, e, owner));
-  const pick = pickReachableWeapon(pass, settler.tribe, intent, owner, routeOf, null);
+  const routeOf = (): FetchRoute => (route ??= fetchRouteFor(search, e, owner));
+  const pick = pickReachableWeapon(search, want, owner, routeOf, prefer);
   if (pick === null) return;
   supply.stampPickupClaim(e, { ...pick, amount: EQUIP_FETCH_UNITS });
   world.add(e, EquipOrder, {
     group: 'weapon',
     slot: 0,
     goodType: pick.goodType,
-    returnTo: armingReturnNode(pass, e, barracks, routeOf().here),
+    returnTo: armingReturnNode(search, e, barracks, routeOf().here),
     stage: 'acquire',
     issuer: 'assistant-recruit',
     queued: [],
@@ -305,28 +431,21 @@ function dispatchWeaponFetch(
   wakeIdle(world, e); // planned onto the errand this pass
 }
 
-/** The weapon policy: the first good of the seat's order for the recruit's class that a reachable store
- *  lends, with its nearest source, `prefer` when it lends the good; null when none does. The route is
- *  resolved only once some store of the side lends a wanted row. */
+/** The weapon policy: the first good of `orderedWant` that a reachable store lends, with its nearest
+ *  source, `prefer` when it lends the good; null when none does. The route is resolved only once some
+ *  store of the side lends a wanted row. */
 function pickReachableWeapon(
   search: ArmingSearch,
-  tribe: number,
-  intent: keyof typeof INTENT_WEAPON_CLASS,
+  orderedWant: readonly number[],
   owner: number,
   routeOf: () => FetchRoute,
   prefer: Entity | null,
 ): ArmingSource | null {
-  const { world, ctx, targets, supply } = search;
+  const { world, targets, supply } = search;
   let route: FetchRoute | undefined;
   // The route's signpost network met with the goods-search limit at its node, read once for every row.
   let gate: SpatialGate | undefined;
-  const vetoed = playerGoodList(world, AssistantWeaponVetoes, owner);
-  const preference = armingGoodPreference(ctx.content, tribe, intent, vetoed);
-  // Without a seat order, the content-wide default the assistant window shows.
-  const order =
-    assistantWeaponOrder(world, owner, intent) ??
-    weaponGoodsByStrength(ctx.content, INTENT_WEAPON_CLASS[intent]);
-  for (const goodType of inSeatOrder(preference, order)) {
+  for (const goodType of orderedWant) {
     if (prefer !== null && lendsGood(search, prefer, goodType)) return { goodType, source: prefer };
     // No store of the side lends this row: the route is not worth resolving.
     if (!storeHoldingMayLieIn(targets.bands, world, goodType, owner, supply, undefined)) continue;
@@ -490,23 +609,40 @@ function lendsGood(
  * own: the weapon, and the armor, the arming pass would send him for, when the barracks holds that good.
  * A better-ranked good another reachable store holds still wins, and that slot is left to the pass's
  * errand. Owner's ruling, authored.
+ *
+ * A recruit with no booking - the drill a player ordered by hand - shops the same way for the
+ * class-generic want: the barracks' stock arms him on the spot, a reachable store's stock sends him on
+ * the fetch errand now, and nothing reachable leaves him standing bare for the pass's posted-waiter
+ * walk to arm him once the stock arrives. No armor want stands for him: the booking names none.
  */
 export function armRecruitInPlace(search: ArmingSearch, e: Entity, barracks: Entity): void {
   const { world, ctx, targets, supply } = search;
   const booking = world.tryGet(e, AssistantRecruit);
-  if (booking === undefined || booking.armed || booking.intent === 'trainSoldiers') return;
+  if (booking?.armed === true) return;
+  if (booking !== undefined && booking.intent === 'trainSoldiers') return;
+  // A booking still standing here names a class want: the armed and plain-soldier bookings returned above.
+  const intent = booking?.intent as keyof typeof INTENT_WEAPON_CLASS | undefined;
   const settler = world.get(e, Settler);
   const owner = ownerOf(world, e);
   if (owner === undefined || !isSoldierJob(ctx.content, settler.jobType)) return;
   if (!isBarracks(world, ctx, barracks) || !sameSide(world, e, barracks)) return;
-  const { intent } = booking;
   let route: FetchRoute | undefined;
   const routeOf = (): FetchRoute => (route ??= fetchRouteFor(search, e, owner));
   if ((world.tryGet(e, Equipment)?.weapon ?? null) === null) {
-    const weapon = pickReachableWeapon(search, settler.tribe, intent, owner, routeOf, barracks);
+    // The class booking shops its class's seat order; the booking-less recruit shops every soldier
+    // class's goods, strongest first - the class he takes is the one the weapon he lifts binds.
+    const want =
+      intent === undefined
+        ? soldierWeaponWant(ctx.content, settler.tribe).filter(
+            (good) => !playerGoodList(world, AssistantWeaponVetoes, owner).includes(good),
+          )
+        : classRecruitWant(search, settler.tribe, intent, owner);
+    const weapon = pickReachableWeapon(search, want, owner, routeOf, barracks);
     if (weapon?.source === barracks) equipFromStore(world, ctx, e, barracks, weapon.goodType, 'weapon', 0);
+    else if (weapon !== null && booking === undefined)
+      dispatchWeaponFetch(search, e, want, barracks, owner, barracks);
   }
-  if ((world.tryGet(e, Equipment)?.armor ?? null) === null) {
+  if (intent !== undefined && (world.tryGet(e, Equipment)?.armor ?? null) === null) {
     const { here, limit, veto } = routeOf();
     const armor = pickReachableArmor(world, ctx, targets, supply, here, owner, intent, limit, veto, barracks);
     if (armor?.source === barracks) equipFromStore(world, ctx, e, barracks, armor.goodType, 'armor', 0);
@@ -526,12 +662,29 @@ const BARE_TARGET = 0;
  *  door (owner's ruling: armed soldiers gather at the barracks). `null` when that barracks is gone or
  *  another side's at dispatch; a barracks lost later still draws him to the node stamped here. A rally
  *  post only stands at a finished barracks, so a foundation's outing ends at its door. */
-function armingReturnNode(pass: PlannerPass, e: Entity, barracks: Entity, here: NodeId): NodeId | null {
-  const { world, ctx, terrain } = pass;
+function armingReturnNode(search: ArmingSearch, e: Entity, barracks: Entity, here: NodeId): NodeId | null {
+  const { world, ctx, terrain } = search;
   if (!isBarracksOrFoundation(world, ctx, barracks) || !sameSide(world, e, barracks)) return null;
   const rally = rallyNodeOf(world, terrain, barracks);
   if (rally !== undefined) return guardPost(world, ctx, terrain, rally, here);
   return interactionCell(world, ctx, terrain, barracks, here);
+}
+
+/**
+ * The recruit the arming pass just released, booking gone and no errand dispatched, walks the post its
+ * booking's barracks holds: the rally post when the owner planted one, else the door - the same end its
+ * fetch errands close on. A recruit still bare starts no walk here either: nothing arms him now, so he
+ * waits by the door for the player's hand, as a drill-end release without a booking does
+ * (`training.ts`). A recruit wearing his weapon starts the walk at once - the walk his booking's
+ * errands would have closed on, now that nothing owns his feet.
+ */
+function releaseToPost(pass: PlannerPass, e: Entity, barracks: Entity): void {
+  const { world, terrain } = pass;
+  if (terrain === undefined) return;
+  if ((world.tryGet(e, Equipment)?.weapon ?? null) === null) return;
+  const here = entityNode(world, terrain, e);
+  const post = armingReturnNode(pass, e, barracks, here);
+  if (post !== null && post !== here) world.add(e, MoveGoal, { cell: post });
 }
 
 /** The recruit's store-search inputs, resolved once per dispatch attempt. `limit` is the settlement

@@ -435,6 +435,16 @@ class PlayerGoodCounts {
   }
 }
 
+/**
+ * The settlers, ascending id, whose assistant scan beat falls on `tick` - the slice
+ * {@link dispatchAssistantGrants} dresses this pass. The recruit-arming pass walks the same slice for
+ * the bare soldiers it owes a weapon, so both passes share one cached feed instead of scanning the
+ * roster every tick.
+ */
+export function assistantScanDue(world: World, tick: number): readonly Entity[] {
+  return dueThisBeat(world, tick);
+}
+
 const byId = (e: Entity): number => e;
 
 /** The beat of the scan period `e` is considered on. */
