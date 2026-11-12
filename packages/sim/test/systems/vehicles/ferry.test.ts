@@ -72,6 +72,23 @@ function sim(): Simulation {
   return s;
 }
 
+/** The two banks plus a one-cell-wide fjord into the far island at row 8: a settler standing at its
+ *  inner end has no berth near, and the crossing must walk the coast outward for one. */
+function fjordMap(): TerrainMap {
+  const typeIds = new Array<number>(MAP_CELLS * MAP_CELLS).fill(GRASS);
+  for (let row = 0; row < MAP_CELLS; row++) {
+    for (let col = SEA_FROM; col < SEA_TO; col++) typeIds[row * MAP_CELLS + col] = WATER;
+  }
+  for (const col of [14, 15, 16]) typeIds[8 * MAP_CELLS + col] = WATER;
+  return halfCellMapFromCells({ width: MAP_CELLS, height: MAP_CELLS, typeIds });
+}
+
+function fjordSim(): Simulation {
+  const s = new Simulation({ seed: 5, content: testContent(), map: fjordMap() });
+  s.enqueueSetup({ kind: 'setNeedsEnabled', enabled: false });
+  return s;
+}
+
 function spawnShip(s: Simulation, x = SHIP_HX, y = HOME.hy): Entity {
   const ship = createVehicle(s.world, ctxOf(s), {
     vehicleType: SHIP_SMALL,
@@ -624,6 +641,66 @@ describe('ferryPassage', () => {
     expect(aboard).toBe(true);
     stepAshore(s, passenger, FAR);
     stepOnto(s, passenger, FAR);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    const state = s.world.get(ship, Vehicle);
+    expect(state.task).toBe('none');
+    expect(vehicleCommander(state)).toBe(scout);
+  });
+
+  it('a pickup whose berth died under it re-picks the next berth and the passenger walks there', () => {
+    const s = fjordSim();
+    const ship = spawnShip(s); // moors at the near shore, scout at the helm
+    const scout = crewScout(s, ship);
+    const home = mooringPoint(s, ship);
+    // The passenger stands at the fjord's inner end, where no berth fits; the goal lies on the
+    // ship's own island, so the taxi is dispatched across.
+    const passenger = spawnSettler(s, 34, 16);
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: HOME.hx, y: HOME.hy }));
+    s.step();
+    const voyage = s.world.tryGet(ship, FerryVoyage);
+    expect(voyage?.phase).toBe('pickup');
+    const bookedShore = voyage?.shore;
+    expect(bookedShore).not.toBeUndefined();
+
+    // Let the taxi get under way, then park a second ship right on its booked berth's water and kill
+    // the sail the way a blocked step does: hull adrift, no drive, no berth remembered.
+    let underWay = false;
+    for (let t = 0; t < 60 && !underWay; t++) {
+      s.step();
+      underWay = s.world.has(ship, VehicleDrive) && !s.world.get(ship, Vehicle).moored;
+    }
+    expect(underWay).toBe(true);
+    const blocker = spawnShip(s, 27, 15); // spawns mid-sea, moors at the booked berth's shore
+    let blockerMoored = false;
+    for (let t = 0; t < 60 && !blockerMoored; t++) {
+      s.step();
+      blockerMoored = s.world.get(blocker, Vehicle).moored;
+    }
+    expect(blockerMoored).toBe(true);
+    s.world.remove(ship, VehicleDrive);
+    const live = s.world.mut(ship, Vehicle);
+    live.task = 'none';
+    live.mooring = null;
+
+    // The watcher re-picks: the taxi moors at the next berth the water still takes, not the dead one.
+    let remade = false;
+    for (let t = 0; t < SAIL_TICKS * 2 && !remade; t++) {
+      s.step();
+      const state = s.world.get(ship, Vehicle);
+      remade =
+        s.world.tryGet(ship, FerryVoyage)?.phase === 'board' &&
+        state.moored &&
+        state.mooring !== null &&
+        (state.mooring.hx !== bookedShore?.hx || state.mooring.hy !== bookedShore?.hy);
+    }
+    expect(remade).toBe(true);
+
+    // The passenger walks to the new door, rides over, and lands at its goal; no lost note anywhere.
+    boardOut(s, ship, passenger);
+    stepAshore(s, passenger, HOME);
+    stepOnto(s, passenger, HOME);
     expect(s.world.has(passenger, LostWay)).toBe(false);
     stepReturnHome(s, ship, home);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);

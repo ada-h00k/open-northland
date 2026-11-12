@@ -42,11 +42,12 @@ import { vehicleIndex } from './registry.js';
 // ship lying at a shore of this island with a scout aboard, the settler sails instead. It walks to the
 // door, boards, and the ship docks at a shore of the target island nearest the clicked spot, where the
 // riders step off and walk on to their spots; the empty ship then sails back to the mooring the
-// crossing booked it at. A route that dies under the hull - a step another ship blocked, say - is not
-// the end of a leg: the watcher puts the dock order of the leg it was on out again, so no crossing
-// leaves its ship, or its passengers, adrift with nobody watching. The pieces are the crew's attach
-// and board, the dock order's sail and moor, and the rider rung's held leaving; this file only books
-// the crossing, flips it from boarding to sailing, sails it home, and reads it over.
+// crossing booked it at. A route that dies under the hull - a step another ship blocked, say - or a
+// berth that went out from under the ship ends no leg: the watcher runs the leg's berth choice again,
+// the nearest shore the water still takes, so the crossing always moors where the coast lets it and
+// nobody is left ashore or adrift. The pieces are the crew's attach and board, the dock order's sail
+// and moor, and the rider rung's held leaving; this file only books the crossing, flips it from
+// boarding to sailing, sails it home, and reads it over.
 
 /**
  * Book `e`, standing on its island, the crossing to `goal` on another one: the nearest idle ship of
@@ -359,18 +360,17 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
       return;
     }
     if (!state.moored) {
-      // Adrift with the pickup under way: the route died under the hull. The dock order goes out
-      // again for the booked shore, throttled; the waiting passengers keep waiting.
+      // Adrift with the pickup under way: the route died under the hull, or the berth it booked went
+      // out from under it. The berth choice runs again - the nearest shore the water still takes,
+      // judged now, the waiting passenger the reference - so the taxi moors where the coast lets it
+      // and the passenger walks that door, instead of the dead berth haunting the crossing.
       if (watchAttemptDue(world, ship, ctx.tick)) {
-        const shore = voyage.shore;
-        if (
-          shore !== null &&
-          dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: shore.hx, y: shore.hy })
-        ) {
-          watchRetry.get(world)?.delete(ship);
-        } else {
-          stampWatchTry(world, ship, ctx.tick);
-        }
+        const first = remaining[0] as Entity | undefined;
+        const at = first === undefined ? null : entityNode(world, terrain, first);
+        const booked =
+          at !== null && sailToShore(world, ctx, terrain, ship, state, at, terrain.componentOf(at), 'pickup');
+        if (booked) watchRetry.get(world)?.delete(ship);
+        else stampWatchTry(world, ship, ctx.tick);
       }
       return;
     }
@@ -408,20 +408,17 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
   }
   if (!world.has(ship, VehicleDrive)) {
     // Adrift with the crossing under way: the sail's route died under the hull - a step another ship
-    // blocked, say - or the player stopped it in the open water, which moors it at the booked shore
-    // and reads as arrived above. A dead route keeps its booking: the dock order goes out again for
-    // the booked shore, throttled like every watcher try, and the crossing finishes instead of
-    // leaving ship and passengers adrift with nobody watching.
+    // blocked, say - or the berth it booked went out from under it; the player's own stop moors it at
+    // the booked shore and reads as arrived above. A dead route keeps its booking: the berth choice
+    // runs again - the nearest shore of the target island the water still takes, judged now, the first
+    // booking's goal the reference - so the ship lands where the coast lets it and the riders walk on
+    // from there, instead of the dead berth haunting the crossing or ship and passengers sitting
+    // adrift with nobody watching.
     if (watchAttemptDue(world, ship, ctx.tick)) {
-      const shore = voyage.shore;
-      if (
-        shore !== null &&
-        dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: shore.hx, y: shore.hy })
-      ) {
-        watchRetry.get(world)?.delete(ship);
-      } else {
-        stampWatchTry(world, ship, ctx.tick);
-      }
+      const first = remaining[0] as Entity | undefined;
+      const booked = first !== undefined && sailVoyage(world, ctx, terrain, ship, state, first);
+      if (booked) watchRetry.get(world)?.delete(ship);
+      else stampWatchTry(world, ship, ctx.tick);
     }
     return;
   }
