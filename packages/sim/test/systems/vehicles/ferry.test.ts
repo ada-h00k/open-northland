@@ -165,12 +165,60 @@ function stepOnto(
   throw new Error(`never reached the spot: at ${JSON.stringify(at)}`);
 }
 
+/** The shore point `ship` lies moored at. */
+function mooringPoint(s: Simulation, ship: Entity): { hx: number; hy: number } {
+  const mooring = s.world.get(ship, Vehicle).mooring;
+  if (mooring === null) throw new Error('the ship lies unmoored');
+  return mooring;
+}
+
+/** Step until `ship` lies moored at `point` again: the return leg's end. */
+function stepMooredAt(
+  s: Simulation,
+  ship: Entity,
+  point: { readonly hx: number; readonly hy: number },
+  limit = SAIL_TICKS,
+): void {
+  for (let ticks = 0; ticks < limit; ticks++) {
+    s.step();
+    const state = s.world.get(ship, Vehicle);
+    if (state.moored && state.mooring?.hx === point.hx && state.mooring?.hy === point.hy) return;
+  }
+  throw new Error('the ship never moored at its point again');
+}
+
+/** Step through the delivered crossing's return leg: the watcher holds until the ship moors home. */
+function stepReturnHome(
+  s: Simulation,
+  ship: Entity,
+  home: { readonly hx: number; readonly hy: number },
+): void {
+  for (let ticks = 0; ticks < SAIL_TICKS; ticks++) {
+    if (s.world.tryGet(ship, FerryVoyage)?.phase === 'return') {
+      stepMooredAt(s, ship, home);
+      return;
+    }
+    // A short walk-on can lose the race to the homebound ship: moored home ends the watcher too.
+    const state = s.world.get(ship, Vehicle);
+    if (
+      s.world.tryGet(ship, FerryVoyage) === undefined &&
+      state.moored &&
+      state.mooring?.hx === home.hx &&
+      state.mooring?.hy === home.hy
+    )
+      return;
+    s.step();
+  }
+  throw new Error('the delivered crossing never sailed home');
+}
+
 describe('ferryPassage', () => {
   it('sails a move order across the water and walks the passenger on to its spot', () => {
     const s = sim();
     const ship = spawnShip(s);
     const scout = crewScout(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+    const home = mooringPoint(s, ship);
 
     s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
     s.step();
@@ -185,13 +233,11 @@ describe('ferryPassage', () => {
     stepOnto(s, passenger, FAR);
     expect(s.world.has(passenger, LostWay)).toBe(false);
     expect(s.world.has(passenger, FerryPassenger)).toBe(false);
-    // The voyage is over, the ship lies moored at the far shore, its scout still at the helm.
+    // Delivered, the crossing sails the empty taxi home and ends when it lies at its mooring again.
+    stepReturnHome(s, ship, home);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
-    expect(state.moored).toBe(true);
-    const mooring = state.mooring;
-    if (mooring === null) throw new Error('the ferry never moored');
-    expect(landOf(s, mooring)).toBe(landOf(s, FAR));
+    expect(state.task).toBe('none');
     expect(vehicleCommander(state)).toBe(scout);
   });
 
@@ -248,6 +294,7 @@ describe('ferryPassage', () => {
     const s = sim();
     const ship = spawnShip(s);
     crewScout(s, ship);
+    const home = mooringPoint(s, ship);
     const first = spawnSettler(s, HOME.hx, 10);
     const second = spawnSettler(s, HOME.hx, 14);
     const firstFar = { hx: FAR.hx, hy: 10 } as const;
@@ -261,11 +308,12 @@ describe('ferryPassage', () => {
     expect(voyage.passengers).toContain(first);
     expect(voyage.passengers).toContain(second);
 
-    // Both land, each on the walk to its own spot, and the voyage ends with the last one ashore.
+    // Both land, each on the walk to its own spot, and the delivered crossing sails the ship home.
     stepAshore(s, first, firstFar);
     stepAshore(s, second, secondFar);
     stepOnto(s, first, firstFar);
     stepOnto(s, second, secondFar);
+    stepReturnHome(s, ship, home);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     expect(s.world.has(first, LostWay)).toBe(false);
     expect(s.world.has(second, LostWay)).toBe(false);
@@ -276,6 +324,7 @@ describe('ferryPassage', () => {
     const ship = spawnShip(s);
     crewScout(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+    const home = mooringPoint(s, ship);
     const retarget = { hx: 42, hy: 16 } as const;
 
     s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
@@ -290,6 +339,7 @@ describe('ferryPassage', () => {
     // The crossing still carries the passenger, and the walk on aims at the new spot.
     stepAshore(s, passenger, retarget);
     stepOnto(s, passenger, retarget);
+    stepReturnHome(s, ship, home);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     expect(s.world.has(passenger, LostWay)).toBe(false);
   });
@@ -299,6 +349,7 @@ describe('ferryPassage', () => {
     const ship = spawnShip(s);
     crewScout(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+    const home = mooringPoint(s, ship);
 
     // The app's ground click always arrives as a group order with per-member destinations.
     s.enqueue(
@@ -313,6 +364,7 @@ describe('ferryPassage', () => {
     stepAshore(s, passenger, FAR);
     stepOnto(s, passenger, FAR);
     expect(s.world.has(passenger, LostWay)).toBe(false);
+    stepReturnHome(s, ship, home);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
   });
 
@@ -331,5 +383,29 @@ describe('ferryPassage', () => {
     const seat = near?.find((group) => group.members.includes(passenger))?.slots[0];
     expect(seat).toBeDefined();
     expect(hexDistanceBetween(seat?.hx ?? 0, seat?.hy ?? 0, 16, 12)).toBeLessThanOrEqual(8);
+  });
+
+  it('the homebound taxi takes the next booking from its old mooring', () => {
+    const s = sim();
+    const ship = spawnShip(s);
+    crewScout(s, ship);
+    const home = mooringPoint(s, ship);
+    const first = spawnSettler(s, HOME.hx, HOME.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: first, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    boardOut(s, ship, first);
+    stepAshore(s, first, FAR);
+    stepOnto(s, first, FAR);
+    stepMooredAt(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    expect(s.world.get(ship, Vehicle).task).toBe('none');
+
+    // The round trip leaves the ship bookable again, moored where the first crossing found it.
+    const second = spawnSettler(s, HOME.hx + 1, HOME.hy);
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: second, x: FAR.hx, y: FAR.hy - 2 }));
+    s.step();
+    expect(s.world.tryGet(second, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('board');
   });
 });

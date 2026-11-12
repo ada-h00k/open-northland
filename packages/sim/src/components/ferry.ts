@@ -3,27 +3,30 @@ import type { Entity } from '../ecs/world.js';
 import type { HalfCellNode } from '../nav/halfcell.js';
 import type { NodeId } from '../nav/terrain/index.js';
 
-/** The legs a booked crossing runs: the passengers walk to the door at the home shore, then the ship
- *  sails for the far shore where the walk lines pick them up. */
-export const FERRY_PHASES = ['board', 'sail'] as const;
+/** The legs a booked crossing runs: the passengers walk to the door at the home shore, the ship sails
+ *  for the far shore where the walk lines pick them up, and the empty ship sails back home. */
+export const FERRY_PHASES = ['board', 'sail', 'return'] as const;
 export type FerryPhase = (typeof FERRY_PHASES)[number];
 
 /**
  * One crossing a ship with a scout at the helm makes for its passengers, from the walk order that
- * could not cross the water: held on the ship from the first booking until the last passenger has
- * stepped ashore. The passengers walk to its door on the home island, it docks at a shore of the
- * target island, and each walks on from there to the spot its order named. A player's own order to
- * the ship meanwhile lapses the booking, the riders staying ordinary ones.
+ * could not cross the water: held on the ship from the first booking until it has carried its
+ * passengers over and lies moored at its home shore again. The passengers walk to its door on the
+ * home island, it docks at a shore of the target island, each walks on from there to the spot its
+ * order named, and the ship sails back to the mooring the crossing booked it at. A player's own order
+ * to the ship meanwhile lapses the booking, the riders staying ordinary ones.
  */
 export interface FerryVoyageState {
   /** The settlers the crossing carries, booking order first; each also carries `FerryPassenger`. */
   passengers: Entity[];
-  /** The shore point the ship sails to moor at on the target island; null while boarding. */
+  /** The shore point the ship sails to moor at; null while boarding. */
   shore: HalfCellNode | null;
   /** The leg under way. */
   phase: FerryPhase;
   /** The tick the first booking was made. */
   since: number;
+  /** The shore point the ship lay moored at when the crossing was booked; the return leg sails it back there. */
+  home: HalfCellNode | null;
 }
 
 export const FerryVoyage = defineComponent<FerryVoyageState>('FerryVoyage', 'movement');
