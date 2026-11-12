@@ -293,4 +293,43 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     expect(s.world.has(passenger, LostWay)).toBe(false);
   });
+
+  it('a group move order onto another island ferries its member, as the click dispatch issues it', () => {
+    const s = sim();
+    const ship = spawnShip(s);
+    crewScout(s, ship);
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+
+    // The app's ground click always arrives as a group order with per-member destinations.
+    s.enqueue(
+      playerCommand(P0, {
+        kind: 'moveUnitGroup',
+        members: [{ entity: passenger, x: FAR.hx, y: FAR.hy }],
+      }),
+    );
+    s.step();
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
+    boardOut(s, ship, passenger);
+    stepAshore(s, passenger, FAR);
+    stepOnto(s, passenger, FAR);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+  });
+
+  it('the order fan keeps a cross-island click as the member\u2019s own raw slot', () => {
+    const s = sim();
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+
+    // The click on the other island is the member's own crossing, not a fan seat on its own coast.
+    const groups = s.formationSlots({ hx: FAR.hx, hy: FAR.hy }, [passenger], 1, 'move');
+    expect(groups).not.toBeNull();
+    const cross = groups?.find((group) => group.members.includes(passenger));
+    expect(cross?.slots).toEqual([{ hx: FAR.hx, hy: FAR.hy }]);
+
+    // A same-island click still fans a seat around itself.
+    const near = s.formationSlots({ hx: 16, hy: 12 }, [passenger], 1, 'move');
+    const seat = near?.find((group) => group.members.includes(passenger))?.slots[0];
+    expect(seat).toBeDefined();
+    expect(hexDistanceBetween(seat?.hx ?? 0, seat?.hy ?? 0, 16, 12)).toBeLessThanOrEqual(8);
+  });
 });
