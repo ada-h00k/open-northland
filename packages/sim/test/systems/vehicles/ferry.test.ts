@@ -72,6 +72,29 @@ function sim(): Simulation {
   return s;
 }
 
+/** The two banks plus a third island south of the far one, split off by a water band, so a booking
+ *  can aim at an island that differs from the island a running crossing is headed to. */
+function threeIslandMap(): TerrainMap {
+  const typeIds = new Array<number>(MAP_CELLS * MAP_CELLS).fill(GRASS);
+  for (let row = 0; row < MAP_CELLS; row++) {
+    for (let col = SEA_FROM; col < SEA_TO; col++) typeIds[row * MAP_CELLS + col] = WATER;
+  }
+  for (let row = 18; row <= 19; row++) {
+    for (let col = SEA_TO; col < MAP_CELLS; col++) typeIds[row * MAP_CELLS + col] = WATER;
+  }
+  return halfCellMapFromCells({ width: MAP_CELLS, height: MAP_CELLS, typeIds });
+}
+
+/** A spot on the third island and the sea point its west coast moors from. */
+const SOUTH = { hx: 34, hy: 42 } as const;
+const SOUTH_SEA = { hx: 24, hy: 42 } as const;
+
+function threeIslandSim(): Simulation {
+  const s = new Simulation({ seed: 5, content: testContent(), map: threeIslandMap() });
+  s.enqueueSetup({ kind: 'setNeedsEnabled', enabled: false });
+  return s;
+}
+
 /** The two banks plus a one-cell-wide fjord into the far island at row 8: a settler standing at its
  *  inner end has no berth near, and the crossing must walk the coast outward for one. */
 function fjordMap(): TerrainMap {
@@ -89,7 +112,7 @@ function fjordSim(): Simulation {
   return s;
 }
 
-function spawnShip(s: Simulation, x = SHIP_HX, y = HOME.hy): Entity {
+function spawnShip(s: Simulation, x: number = SHIP_HX, y: number = HOME.hy): Entity {
   const ship = createVehicle(s.world, ctxOf(s), {
     vehicleType: SHIP_SMALL,
     x,
@@ -115,8 +138,8 @@ function crewAboard(
   s: Simulation,
   ship: Entity,
   jobType: number,
-  x = 16,
-  y = HOME.hy,
+  x: number = 16,
+  y: number = HOME.hy,
 ): Entity {
   const member = spawnSettler(s, x, y, jobType);
   s.enqueue(playerCommand(P0, { kind: 'attachToVehicle', entity: member, vehicle: ship }));
@@ -128,7 +151,7 @@ function crewAboard(
 }
 
 /** The crossing's ferryman: a scout at the helm. */
-function crewScout(s: Simulation, ship: Entity, x = 16, y = HOME.hy): Entity {
+function crewScout(s: Simulation, ship: Entity, x: number = 16, y: number = HOME.hy): Entity {
   return crewAboard(s, ship, SCOUT, x, y);
 }
 
@@ -148,7 +171,7 @@ function seatOf(s: Simulation, vehicle: Entity, rider: Entity): { inside: boolea
 }
 
 /** Step until `rider` is inside `vehicle`. */
-function boardOut(s: Simulation, vehicle: Entity, rider: Entity, limit = BOARD_TICKS): void {
+function boardOut(s: Simulation, vehicle: Entity, rider: Entity, limit: number = BOARD_TICKS): void {
   for (let ticks = 0; ticks < limit; ticks++) {
     if (seatOf(s, vehicle, rider)?.inside === true) return;
     s.step();
@@ -172,8 +195,8 @@ function stepOnto(
   s: Simulation,
   e: Entity,
   spot: { readonly hx: number; readonly hy: number },
-  reach = 2,
-  limit = WALK_ON_TICKS,
+  reach: number = 2,
+  limit: number = WALK_ON_TICKS,
 ): void {
   for (let ticks = 0; ticks < limit; ticks++) {
     const at = nodeOf(s, e);
@@ -196,7 +219,7 @@ function stepMooredAt(
   s: Simulation,
   ship: Entity,
   point: { readonly hx: number; readonly hy: number },
-  limit = SAIL_TICKS,
+  limit: number = SAIL_TICKS,
 ): void {
   for (let ticks = 0; ticks < limit; ticks++) {
     s.step();
@@ -307,6 +330,122 @@ describe('ferryPassage', () => {
     s.step();
     expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(near);
     expect(s.world.has(far, FerryVoyage)).toBe(false);
+  });
+
+  it('a ship already on a voyage leaves the next booking to a free ship', () => {
+    const s = sim();
+    const near = spawnShip(s, SHIP_HX, HOME.hy);
+    crewScout(s, near, 16, HOME.hy);
+    const free = spawnShip(s, SHIP_HX, 24);
+    crewScout(s, free, 16, 24);
+    const first = spawnSettler(s, HOME.hx, HOME.hy);
+    const second = spawnSettler(s, HOME.hx, 20);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: first, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    expect(s.world.tryGet(first, FerryPassenger)?.ship).toBe(near);
+    // The first walks aboard and the ship casts off: it is on a voyage now.
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, near, first)?.inside !== true; t++) s.step();
+    for (let t = 0; t < 40 && s.world.tryGet(near, FerryVoyage)?.phase !== 'sail'; t++) s.step();
+    expect(s.world.tryGet(near, FerryVoyage)?.phase).toBe('sail');
+
+    // A second worker clicks while the nearest ship sails: the free one takes the booking.
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: second, x: FAR.hx, y: 20 }));
+    s.step();
+    expect(s.world.tryGet(second, FerryPassenger)?.ship).toBe(free);
+    expect(s.world.tryGet(free, FerryVoyage)?.phase).toBe('board');
+    // The free ship carries them over and the walk on goes to their spot.
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, free, second)?.inside !== true; t++) s.step();
+    expect(seatOf(s, free, second)?.inside).toBe(true);
+    stepAshore(s, second, { hx: FAR.hx, hy: 20 });
+    stepOnto(s, second, { hx: FAR.hx, hy: 20 });
+    expect(s.world.has(second, LostWay)).toBe(false);
+    expect(s.world.has(first, LostWay)).toBe(false);
+  });
+
+  it('a voyage under way sends a far-side booking to the free ship, not the sailing one', () => {
+    const s = sim();
+    const near = spawnShip(s, SHIP_HX, HOME.hy);
+    crewScout(s, near, 16, HOME.hy);
+    const free = spawnShip(s, SHIP_HX, 24);
+    crewScout(s, free, 16, 24);
+    const first = spawnSettler(s, HOME.hx, HOME.hy);
+    const second = spawnSettler(s, FAR.hx, FAR.hy); // lives on the far island
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: first, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, near, first)?.inside !== true; t++) s.step();
+    for (let t = 0; t < 40 && s.world.tryGet(near, FerryVoyage)?.phase !== 'sail'; t++) s.step();
+    expect(s.world.tryGet(near, FerryVoyage)?.phase).toBe('sail');
+
+    // The far-side worker wants home while the nearest ship sails toward them: the free one goes.
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: second, x: HOME.hx, y: 20 }));
+    s.step();
+    expect(s.world.tryGet(second, FerryPassenger)?.ship).toBe(free);
+  });
+
+  it('a crossing headed to one island leaves a booking for another island to a free ship', () => {
+    const s = threeIslandSim();
+    const near = spawnShip(s, SHIP_HX, HOME.hy);
+    crewScout(s, near, 16, HOME.hy);
+    const free = spawnShip(s, SOUTH_SEA.hx, SOUTH_SEA.hy); // moors at the third island's coast
+    crewScout(s, free, 28, 42);
+    const first = spawnSettler(s, HOME.hx, HOME.hy);
+    const second = spawnSettler(s, HOME.hx, 20);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: first, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    expect(s.world.tryGet(first, FerryPassenger)?.ship).toBe(near);
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, near, first)?.inside !== true; t++) s.step();
+    for (let t = 0; t < 40 && s.world.tryGet(near, FerryVoyage)?.phase !== 'sail'; t++) s.step();
+    expect(s.world.tryGet(near, FerryVoyage)?.phase).toBe('sail');
+
+    // The second worker clicks for the third island while the nearest ship sails to the far one:
+    // the free ship from the third island is dispatched, the running crossing is left alone.
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: second, x: SOUTH.hx, y: SOUTH.hy }));
+    s.step();
+    expect(s.world.tryGet(second, FerryPassenger)?.ship).toBe(free);
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, free, second)?.inside !== true; t++) s.step();
+    stepAshore(s, second, SOUTH);
+    stepOnto(s, second, SOUTH);
+    expect(s.world.has(second, LostWay)).toBe(false);
+    // The first crossing delivered its own passenger on the far island in the meantime.
+    for (let t = 0; t < SAIL_TICKS && seatOf(s, near, first)?.inside !== true; t++) s.step();
+    stepAshore(s, first, FAR);
+    stepOnto(s, first, FAR);
+    expect(s.world.has(first, LostWay)).toBe(false);
+  });
+
+  it('a boarding ship headed to one island takes no booking for another island', () => {
+    const s = threeIslandSim();
+    const near = spawnShip(s, SHIP_HX, HOME.hy);
+    crewScout(s, near, 16, HOME.hy);
+    const free = spawnShip(s, SOUTH_SEA.hx, SOUTH_SEA.hy);
+    crewScout(s, free, 28, 42);
+    const first = spawnSettler(s, HOME.hx, HOME.hy);
+    const second = spawnSettler(s, HOME.hx, 20);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: first, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    // The nearest ship is booked and boards: it is on its own crossing now.
+    expect(s.world.tryGet(near, FerryVoyage)?.phase).toBe('board');
+
+    // A booking for the third island may not join it: the free ship takes the crossing instead.
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: second, x: SOUTH.hx, y: SOUTH.hy }));
+    s.step();
+    expect(s.world.tryGet(second, FerryPassenger)?.ship).toBe(free);
+    expect(s.world.tryGet(free, FerryVoyage)?.phase).toBe('pickup');
+    expect(s.world.tryGet(near, FerryVoyage)?.passengers).not.toContain(second);
+    // Both crossings run to their own ends.
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, near, first)?.inside !== true; t++) s.step();
+    for (let t = 0; t < SAIL_TICKS && seatOf(s, near, first)?.inside !== true; t++) s.step();
+    stepAshore(s, first, FAR);
+    stepOnto(s, first, FAR);
+    expect(s.world.has(first, LostWay)).toBe(false);
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, free, second)?.inside !== true; t++) s.step();
+    stepAshore(s, second, SOUTH);
+    stepOnto(s, second, SOUTH);
+    expect(s.world.has(second, LostWay)).toBe(false);
   });
 
   it('shares the waiting ship with a second island-crossing click', () => {
