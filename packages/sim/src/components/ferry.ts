@@ -4,8 +4,9 @@ import type { HalfCellNode } from '../nav/halfcell.js';
 import type { NodeId } from '../nav/terrain/index.js';
 
 /** The legs a booked crossing runs: the passengers walk to the door at the home shore, the ship sails
- *  for the far shore where the walk lines pick them up, and the empty ship sails back home. */
-export const FERRY_PHASES = ['board', 'sail', 'return'] as const;
+ *  for the far shore where the walk lines pick them up, and the empty ship sails back home. A dispatch
+ *  crossing adds the pickup leg, the ship sailing from its own island to the waiting passengers'. */
+export const FERRY_PHASES = ['board', 'pickup', 'sail', 'return'] as const;
 export type FerryPhase = (typeof FERRY_PHASES)[number];
 
 /**
@@ -13,13 +14,15 @@ export type FerryPhase = (typeof FERRY_PHASES)[number];
  * could not cross the water: held on the ship from the first booking until it has carried its
  * passengers over and lies moored at its home shore again. The passengers walk to its door on the
  * home island, it docks at a shore of the target island, each walks on from there to the spot its
- * order named, and the ship sails back to the mooring the crossing booked it at. A player's own order
+ * order named, and the ship sails back to the mooring the crossing booked it at. When the home island
+ * keeps no ship, one from another island is dispatched: it sails to the passengers' shore first, the
+ * passengers waiting where they stand until it moors there. A player's own order
  * to the ship meanwhile lapses the booking, the riders staying ordinary ones.
  */
 export interface FerryVoyageState {
   /** The settlers the crossing carries, booking order first; each also carries `FerryPassenger`. */
   passengers: Entity[];
-  /** The shore point the ship sails to moor at; null while boarding. */
+  /** The shore point the ship sails to moor at; null while boarding or while a pickup has not sailed. */
   shore: HalfCellNode | null;
   /** The leg under way. */
   phase: FerryPhase;

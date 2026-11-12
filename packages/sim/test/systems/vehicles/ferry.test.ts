@@ -458,4 +458,64 @@ describe('ferryPassage', () => {
     expect(state.task).toBe('none');
     expect(vehicleCommander(state)).toBe(scout);
   });
+
+  it('a ship on the passenger\u2019s own island beats a dispatch from another one', () => {
+    const s = sim();
+    const local = spawnShip(s); // moors at the home shore, scout at the helm
+    crewScout(s, local);
+    const far = spawnShip(s, 26, 18); // moors at the far shore, also scout-manned
+    crewScout(s, far, 30, 18);
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(local);
+    expect(s.world.tryGet(local, FerryVoyage)?.phase).toBe('board');
+    expect(s.world.has(far, FerryVoyage)).toBe(false);
+  });
+
+  it('a crossing from an island without a ship dispatches one from another and brings it back', () => {
+    const s = sim();
+    // The player's only ship lies at the far shore, a scout at the helm.
+    const ship = spawnShip(s, 26, 18);
+    const scout = crewScout(s, ship, 30, 18);
+    const home = mooringPoint(s, ship);
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('pickup');
+    // The passenger waits where it stands: the walk to the door waits for the ship's arrival.
+    for (let t = 0; t < 20; t++) {
+      s.step();
+      const at = nodeOf(s, passenger);
+      expect(at?.hx).toBe(HOME.hx);
+      expect(at?.hy).toBe(HOME.hy);
+      expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('pickup');
+    }
+    // The ship sails to their island, moors there, and its arrival starts the walk to the door.
+    let aboard = false;
+    let pickupBerth: { hx: number; hy: number } | null = null;
+    for (let t = 0; t < SAIL_TICKS * 2 && !aboard; t++) {
+      s.step();
+      const voyage = s.world.tryGet(ship, FerryVoyage);
+      if (pickupBerth === null && voyage?.phase === 'board') {
+        pickupBerth = s.world.get(ship, Vehicle).mooring; // the berth it took for the pickup
+      }
+      aboard = seatOf(s, ship, passenger)?.inside === true;
+    }
+    expect(aboard).toBe(true);
+    expect(pickupBerth).not.toBeNull();
+    expect(landOf(s, pickupBerth!)).toBe(landOf(s, HOME)); // it moored on the passenger's island
+    // The crossing delivers, the walk on goes to the spot, and the taxi sails home to its old mooring.
+    stepAshore(s, passenger, FAR);
+    stepOnto(s, passenger, FAR);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    const state = s.world.get(ship, Vehicle);
+    expect(state.task).toBe('none');
+    expect(vehicleCommander(state)).toBe(scout);
+  });
 });
