@@ -19,6 +19,7 @@ import {
   Simulation,
   type TerrainMap,
 } from '../../../src/index.js';
+import { dockVehicle } from '../../../src/systems/vehicles/dock.js';
 import { createVehicle } from '../../../src/systems/vehicles/index.js';
 import { testContent } from '../../fixtures/content.js';
 import { ctxOf } from '../../fixtures/context.js';
@@ -407,5 +408,54 @@ describe('ferryPassage', () => {
     s.step();
     expect(s.world.tryGet(second, FerryPassenger)?.ship).toBe(ship);
     expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('board');
+  });
+
+  it('a crossing to a spot next to another ship on the far island still brings the taxi home', () => {
+    const s = sim();
+    const ship = spawnShip(s);
+    const scout = crewScout(s, ship);
+    const other = spawnShip(s, 26, 18); // moored at the far shore, no scout: it takes no booking
+    const berth = mooringPoint(s, other);
+    const goal = { hx: berth.hx + 2, hy: berth.hy + 2 } as const;
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+    const home = mooringPoint(s, ship);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: goal.hx, y: goal.hy }));
+    s.step();
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
+    boardOut(s, ship, passenger);
+    stepAshore(s, passenger, goal);
+    stepOnto(s, passenger, goal);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    // Delivered next to the other ship, the crossing still sails its taxi home and ends the watcher.
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    const state = s.world.get(ship, Vehicle);
+    expect(state.task).toBe('none');
+    expect(vehicleCommander(state)).toBe(scout);
+  });
+
+  it('a return whose start lapsed retries while the ship lies at the far shore', () => {
+    const s = sim();
+    const ship = spawnShip(s);
+    const scout = crewScout(s, ship);
+    const home = mooringPoint(s, ship);
+
+    // Sail the taxi to the far shore, as a delivered crossing leaves it, and craft the delivered
+    // bookkeeping whose return start lapsed: the water was choked when the watcher first tried.
+    expect(dockVehicle(s.world, ctxOf(s), { kind: 'dockVehicle', vehicle: ship, x: 28, y: 12 })).toBe(true);
+    stepMooredAt(s, ship, { hx: 28, hy: 12 });
+    s.world.add(ship, FerryVoyage, {
+      passengers: [],
+      shore: { hx: 28, hy: 12 },
+      phase: 'return',
+      since: 0,
+      home: { hx: home.hx, hy: home.hy },
+    });
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    const state = s.world.get(ship, Vehicle);
+    expect(state.task).toBe('none');
+    expect(vehicleCommander(state)).toBe(scout);
   });
 });

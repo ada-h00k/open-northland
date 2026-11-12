@@ -203,14 +203,18 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
   }
   if (remaining.length === 0) {
     // Delivered: the taxi sails back to the mooring the crossing booked it at, watched until it lies
-    // there again, so the next booking finds it home. A return the player takes over ends the watcher
-    // wherever the ship last moored; a boarding that never sailed just ends.
+    // there again, so the next booking finds it home. The watcher retries while the ship still lies
+    // at the far shore - a berth next to another ship can leave its anchor without a mooring-spot set,
+    // and the water can open up later - and ends when it is home or the player has moored it elsewhere.
+    if (voyage.phase === 'sail' || (voyage.phase === 'return' && atMooring(state, voyage.shore))) {
+      if (!world.has(ship, VehicleDrive) && returnAttemptDue(world, ship, ctx.tick)) {
+        startReturnVoyage(world, ctx, terrain, ship, voyage);
+      }
+    }
     if (voyage.phase === 'return') {
       if (world.has(ship, VehicleDrive)) return; // the sail home is under way
-      world.remove(ship, FerryVoyage);
-      return;
+      if (atMooring(state, voyage.shore)) return; // no way out yet: try again next attempt
     }
-    if (voyage.phase === 'sail' && startReturnVoyage(world, ctx, terrain, ship, voyage)) return;
     world.remove(ship, FerryVoyage);
     return;
   }
@@ -267,40 +271,56 @@ function sailVoyage(
   const type = contentIndex(ctx.content).vehicles.get(state.vehicleType);
   const first = world.tryGet(passenger, FerryPassenger);
   if (type === undefined || first === undefined) return false;
-  const spots = mooringSpotsOf(world, ctx, terrain, ship);
-  if (spots === null) return false;
   const target = terrain.componentOf(first.goal);
   const goal = terrain.coordsOf(first.goal);
-  const candidates: NodeId[] = [];
-  for (const spot of spots.spots) {
-    if (terrain.componentOf(spot) === target) candidates.push(spot);
-  }
-  // Nearest the goal first, ties in ascending node id: the passengers land as close to their spots as
-  // the coast lets them.
-  candidates.sort(
-    (a, b) =>
-      hexDistanceBetween(terrain.xOf(a), terrain.yOf(a), goal.x, goal.y) -
-        hexDistanceBetween(terrain.xOf(b), terrain.yOf(b), goal.x, goal.y) ||
-      a - b,
-  );
-  for (const spot of candidates) {
-    const at = nodeOf(terrain, spot);
-    if (dockRoute(world, ctx, terrain, ship, at) === null) continue;
-    if (dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: at.hx, y: at.hy })) {
-      const live = world.mut(ship, FerryVoyage);
-      live.phase = 'sail';
-      live.shore = { hx: at.hx, hy: at.hy };
-      return true;
+  const spots = mooringSpotsOf(world, ctx, terrain, ship);
+  if (spots !== null) {
+    const candidates: NodeId[] = [];
+    for (const spot of spots.spots) {
+      if (terrain.componentOf(spot) === target) candidates.push(spot);
     }
+    // Nearest the goal first, ties in ascending node id: the passengers land as close to their spots as
+    // the coast lets them.
+    candidates.sort(
+      (a, b) =>
+        hexDistanceBetween(terrain.xOf(a), terrain.yOf(a), goal.x, goal.y) -
+          hexDistanceBetween(terrain.xOf(b), terrain.yOf(b), goal.x, goal.y) ||
+        a - b,
+    );
+    for (const spot of candidates) {
+      const at = nodeOf(terrain, spot);
+      if (dockRoute(world, ctx, terrain, ship, at) === null) continue;
+      if (dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: at.hx, y: at.hy })) {
+        const live = world.mut(ship, FerryVoyage);
+        live.phase = 'sail';
+        live.shore = { hx: at.hx, hy: at.hy };
+        return true;
+      }
+    }
+  }
+  // The spot set can come back empty (a tight berth leaves the anchor below its free-size class) or
+  // miss a shore the route still reaches: the goal's own point is the last word.
+  const direct = nodeOf(terrain, first.goal);
+  if (
+    dockRoute(world, ctx, terrain, ship, direct) !== null &&
+    dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: direct.hx, y: direct.hy })
+  ) {
+    const live = world.mut(ship, FerryVoyage);
+    live.phase = 'sail';
+    live.shore = { hx: direct.hx, hy: direct.hy };
+    return true;
   }
   return false;
 }
 
 /**
- * Sail the delivered voyage back to the mooring the crossing booked it at: the mooring spots the
- * ship's sea reaches that lie on the booked home point's land, the booked spot itself first, each
- * judged by the route a dock order would take. False when no spot takes the ship; the watcher then
- * ends and the taxi stays at the far shore.
+ * Sail the delivered voyage back to the mooring the crossing booked it at. The booked home point
+ * itself first, judged by the route a dock order would take - the berth next to another ship can
+ * leave the ship's anchor with no mooring-spot set at all (the sea there is too tight for its free
+ * size class), while the route back still runs, so the spots must not gate the way home. Then the
+ * mooring spots the ship's sea reaches that lie on the home point's land, the nearest first, for a
+ * home berth another ship has taken. False when neither takes: the phase flips to `return` all the
+ * same, so the watcher keeps trying while the ship still lies at the far shore.
  */
 function startReturnVoyage(
   world: World,
@@ -309,6 +329,52 @@ function startReturnVoyage(
   ship: Entity,
   voyage: VehicleVoyageView,
 ): boolean {
+  const home = voyage.home;
+  const taken = takeReturnDock(world, ctx, terrain, ship, voyage, home === null || home === undefined ? null : { hx: home.hx, hy: home.hy });
+  const live = world.mut(ship, FerryVoyage);
+  live.phase = 'return';
+  if (taken) returnRetry.get(world)?.delete(ship);
+  else {
+    let held = returnRetry.get(world);
+    if (held === undefined) {
+      held = new Map();
+      returnRetry.set(world, held);
+    }
+    held.set(ship, ctx.tick);
+  }
+  return taken;
+}
+
+/** Ticks between the watcher's tries to start a return the water currently refuses. */
+const RETURN_RETRY_TICKS = 8;
+/** The last try per ship, so a wedged watcher does not search the whole shore every tick. */
+const returnRetry = new WeakMap<World, Map<Entity, number>>();
+
+/** Whether `ship`'s watcher may make its next try: the first one at once, then throttled. */
+function returnAttemptDue(world: World, ship: Entity, tick: number): boolean {
+  const last = returnRetry.get(world)?.get(ship);
+  return last === undefined || tick - last >= RETURN_RETRY_TICKS;
+}
+
+/**
+ * Issue the dock order that takes the ship from its berth to `point`, or, when `point` itself gives
+ * no route, to the mooring spot on its land nearest the point. False when neither routes.
+ */
+function takeReturnDock(
+  world: World,
+  ctx: SystemContext,
+  terrain: TerrainGraph,
+  ship: Entity,
+  voyage: VehicleVoyageView,
+  point: { hx: number; hy: number } | null,
+): boolean {
+  if (point !== null) {
+    if (
+      dockRoute(world, ctx, terrain, ship, point) !== null &&
+      dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: point.hx, y: point.hy })
+    )
+      return true;
+  }
   const home = voyage.home;
   if (home === null || home === undefined) return false;
   const spots = mooringSpotsOf(world, ctx, terrain, ship);
@@ -319,8 +385,8 @@ function startReturnVoyage(
   for (const spot of spots.spots) {
     if (terrain.componentOf(spot) === homeComponent) candidates.push(spot);
   }
-  // The booked home spot first, then the shore nearest it, ties in ascending node id: the taxi comes
-  // back to where it started, or as close as the coast lets it.
+  // The shore nearest the booked point, ties in ascending node id: the taxi comes back to where it
+  // started, or as close as the coast lets it.
   candidates.sort(
     (a, b) =>
       hexDistanceBetween(terrain.xOf(a), terrain.yOf(a), home.hx, home.hy) -
@@ -330,14 +396,20 @@ function startReturnVoyage(
   for (const spot of candidates) {
     const at = nodeOf(terrain, spot);
     if (dockRoute(world, ctx, terrain, ship, at) === null) continue;
-    if (dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: at.hx, y: at.hy })) {
-      const live = world.mut(ship, FerryVoyage);
-      live.phase = 'return';
-      live.shore = { hx: at.hx, hy: at.hy };
-      return true;
-    }
+    if (dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: at.hx, y: at.hy })) return true;
   }
   return false;
+}
+
+/** Whether `state` lies moored at `point`: the watcher compares shores by node. */
+function atMooring(state: VehicleStateView, point: { readonly hx: number; readonly hy: number } | null): boolean {
+  return (
+    state.moored &&
+    state.mooring !== null &&
+    point !== null &&
+    state.mooring.hx === point.hx &&
+    state.mooring.hy === point.hy
+  );
 }
 
 /** Point every aboard passenger's held leaving at its walk-on spot, once each. */
