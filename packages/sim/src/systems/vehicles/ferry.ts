@@ -4,6 +4,7 @@ import {
   FerryPassenger,
   FerryVoyage,
   type FerryVoyageState,
+  MoveGoal,
   PlayerOrder,
   PathRequest,
   TradeShip,
@@ -42,21 +43,24 @@ import { vehicleIndex } from './registry.js';
 // ship lying at a shore of this island with a scout aboard, the settler sails instead. It walks to the
 // door, boards, and the ship docks at a shore of the target island nearest the clicked spot, where the
 // riders step off and walk on to their spots; the empty ship then sails back to the mooring the
-// crossing booked it at. A route that dies under the hull - a step another ship blocked, say - or a
-// berth that went out from under the ship ends no leg: the watcher runs the leg's berth choice again,
-// the nearest shore the water still takes, so the crossing always moors where the coast lets it and
-// nobody is left ashore or adrift. The pieces are the crew's attach and board, the dock order's sail
-// and moor, and the rider rung's held leaving; this file only books the crossing, flips it from
-// boarding to sailing, sails it home, and reads it over.
+// crossing booked it at. A dispatched booking's passenger walks toward the water while the ship sails:
+// the shore the crossing holds for it, so they stand at the coast when the ship arrives. A route that
+// dies under the hull - a step another ship blocked, say - or a berth that went out from under the
+// ship ends no leg: the watcher runs the leg's berth choice again, the nearest shore the water still
+// takes, so the crossing always moors where the coast lets it and nobody is left ashore or adrift.
+// The pieces are the crew's attach and board, the dock order's sail and moor, and the rider rung's
+// held leaving; this file only books the crossing, flips it from boarding to sailing, sails it home,
+// and reads it over.
 
 /**
  * Book `e`, standing on its island, the crossing to `goal` on another one: the nearest idle ship of
  * `e`'s owner moored at a shore of this island with a scout aboard takes the booking, `e` walks to its
  * door and boards, and the ship sails once every passenger is inside. When this island keeps no such
  * ship, the nearest one of another island whose sea reaches this shore is dispatched instead: it sails
- * here first (the phase `pickup`), the passenger waits where it stands, riding nothing, and takes its
- * seat and the walk to the door only once the ship has moored. False, leaving the order to the
- * caller's ordinary refusal, when the goal is no island away or no ship qualifies.
+ * here first (the phase `pickup`), and while it sails, the passenger walks toward the water and holds
+ * at the shore the crossing booked for it, riding nothing; it takes its seat and the walk to the door
+ * only once the ship has moored. False, leaving the order to the caller's ordinary refusal, when the
+ * goal is no island away or no ship qualifies.
  */
 export function tryFerryPassage(
   world: World,
@@ -114,8 +118,88 @@ export function tryFerryPassage(
   } else if (!voyage.passengers.includes(e)) {
     world.mut(ship, FerryVoyage).passengers.push(e); // boarding or dispatch continues: one more seat booked
   }
-  world.add(e, FerryPassenger, { ship, goal });
+  // A dispatched booking's passenger walks toward the water while the ship sails: the shore the
+  // crossing holds for them - the booked berth of a crossing joined under way, else the spot the
+  // shore choice will take - is where they wait, at the coast when the ship arrives. A booking on a
+  // ship already lying at their island walks the door instead, so it holds no wait spot.
+  const held = voyage?.shore ?? null;
+  const wait =
+    held !== null
+      ? terrain.nodeAt(held.hx, held.hy)
+      : dispatched
+        ? predictedShore(world, ctx, terrain, ship, start, target)
+        : null;
+  world.add(e, FerryPassenger, { ship, goal, wait });
+  if (wait !== null) holdAtShore(world, terrain, e, wait);
   return true;
+}
+
+/**
+ * The mooring spot of the land `target` that the ship's water reaches, nearest `ref`: the berth the
+ * shore choice will take unless the route to it is dead, and the spot a dispatched booking's waiting
+ * passenger holds at while the ship sails. Null when the ship keeps no spot set for that shore.
+ */
+function predictedShore(
+  world: World,
+  ctx: SystemContext,
+  terrain: TerrainGraph,
+  ship: Entity,
+  ref: NodeId,
+  target: number,
+): NodeId | null {
+  const spots = mooringSpotsOf(world, ctx, terrain, ship);
+  if (spots === null) return null;
+  const goal = terrain.coordsOf(ref);
+  let best: NodeId | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const spot of spots.spots) {
+    if (terrain.componentOf(spot) !== target) continue;
+    const distance = hexDistanceBetween(terrain.xOf(spot), terrain.yOf(spot), goal.x, goal.y);
+    if (distance < bestDistance) {
+      best = spot;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/**
+ * Hold a dispatched booking's passenger at the water: a bare move goal to the shore the crossing
+ * booked - no player order, so the watcher's stray-route prune reads it against the marker's `wait`
+ * and lets it stand. A passenger standing on the spot already is left alone; an in-flight route to a
+ * previous wait is dropped, so the new goal replans from scratch instead of racing the prune.
+ */
+function holdAtShore(world: World, terrain: TerrainGraph, e: Entity, node: NodeId): void {
+  const walk = world.tryGet(e, MoveGoal);
+  if (walk !== undefined && walk.cell === node) return;
+  if (entityNode(world, terrain, e) === node) {
+    world.remove(e, MoveGoal);
+    return;
+  }
+  world.remove(e, PathRequest);
+  world.add(e, MoveGoal, { cell: node });
+}
+
+/**
+ * Re-point the waiting passengers at the shore the crossing now holds for them: the berth the booking
+ * predicted can differ once the route a dock order would take is judged, and a re-pick after a dead
+ * berth moves it again. Riders are aboard or already walking the door and keep their own walk.
+ */
+function syncWaitShore(
+  world: World,
+  terrain: TerrainGraph,
+  ship: Entity,
+  passengers: readonly Entity[],
+): void {
+  const shore = world.get(ship, FerryVoyage).shore;
+  if (shore === null) return;
+  const node = terrain.nodeAt(shore.hx, shore.hy);
+  for (const passenger of passengers) {
+    const marker = world.tryGet(passenger, FerryPassenger);
+    if (marker === undefined || world.has(passenger, Rider)) continue;
+    if (marker.wait !== node) world.mut(passenger, FerryPassenger).wait = node;
+    holdAtShore(world, terrain, passenger, node);
+  }
 }
 
 /**
@@ -266,17 +350,21 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
   for (const passenger of voyage.passengers) {
     const marker = world.tryGet(passenger, FerryPassenger);
     const rides = world.tryGet(passenger, Rider)?.vehicle === ship;
+    const route = world.tryGet(passenger, PathRequest);
     if (
       marker === undefined ||
       marker.ship !== ship ||
       !world.isAlive(passenger) ||
       (!rides &&
-        // A dispatch booking's passengers stand ashore, riding nothing, until the ship moors at their
-        // island; they stay booked only while they wait — an order of their own takes them off the list.
+        // A dispatch booking's passengers walk to the shore the crossing holds for them and stand
+        // ashore, riding nothing, until the ship moors at their island; they stay booked only while
+        // they wait - an order of their own takes them off the list, and so does a route anywhere but
+        // the crossing's wait spot: the wait walk itself is the crossing's own bare move goal, whose
+        // route goal reads `wait`.
         (voyage.phase !== 'pickup' ||
           world.has(passenger, PlayerOrder) ||
-          world.has(passenger, PathRequest) ||
-          world.has(passenger, CurrentAtomic)))
+          world.has(passenger, CurrentAtomic) ||
+          (route !== undefined && (marker.wait === null || route.goal !== marker.wait))))
     ) {
       if (marker?.ship === ship) world.remove(passenger, FerryPassenger);
       continue; // dead, released, re-attached elsewhere or walked off its dispatch: the crossing is over for it
@@ -325,9 +413,9 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
       const first = remaining[0] as Entity | undefined;
       if (first === undefined) return;
       const at = entityNode(world, terrain, first);
-      if (
-        !sailToShore(world, ctx, terrain, ship, state, at, terrain.componentOf(at), 'pickup')
-      ) {
+      if (sailToShore(world, ctx, terrain, ship, state, at, terrain.componentOf(at), 'pickup')) {
+        syncWaitShore(world, terrain, ship, remaining);
+      } else {
         cancelVoyage(world, ctx, ship, voyage, remaining, true); // no shore took the dock
       }
       return;
@@ -369,8 +457,12 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
         const at = first === undefined ? null : entityNode(world, terrain, first);
         const booked =
           at !== null && sailToShore(world, ctx, terrain, ship, state, at, terrain.componentOf(at), 'pickup');
-        if (booked) watchRetry.get(world)?.delete(ship);
-        else stampWatchTry(world, ship, ctx.tick);
+        if (booked) {
+          watchRetry.get(world)?.delete(ship);
+          syncWaitShore(world, terrain, ship, remaining);
+        } else {
+          stampWatchTry(world, ship, ctx.tick);
+        }
       }
       return;
     }
@@ -638,7 +730,9 @@ function cancelVoyage(
   note: boolean,
 ): void {
   for (const passenger of passengers) {
-    const goal = world.tryGet(passenger, FerryPassenger)?.goal;
+    const booked = world.tryGet(passenger, FerryPassenger);
+    const goal = booked?.goal;
+    if (booked !== undefined && booked.wait !== null) world.remove(passenger, MoveGoal);
     world.remove(passenger, FerryPassenger);
     if (world.tryGet(passenger, Rider)?.vehicle !== ship) {
       // A dispatch booking's waiting passenger rides nothing: the lapse still tells them the way is lost.

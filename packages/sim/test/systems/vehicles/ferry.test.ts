@@ -504,14 +504,20 @@ describe('ferryPassage', () => {
     s.step();
     expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
     expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('pickup');
-    // The passenger waits where it stands: the walk to the door waits for the ship's arrival.
-    for (let t = 0; t < 20; t++) {
+    // The passenger walks toward the water while the ship sails: the crossing walks them to the shore
+    // it booked for them, so they wait at the coast and the walk to its door stays short.
+    expect(s.world.tryGet(passenger, FerryPassenger)?.wait).not.toBeNull();
+    const shore = s.world.tryGet(ship, FerryVoyage)?.shore ?? null;
+    expect(shore).not.toBeNull();
+    let held = false;
+    for (let t = 0; t < 120 && !held; t++) {
       s.step();
       const at = nodeOf(s, passenger);
-      expect(at?.hx).toBe(HOME.hx);
-      expect(at?.hy).toBe(HOME.hy);
+      held =
+        at !== null && hexDistanceBetween(at.hx, at.hy, shore!.hx, shore!.hy) <= 2;
       expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('pickup');
     }
+    expect(held).toBe(true);
     // The ship sails to their island, moors there, and its arrival starts the walk to the door.
     let aboard = false;
     let pickupBerth: { hx: number; hy: number } | null = null;
@@ -707,5 +713,79 @@ describe('ferryPassage', () => {
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
     expect(vehicleCommander(state)).toBe(scout);
+  });
+
+  it('a dispatched passenger far from the water walks to the coast and holds there', () => {
+    const s = fjordSim();
+    const ship = spawnShip(s); // moors at the near shore, scout at the helm
+    const scout = crewScout(s, ship);
+    const home = mooringPoint(s, ship);
+    // Deep inland on the far island, far from any water: the crossing walks them to the coast while
+    // the ship sails, so they stand at the shore when it arrives.
+    const passenger = spawnSettler(s, 40, 8);
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: HOME.hx, y: HOME.hy }));
+    s.step();
+    expect(s.world.tryGet(passenger, FerryPassenger)?.wait).not.toBeNull();
+    let aboard = false;
+    let pickupBerth: { hx: number; hy: number } | null = null;
+    let closest = Number.POSITIVE_INFINITY;
+    for (let t = 0; t < SAIL_TICKS * 2 && !aboard; t++) {
+      s.step();
+      const voyage = s.world.tryGet(ship, FerryVoyage);
+      if (voyage?.shore != null) {
+        const at = nodeOf(s, passenger);
+        if (at !== null) {
+          closest = Math.min(closest, hexDistanceBetween(at.hx, at.hy, voyage.shore.hx, voyage.shore.hy));
+        }
+      }
+      if (pickupBerth === null && voyage?.phase === 'board') {
+        pickupBerth = s.world.get(ship, Vehicle).mooring;
+      }
+      aboard = seatOf(s, ship, passenger)?.inside === true;
+    }
+    expect(aboard).toBe(true);
+    expect(pickupBerth).not.toBeNull();
+    expect(landOf(s, pickupBerth!)).toBe(landOf(s, { hx: 40, hy: 8 })); // it moored on their island
+    expect(closest).toBeLessThanOrEqual(2); // the wait walk closed the gap to the water
+    stepAshore(s, passenger, HOME);
+    stepOnto(s, passenger, HOME);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    const state = s.world.get(ship, Vehicle);
+    expect(state.task).toBe('none');
+    expect(vehicleCommander(state)).toBe(scout);
+  });
+
+  it('an order of their own still takes a waiting passenger off the crossing', () => {
+    const s = fjordSim();
+    const ship = spawnShip(s);
+    crewScout(s, ship); // a scout at the helm, so the dispatch search qualifies the ship
+    const home = mooringPoint(s, ship);
+    const passenger = spawnSettler(s, 34, 16);
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: HOME.hx, y: HOME.hy }));
+    s.step();
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.tryGet(passenger, FerryPassenger)?.wait).not.toBeNull();
+    // Let the taxi get under way, then order the passenger elsewhere on their own island: the booking
+    // lapses, the hold walk ends, and the empty ship sails home.
+    let underWay = false;
+    for (let t = 0; t < 60 && !underWay; t++) {
+      s.step();
+      underWay = s.world.has(ship, VehicleDrive) && !s.world.get(ship, Vehicle).moored;
+    }
+    expect(underWay).toBe(true);
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: 40, y: 12 }));
+    s.step();
+    let dropped = false;
+    for (let t = 0; t < 60 && !dropped; t++) {
+      s.step();
+      dropped = !s.world.has(passenger, FerryPassenger);
+    }
+    expect(dropped).toBe(true);
+    stepMooredAt(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    stepOnto(s, passenger, { hx: 40, hy: 12 }); // their own walk stands
+    expect(s.world.has(passenger, LostWay)).toBe(false);
   });
 });
