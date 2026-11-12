@@ -52,6 +52,7 @@ import { announceLostWay, liftLostWalk, markLostWay } from '../settlers/lost-way
 import { navigationLimitFor } from '../signposts/index.js';
 import { entityNode } from '../spatial/nodes.js';
 import { pullsHaulingCart } from '../vehicles/hauling-cart.js';
+import { tryFerryPassage } from '../vehicles/ferry.js';
 import { recordAiOrder } from './ai-lifecycle.js';
 import { moveAnchor } from './combat.js';
 import { deferOrderDuringAtomic, supersedeStandingOrders } from './guards.js';
@@ -193,6 +194,19 @@ function startPlayerWalk(
     confined && command.kind === 'moveUnit'
       ? walkerSideMoveGoal(world, ctx, terrain, clicked, entityNode(world, terrain, e))
       : reachableMoveGoal(world, ctx, terrain, clicked);
+  // A goal across open water is no walk, the route dying at the sea. With the owner's idle ship
+  // moored at a shore of this island with a scout aboard, the order becomes a crossing instead: the
+  // settler boards, the ship docks at the target island, the walk on resumes there. No ship takes the
+  // booking, the order refuses as before. A settler held by an atomic waits for the parked order the
+  // same way a walk does.
+  if (
+    confined &&
+    command.kind === 'moveUnit' &&
+    !atomicHoldsSettler(world, e) &&
+    tryFerryPassage(world, ctx, terrain, e, goal)
+  ) {
+    return true;
+  }
   // Signpost confinement: a civilian ordered beyond its allowed area doesn't know the way, so the order is
   // refused and the unit stays put. Approximation: the original starts the walk and lets its guided
   // pathfinder fail it, raising the same "lost" note.
