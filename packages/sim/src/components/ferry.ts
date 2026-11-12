@@ -16,7 +16,9 @@ export type FerryPhase = (typeof FERRY_PHASES)[number];
  * home island, it docks at a shore of the target island, each walks on from there to the spot its
  * order named, and the ship sails back to the mooring the crossing booked it at. When the home island
  * keeps no ship, one from another island is dispatched: it sails to the passengers' shore first, the
- * passengers waiting where they stand until it moors there. A player's own order
+ * passengers waiting where they stand until it moors there. A route that dies under the hull - a step
+ * another ship blocked - ends no leg: the watcher docks the leg's shore again until the crossing runs
+ * on. A player's own order
  * to the ship meanwhile lapses the booking, the riders staying ordinary ones.
  */
 export interface FerryVoyageState {

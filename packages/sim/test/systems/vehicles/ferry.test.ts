@@ -7,6 +7,7 @@ import {
   Rider,
   Settler,
   Vehicle,
+  VehicleDrive,
   vehicleCommander,
   vehiclePassengers,
 } from '../../../src/components/index.js';
@@ -509,6 +510,118 @@ describe('ferryPassage', () => {
     expect(pickupBerth).not.toBeNull();
     expect(landOf(s, pickupBerth!)).toBe(landOf(s, HOME)); // it moored on the passenger's island
     // The crossing delivers, the walk on goes to the spot, and the taxi sails home to its old mooring.
+    stepAshore(s, passenger, FAR);
+    stepOnto(s, passenger, FAR);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    const state = s.world.get(ship, Vehicle);
+    expect(state.task).toBe('none');
+    expect(vehicleCommander(state)).toBe(scout);
+  });
+
+  it('a return whose route died under it keeps its watcher and still moors home', () => {
+    const s = sim();
+    const ship = spawnShip(s);
+    const scout = crewScout(s, ship);
+    const home = mooringPoint(s, ship);
+
+    // Sail the taxi to the far shore, craft the delivered bookkeeping, start the return, then kill
+    // the drive the way a blocked step does: hull adrift, no drive, no berth remembered.
+    expect(dockVehicle(s.world, ctxOf(s), { kind: 'dockVehicle', vehicle: ship, x: 28, y: 12 })).toBe(true);
+    stepMooredAt(s, ship, { hx: 28, hy: 12 });
+    s.world.add(ship, FerryVoyage, {
+      passengers: [],
+      shore: { hx: 28, hy: 12 },
+      phase: 'return',
+      since: 0,
+      home: { hx: home.hx, hy: home.hy },
+    });
+    expect(dockVehicle(s.world, ctxOf(s), { kind: 'dockVehicle', vehicle: ship, x: home.hx, y: home.hy })).toBe(true);
+    let underWay = false;
+    for (let t = 0; t < 40 && !underWay; t++) {
+      s.step();
+      underWay = s.world.has(ship, VehicleDrive);
+    }
+    expect(underWay).toBe(true);
+    s.world.remove(ship, VehicleDrive);
+    const live = s.world.mut(ship, Vehicle);
+    live.task = 'none';
+    live.mooring = null; // what abandonDock leaves behind
+    // The watcher puts the dock order out again and the taxi moors home, bookable once more.
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    const state = s.world.get(ship, Vehicle);
+    expect(state.task).toBe('none');
+    expect(state.moored).toBe(true);
+    expect(vehicleCommander(state)).toBe(scout);
+  });
+
+  it('a delivery whose route died under it sails on and lands its passengers', () => {
+    const s = sim();
+    const ship = spawnShip(s);
+    const scout = crewScout(s, ship);
+    const home = mooringPoint(s, ship);
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    boardOut(s, ship, passenger);
+    // Kill the delivery drive mid-sea the way a blocked step does.
+    let underWay = false;
+    for (let t = 0; t < SAIL_TICKS && !underWay; t++) {
+      s.step();
+      underWay =
+        s.world.has(ship, VehicleDrive) &&
+        s.world.tryGet(ship, FerryVoyage)?.phase === 'sail' &&
+        !s.world.get(ship, Vehicle).moored;
+    }
+    expect(underWay).toBe(true);
+    s.world.remove(ship, VehicleDrive);
+    const live = s.world.mut(ship, Vehicle);
+    live.task = 'none';
+    live.mooring = null;
+    // The watcher re-docks the booked shore and the crossing finishes: landing, walk on, ride home.
+    stepAshore(s, passenger, FAR);
+    stepOnto(s, passenger, FAR);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    const state = s.world.get(ship, Vehicle);
+    expect(state.task).toBe('none');
+    expect(vehicleCommander(state)).toBe(scout);
+  });
+
+  it('a pickup whose route died under it sails on to its waiting passengers', () => {
+    const s = sim();
+    const ship = spawnShip(s, 26, 18); // the player's only ship: the far shore
+    const scout = crewScout(s, ship, 30, 18);
+    const home = mooringPoint(s, ship);
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    // The ship sails for the passenger's island; kill the pickup drive mid-sea as a blocked step does.
+    let underWay = false;
+    for (let t = 0; t < SAIL_TICKS && !underWay; t++) {
+      s.step();
+      underWay =
+        s.world.has(ship, VehicleDrive) &&
+        s.world.tryGet(ship, FerryVoyage)?.phase === 'pickup' &&
+        !s.world.get(ship, Vehicle).moored;
+    }
+    expect(underWay).toBe(true);
+    s.world.remove(ship, VehicleDrive);
+    const live = s.world.mut(ship, Vehicle);
+    live.task = 'none';
+    live.mooring = null;
+    // The watcher re-docks the pickup shore; the waiting passenger boards and the crossing finishes.
+    let aboard = false;
+    for (let t = 0; t < SAIL_TICKS * 2 && !aboard; t++) {
+      s.step();
+      aboard = seatOf(s, ship, passenger)?.inside === true;
+    }
+    expect(aboard).toBe(true);
     stepAshore(s, passenger, FAR);
     stepOnto(s, passenger, FAR);
     expect(s.world.has(passenger, LostWay)).toBe(false);

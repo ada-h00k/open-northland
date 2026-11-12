@@ -42,9 +42,11 @@ import { vehicleIndex } from './registry.js';
 // ship lying at a shore of this island with a scout aboard, the settler sails instead. It walks to the
 // door, boards, and the ship docks at a shore of the target island nearest the clicked spot, where the
 // riders step off and walk on to their spots; the empty ship then sails back to the mooring the
-// crossing booked it at. The pieces are the crew's attach and board, the dock order's sail and moor,
-// and the rider rung's held leaving; this file only books the crossing, flips it from boarding to
-// sailing, sails it home, and reads it over.
+// crossing booked it at. A route that dies under the hull - a step another ship blocked, say - is not
+// the end of a leg: the watcher puts the dock order of the leg it was on out again, so no crossing
+// leaves its ship, or its passengers, adrift with nobody watching. The pieces are the crew's attach
+// and board, the dock order's sail and moor, and the rider rung's held leaving; this file only books
+// the crossing, flips it from boarding to sailing, sails it home, and reads it over.
 
 /**
  * Book `e`, standing on its island, the crossing to `goal` on another one: the nearest idle ship of
@@ -287,20 +289,24 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
     // Delivered — or every passenger gone while a dispatch was under way: the taxi sails back to the
     // mooring the crossing booked it at, watched until it lies there again, so the next booking finds
     // it home. The watcher retries while the ship still lies at the far shore - a berth next to another
-    // ship can leave its anchor without a mooring-spot set, and the water can open up later - and ends
-    // when it is home or the player has moored it elsewhere.
+    // ship can leave its anchor without a mooring-spot set, and the water can open up later - and
+    // while a lapsed route left it adrift, and ends when it is home or the player has moored it
+    // elsewhere.
     if (
       voyage.phase === 'sail' ||
       voyage.phase === 'pickup' ||
-      (voyage.phase === 'return' && atMooring(state, voyage.shore))
+      (voyage.phase === 'return' && (atMooring(state, voyage.shore) || !state.moored))
     ) {
-      if (!world.has(ship, VehicleDrive) && returnAttemptDue(world, ship, ctx.tick)) {
+      if (!world.has(ship, VehicleDrive) && watchAttemptDue(world, ship, ctx.tick)) {
         startReturnVoyage(world, ctx, terrain, ship, voyage);
       }
     }
     if (voyage.phase === 'return') {
       if (world.has(ship, VehicleDrive)) return; // the sail home is under way
-      if (atMooring(state, voyage.shore)) return; // no way out yet: try again next attempt
+      // It still lies at the far shore with the water choked, or lies nowhere at all - a route that
+      // died under the hull left it adrift. Either way the try comes again next attempt: an unmoored
+      // hull without its voyage would sit in the water forever, bookable by nobody.
+      if (atMooring(state, voyage.shore) || !state.moored) return;
     }
     if (voyage.phase === 'pickup' && world.has(ship, VehicleDrive)) return; // the empty pickup runs on
     world.remove(ship, FerryVoyage);
@@ -352,6 +358,22 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
       }
       return;
     }
+    if (!state.moored) {
+      // Adrift with the pickup under way: the route died under the hull. The dock order goes out
+      // again for the booked shore, throttled; the waiting passengers keep waiting.
+      if (watchAttemptDue(world, ship, ctx.tick)) {
+        const shore = voyage.shore;
+        if (
+          shore !== null &&
+          dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: shore.hx, y: shore.hy })
+        ) {
+          watchRetry.get(world)?.delete(ship);
+        } else {
+          stampWatchTry(world, ship, ctx.tick);
+        }
+      }
+      return;
+    }
     cancelVoyage(world, ctx, ship, voyage, remaining, true); // moored off the booked shore: the player's
     return;
   }
@@ -385,7 +407,22 @@ function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, 
     return;
   }
   if (!world.has(ship, VehicleDrive)) {
-    dropBooking(world, ship, voyage); // adrift: the sail gave up or the player stopped it
+    // Adrift with the crossing under way: the sail's route died under the hull - a step another ship
+    // blocked, say - or the player stopped it in the open water, which moors it at the booked shore
+    // and reads as arrived above. A dead route keeps its booking: the dock order goes out again for
+    // the booked shore, throttled like every watcher try, and the crossing finishes instead of
+    // leaving ship and passengers adrift with nobody watching.
+    if (watchAttemptDue(world, ship, ctx.tick)) {
+      const shore = voyage.shore;
+      if (
+        shore !== null &&
+        dockVehicle(world, ctx, { kind: 'dockVehicle', vehicle: ship, x: shore.hx, y: shore.hy })
+      ) {
+        watchRetry.get(world)?.delete(ship);
+      } else {
+        stampWatchTry(world, ship, ctx.tick);
+      }
+    }
     return;
   }
   holdLeaving(world, terrain, remaining);
@@ -488,27 +525,30 @@ function startReturnVoyage(
   const taken = takeReturnDock(world, ctx, terrain, ship, voyage, home === null || home === undefined ? null : { hx: home.hx, hy: home.hy });
   const live = world.mut(ship, FerryVoyage);
   live.phase = 'return';
-  if (taken) returnRetry.get(world)?.delete(ship);
-  else {
-    let held = returnRetry.get(world);
-    if (held === undefined) {
-      held = new Map();
-      returnRetry.set(world, held);
-    }
-    held.set(ship, ctx.tick);
-  }
+  if (taken) watchRetry.get(world)?.delete(ship);
+  else stampWatchTry(world, ship, ctx.tick);
   return taken;
 }
 
-/** Ticks between the watcher's tries to start a return the water currently refuses. */
-const RETURN_RETRY_TICKS = 8;
+/** Ticks between the watcher's tries to bring a lapsed leg back on the water. */
+const WATCH_RETRY_TICKS = 8;
 /** The last try per ship, so a wedged watcher does not search the whole shore every tick. */
-const returnRetry = new WeakMap<World, Map<Entity, number>>();
+const watchRetry = new WeakMap<World, Map<Entity, number>>();
 
 /** Whether `ship`'s watcher may make its next try: the first one at once, then throttled. */
-function returnAttemptDue(world: World, ship: Entity, tick: number): boolean {
-  const last = returnRetry.get(world)?.get(ship);
-  return last === undefined || tick - last >= RETURN_RETRY_TICKS;
+function watchAttemptDue(world: World, ship: Entity, tick: number): boolean {
+  const last = watchRetry.get(world)?.get(ship);
+  return last === undefined || tick - last >= WATCH_RETRY_TICKS;
+}
+
+/** Note `ship`'s watcher try as made now, so the next one waits its throttle. */
+function stampWatchTry(world: World, ship: Entity, tick: number): void {
+  let held = watchRetry.get(world);
+  if (held === undefined) {
+    held = new Map();
+    watchRetry.set(world, held);
+  }
+  held.set(ship, tick);
 }
 
 /**
