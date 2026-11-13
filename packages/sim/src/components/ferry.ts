@@ -39,10 +39,10 @@ export const FerryVoyage = defineComponent<FerryVoyageState>('FerryVoyage', 'mov
 /**
  * A settler booked on a ferry crossing ({@link FerryVoyage}): `ship` is the vessel it walks to and
  * rides, `goal` the spot its move order named, which the walk line from the far shore carries it to.
- * `wait` is the shore node a dispatched booking holds the settler at while the ship sails to it - a
- * bare move goal of the crossing's own, so they stand at the coast when the ship arrives; null before
- * a shore is known or for a booking on a ship already lying at their island. The booking ends when the
- * settler steps ashore at `goal`, and with the voyage it was booked on.
+ * `wait` is the coast node on their own island a dispatched booking holds the settler at while the
+ * ship sails to it - a bare move goal of the crossing's own, so they stand at the water when it
+ * arrives; null before such a spot is found or for a booking on a ship already lying at their
+ * island. The booking ends when the settler steps ashore at `goal`, and with the voyage it was booked on.
  */
 export const FerryPassenger = defineComponent<{ ship: Entity; goal: NodeId; wait: NodeId | null }>(
   'FerryPassenger',

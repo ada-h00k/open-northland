@@ -12,6 +12,7 @@ import {
   VehicleDrive,
   vehicleCommander,
   vehiclePassengers,
+  WALK_RANGE_NODES,
 } from '../../../src/components/index.js';
 import type { Entity } from '../../../src/ecs/world.js';
 import {
@@ -22,10 +23,13 @@ import {
   Simulation,
   type TerrainMap,
 } from '../../../src/index.js';
+import { navigationLimitFor } from '../../../src/systems/index.js';
 import { dockVehicle } from '../../../src/systems/vehicles/dock.js';
 import { createVehicle } from '../../../src/systems/vehicles/index.js';
+import { ferryLandingOf } from '../../../src/systems/vehicles/ferry.js';
 import { testContent } from '../../fixtures/content.js';
 import { ctxOf } from '../../fixtures/context.js';
+import { stampPost } from '../signposts/support.js';
 
 /**
  * The ferryman: a move order whose goal lies across open water takes the owner's idle ship with a scout
@@ -117,6 +121,41 @@ function fjordSim(): Simulation {
   return s;
 }
 
+/** The two banks of a long map, split by the same four cells of sea: banks long enough that a settler
+ *  deep inland stands past its walk range from the coast, so only a signpost chain to the landing
+ *  place lets a confined civilian take the ship. */
+function wideIslandMap(): TerrainMap {
+  const width = 128;
+  const height = 24;
+  const typeIds = new Array<number>(width * height).fill(GRASS);
+  for (let row = 0; row < height; row++) {
+    for (let col = WIDE_SEA_FROM; col < WIDE_SEA_TO; col++) typeIds[row * width + col] = WATER;
+  }
+  return halfCellMapFromCells({ width, height, typeIds });
+}
+
+/** The wide map's sea columns: water nodes 44..51, so the banks run 0..43 and 52..127. */
+const WIDE_SEA_FROM = 22;
+const WIDE_SEA_TO = 26;
+/** A deep-inland spot on the east bank and a goal on the west one, islands apart. */
+const WIDE_SPOT = { hx: 108, hy: 16 } as const;
+const WIDE_HOME = { hx: 20, hy: 16 } as const;
+/** The posts that bridge the walk range to the coast: caught at 20 nodes, linked at 32, the coast
+ *  post's coverage covering the landing place. */
+const WIDE_POST_NEAR = { x: 44, y: 8 } as const;
+const WIDE_POST_COAST = { x: 28, y: 8 } as const;
+/** A long walk on the wide banks, with margin. */
+const WIDE_WALK_TICKS = 3000;
+
+/** The wide map with the signpost rule switched on: the civilian tests run confined. */
+function wideSim(): Simulation {
+  const s = new Simulation({ seed: 5, content: testContent(), map: wideIslandMap() });
+  s.enqueueSetup({ kind: 'setNeedsEnabled', enabled: false });
+  s.enqueueSetup({ kind: 'setSignpostNavigation', enabled: true });
+  s.step();
+  return s;
+}
+
 function spawnShip(s: Simulation, x: number = SHIP_HX, y: number = HOME.hy): Entity {
   const ship = createVehicle(s.world, ctxOf(s), {
     vehicleType: SHIP_SMALL,
@@ -145,19 +184,26 @@ function crewAboard(
   jobType: number,
   x: number = 16,
   y: number = HOME.hy,
+  limit: number = BOARD_TICKS,
 ): Entity {
   const member = spawnSettler(s, x, y, jobType);
   s.enqueue(playerCommand(P0, { kind: 'attachToVehicle', entity: member, vehicle: ship }));
   s.step();
   s.enqueue(playerCommand(P0, { kind: 'boardVehicle', entity: member }));
   s.step();
-  boardOut(s, ship, member);
+  boardOut(s, ship, member, limit);
   return member;
 }
 
 /** The crossing's ferryman: a scout at the helm. */
-function crewScout(s: Simulation, ship: Entity, x: number = 16, y: number = HOME.hy): Entity {
-  return crewAboard(s, ship, SCOUT, x, y);
+function crewScout(
+  s: Simulation,
+  ship: Entity,
+  x: number = 16,
+  y: number = HOME.hy,
+  limit: number = BOARD_TICKS,
+): Entity {
+  return crewAboard(s, ship, SCOUT, x, y, limit);
 }
 
 function nodeOf(s: Simulation, e: Entity): { hx: number; hy: number } | null {
@@ -1126,6 +1172,121 @@ describe('ferryPassage', () => {
     stepMooredAt(s, ship, home);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     stepOnto(s, passenger, { hx: 40, hy: 12 }); // their own walk stands
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+  });
+});
+
+describe('ferryPassage under the signpost rule', () => {
+  /**
+   * A confined civilian ordered to another island is judged at the crossing's landing place, not at
+   * the far goal: the posts must lead them to the shore where they board or wait for the ship, and
+   * whether they could walk the far island themselves is the ferryman's business - the scout at the
+   * helm knows it. The wide map's banks put the coast past the walk range of a deep-inland settler,
+   * so only a signpost chain to the landing place opens the crossing.
+   */
+
+  it('a civilian whose posts reach no landing place is refused the far island', () => {
+    const s = wideSim();
+    const ship = spawnShip(s, 49, 16); // moors at the east bank, the settler's island
+    crewScout(s, ship, 56, 16);
+    const passenger = spawnSettler(s, WIDE_SPOT.hx, WIDE_SPOT.hy);
+    const terrain = s.terrain;
+    if (terrain === undefined) throw new Error('the sim runs mapless');
+    // The premise: the landing place - the ship's door at the coast - lies past the walk range,
+    // and the goal lies on ground no post covers.
+    const goal = terrain.nodeAt(WIDE_HOME.hx, WIDE_HOME.hy);
+    const landing = ferryLandingOf(s.world, ctxOf(s), terrain, passenger, goal);
+    if (landing === null) throw new Error('the far goal names no landing place');
+    const at = nodeOf(s, passenger);
+    if (at === null) throw new Error('the passenger stands off the map');
+    expect(hexDistanceBetween(terrain.xOf(landing), terrain.yOf(landing), at.hx, at.hy)).toBeGreaterThan(
+      WALK_RANGE_NODES,
+    );
+    expect(navigationLimitFor(s.world, s.content, terrain, passenger)?.allowsNode(goal)).toBe(false);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: WIDE_HOME.hx, y: WIDE_HOME.hy }));
+    s.step();
+    // Refused, no crossing and no hold: the settler does not know the way even to the shore.
+    expect(s.world.has(passenger, FerryPassenger)).toBe(false);
+    expect(s.world.has(passenger, FerryWaiting)).toBe(false);
+    expect(s.events.current()).toContainEqual({ kind: 'settlerLost', entity: passenger });
+    expect(s.world.has(passenger, LostWay)).toBe(true);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+  });
+
+  it('a post chain to the landing place takes the civilian across, and the far island asks none', () => {
+    const s = wideSim();
+    const ship = spawnShip(s, 49, 16);
+    const scout = crewScout(s, ship, 56, 16);
+    const home = mooringPoint(s, ship);
+    stampPost(s, WIDE_POST_NEAR.x, WIDE_POST_NEAR.y); // caught: 20 nodes from the settler
+    stampPost(s, WIDE_POST_COAST.x, WIDE_POST_COAST.y); // linked to it; covers the coast door
+    const passenger = spawnSettler(s, WIDE_SPOT.hx, WIDE_SPOT.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: WIDE_HOME.hx, y: WIDE_HOME.hy }));
+    s.step();
+    // The crossing is booked off the posts alone: the goal itself lies on an island no post covers.
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    boardOut(s, ship, passenger, WIDE_WALK_TICKS);
+    expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('sail');
+
+    // The ship moors at the target island and the passenger walks on to the ordered spot - no
+    // signpost there, and the walk on is not refused for it.
+    stepAshore(s, passenger, WIDE_HOME);
+    stepOnto(s, passenger, WIDE_HOME, 2, WIDE_WALK_TICKS);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    expect(s.world.has(passenger, FerryPassenger)).toBe(false);
+    stepReturnHome(s, ship, home);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    expect(vehicleCommander(s.world.get(ship, Vehicle))).toBe(scout);
+  });
+
+  it('a dispatched crossing holds its civilian at their own coast once the posts lead there', () => {
+    const s = wideSim();
+    const ship = spawnShip(s, 47, 16); // moors at the west bank: the east island keeps no ferry
+    crewScout(s, ship, 30, 16, WIDE_WALK_TICKS);
+    const home = mooringPoint(s, ship);
+    stampPost(s, WIDE_POST_NEAR.x, WIDE_POST_NEAR.y);
+    stampPost(s, WIDE_POST_COAST.x, WIDE_POST_COAST.y);
+    const passenger = spawnSettler(s, WIDE_SPOT.hx, WIDE_SPOT.hy);
+    const terrain = s.terrain;
+    if (terrain === undefined) throw new Error('the sim runs mapless');
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: WIDE_HOME.hx, y: WIDE_HOME.hy }));
+    s.step();
+    // The dispatch is booked: the predicted wait is the coast spot on their own island, whose posts
+    // reach it - the far island's lack of coverage never asked.
+    const wait = s.world.tryGet(passenger, FerryPassenger)?.wait;
+    if (wait === null || wait === undefined) throw new Error('the dispatch booked no wait spot');
+    expect(terrain.componentOf(wait)).toBe(terrain.componentOf(terrain.nodeAt(WIDE_SPOT.hx, WIDE_SPOT.hy)));
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    // They walk to that coast while the ship sails over, and board when it moors there.
+    stepOnto(s, passenger, { hx: terrain.xOf(wait), hy: terrain.yOf(wait) }, 2, WIDE_WALK_TICKS);
+    boardOut(s, ship, passenger, WIDE_WALK_TICKS);
+
+    // The crossing delivers them to the ordered spot on the far island, and the taxi sails home.
+    stepAshore(s, passenger, WIDE_HOME);
+    stepOnto(s, passenger, WIDE_HOME, 2, WIDE_WALK_TICKS);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    expect(s.world.has(passenger, FerryPassenger)).toBe(false);
+    stepMooredAt(s, ship, home, WIDE_WALK_TICKS);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+  });
+
+  it('a hold with no ship coming home stands where it is - its own spot is the landing place', () => {
+    const s = wideSim(); // no ship anywhere, so none will come back to this island either
+    const passenger = spawnSettler(s, WIDE_SPOT.hx, WIDE_SPOT.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: WIDE_HOME.hx, y: WIDE_HOME.hy }));
+    s.step();
+    // No landing walk to judge the posts by: the hold keeps them standing, and the order stands
+    // instead of refusing lost.
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+    expect(s.world.tryGet(passenger, FerryWaiting)?.wait).toBeNull();
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    for (let ticks = 0; ticks < LOST_TICKS; ticks++) s.step();
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
     expect(s.world.has(passenger, LostWay)).toBe(false);
   });
 });

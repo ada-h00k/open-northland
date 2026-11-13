@@ -143,18 +143,52 @@ export function tryFerryPassage(
   }
   // A dispatched booking's passenger walks toward the water while the ship sails: the shore the
   // crossing holds for them - the booked berth of a crossing joined under way, else the spot the
-  // shore choice will take - is where they wait, at the coast when the ship arrives. A booking on a
-  // ship already lying at their island walks the door instead, so it holds no wait spot.
+  // shore choice will take on their own island - is where they wait, at the coast when the ship
+  // arrives. A booking on a ship already lying at their island walks the door instead, so it holds
+  // no wait spot.
   const held = voyage?.shore ?? null;
   const wait =
     held !== null
       ? terrain.nodeAt(held.hx, held.hy)
       : dispatched
-        ? predictedShore(world, ctx, terrain, ship, start, target)
+        ? predictedShore(world, ctx, terrain, ship, start, home)
         : null;
   world.add(e, FerryPassenger, { ship, goal, wait });
   if (wait !== null) holdAtShore(world, terrain, e, wait);
   return true;
+}
+
+/**
+ * The landing place on the settler's own island that a crossing to `goal` would walk them over: the
+ * door of the idle ship that would take the booking now, the coast spot a dispatched crossing holds
+ * its passenger at while it sails, the berth an away ship comes back to moor at for a hold, or the
+ * settler's own node when a hold would keep them standing where they are. Null when `goal` is no
+ * crossing away - the settler's own land, or off it - leaving the goal to the caller's ordinary
+ * confinement. This is the signpost question a cross-island order asks: the posts must lead the
+ * settler to the landing place, and whether they could walk the far island themselves is the
+ * ferryman's business - the scout at the helm knows it.
+ */
+export function ferryLandingOf(
+  world: World,
+  ctx: SystemContext,
+  terrain: TerrainGraph,
+  e: Entity,
+  goal: NodeId,
+): NodeId | null {
+  const start = entityNode(world, terrain, e);
+  const home = terrain.componentOf(start);
+  const target = terrain.componentOf(goal);
+  if (home === NO_COMPONENT || target === NO_COMPONENT || home === target) return null;
+  const owner = ownerOf(world, e);
+  if (owner === undefined) return null;
+  const idle = nearestFerry(world, ctx, terrain, e, owner, start, target);
+  if (idle !== null) {
+    const door = landingOf(world, ctx, idle);
+    return door === null ? null : terrain.nodeAt(door.hx, door.hy);
+  }
+  const dispatched = nearestFerryAcross(world, ctx, terrain, e, owner, start, target);
+  if (dispatched !== null) return predictedShore(world, ctx, terrain, dispatched, start, home) ?? start;
+  return returnBerthOf(world, ctx, terrain, owner, start) ?? start;
 }
 
 /**
