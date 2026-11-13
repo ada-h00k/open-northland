@@ -7,6 +7,7 @@ import {
   type JobType,
   parseContentSet,
   parseGeneratedContentSet,
+  type TribeType,
   type VehicleType,
   type WeaponType,
 } from '@open-northland/data';
@@ -147,6 +148,20 @@ function withFerrymanCrew(vehicle: VehicleType): VehicleType {
   return { ...vehicle, passengerJobs: [...vehicle.passengerJobs, JOB_FERRYMAN] };
 }
 
+/**
+ * Admit the ferryman at every tribe's initial allow table (`permissions.job`): the tables transcribe
+ * the original's per-tribe allow flags, which no extracted record carries our trade in, and a trade an
+ * existing table leaves unlisted is banned - the profession picker hides it wholesale. Every man takes
+ * it from the start like the scout does: no `needforjob` row thresholds it, so no other gate reads.
+ * A tribe without a table is unrestricted and passes through; idempotent, like every overlay here.
+ */
+function withFerrymanAllowed(tribe: TribeType): TribeType {
+  const permissions = tribe.permissions;
+  const job = permissions?.job;
+  if (permissions === undefined || job === undefined || job.includes(JOB_FERRYMAN)) return tribe;
+  return { ...tribe, permissions: { ...permissions, job: [...job, JOB_FERRYMAN] } };
+}
+
 /** Overlay the clean-room felling/mining balance (felled yield, deposit size and levels) into the
  *  pipeline's zeroed gathering block: the mod data carries none of them. Everything else the real row
  *  ships is preserved. */
@@ -178,7 +193,8 @@ export function withGoodOverlays(good: GoodType): GoodType {
  * It also injects the sim's semantic nav-terrain classes ({@link NAV_LANDSCAPE_TYPES}) into `landscape`:
  * real content's detailed types (1..87) carry no collision classes, and the class ids sit in a reserved
  * band that never aliases them, plus this project's ferry trade with its ship crew lists
- * ({@link withFerrymanTrade}, {@link withFerrymanCrew}), which no extracted record carries. Idempotent,
+ * ({@link withFerrymanTrade}, {@link withFerrymanCrew}) and its seat in every tribe's initial job allow
+ * table ({@link withFerrymanAllowed}), which no extracted record carries. Idempotent,
  * so a class row already present is not duplicated.
  */
 export function mergeRealContent(real: ContentSet): RealContentMerge {
@@ -219,7 +235,7 @@ export function mergeRealContent(real: ContentSet): RealContentMerge {
       landscape,
       weapons,
       vehicles,
-      tribes: real.tribes.map((tribe) => withUnitVariants(tribe, weapons)),
+      tribes: real.tribes.map((tribe) => withFerrymanAllowed(withUnitVariants(tribe, weapons))),
     }),
     unbalancedGoods,
     unfarmedFieldGoods,
