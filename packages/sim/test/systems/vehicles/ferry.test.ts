@@ -4,6 +4,7 @@ import {
   FerryVoyage,
   FerryWaiting,
   LostWay,
+  MoveGoal,
   Position,
   Rider,
   Settler,
@@ -29,8 +30,11 @@ import { ctxOf } from '../../fixtures/context.js';
 /**
  * The ferryman: a move order whose goal lies across open water takes the owner's idle ship with a scout
  * aboard, moored at a shore of the settler's island. The settler boards, the ship docks at a shore of the
- * target island and the passenger walks on from there to the spot the order named. Without such a ship
- * the order refuses lost, as any unreachable walk does.
+ * target island and the passenger walks on from there to the spot the order named. A booking whose ship
+ * lies on another island is dispatched: the ship sails to the passengers' shore first, and they walk to
+ * the coast and hold there while it comes. When no ship takes a booking at all, the order stands as a
+ * hold: the settler walks to the berth an away ship of theirs comes back to moor at on this island and
+ * stands there for its return, or keeps their spot when none will come home.
  */
 
 const VIKING = 1;
@@ -348,6 +352,126 @@ describe('ferryPassage', () => {
     stepOnto(s, second, { hx: FAR.hx, hy: 20 });
     expect(s.world.has(second, LostWay)).toBe(false);
     expect(s.world.has(first, LostWay)).toBe(false);
+  });
+
+  it('a hold walks to the berth the away taxi comes back to and boards when it moors', () => {
+    const s = threeIslandSim();
+    const ship = spawnShip(s, SHIP_HX, HOME.hy);
+    crewScout(s, ship, 16, HOME.hy);
+    const home = mooringPoint(s, ship);
+    const first = spawnSettler(s, HOME.hx, HOME.hy);
+    const second = spawnSettler(s, HOME.hx, 20);
+
+    // The only ship sails the long crossing to the third island: no ship is free for the second,
+    // whose order stands as a hold that books the berth the taxi comes back to moor at.
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: first, x: SOUTH.hx, y: SOUTH.hy }));
+    s.step();
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, ship, first)?.inside !== true; t++) s.step();
+    for (let t = 0; t < 40 && s.world.tryGet(ship, FerryVoyage)?.phase !== 'sail'; t++) s.step();
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: second, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    expect(s.world.has(second, FerryWaiting)).toBe(true);
+    const terrain = s.terrain;
+    if (terrain === undefined) throw new Error('the sim runs mapless');
+    // The booked berth is the shore the crossing left the ship moored at: its return's end.
+    expect(s.world.tryGet(second, FerryWaiting)?.wait).toBe(terrain.nodeAt(home.hx, home.hy));
+
+    // They walk there while the ship is away, and stand for its return; the hold keeps them standing.
+    stepOnto(s, second, home, 2);
+    for (let t = 0; t < LOST_TICKS; t++) s.step();
+    expect(s.world.has(second, FerryWaiting)).toBe(true);
+    expect(s.world.has(second, LostWay)).toBe(false);
+
+    // The crossing delivers, the taxi moors home at the berth, and the waiter boards the moment it
+    // lies there and rides over to their spot.
+    stepAshore(s, first, SOUTH);
+    stepOnto(s, first, SOUTH);
+    let bookedAt = -1;
+    for (let t = 0; t < SAIL_TICKS * 2 && bookedAt < 0; t++) {
+      s.step();
+      if (s.world.has(second, FerryPassenger)) bookedAt = t;
+    }
+    expect(bookedAt).toBeGreaterThanOrEqual(0);
+    expect(s.world.tryGet(second, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.has(second, FerryWaiting)).toBe(false);
+    boardOut(s, ship, second);
+    stepAshore(s, second, FAR);
+    stepOnto(s, second, FAR);
+    expect(s.world.has(second, LostWay)).toBe(false);
+    expect(s.world.has(first, LostWay)).toBe(false);
+  });
+
+  it('a hold with no ship coming back stands where it is', () => {
+    const s = sim();
+    spawnShip(s); // moored at the west shore, but nobody aboard: no booking, and no ship away either
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    // Nothing is under way, so no berth is booked and no walk goes out: the settler keeps their spot.
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+    expect(s.world.tryGet(passenger, FerryWaiting)?.wait).toBeNull();
+    expect(s.world.has(passenger, MoveGoal)).toBe(false);
+    const at = nodeOf(s, passenger);
+    for (let ticks = 0; ticks < LOST_TICKS; ticks++) s.step();
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+    expect(nodeOf(s, passenger)).toEqual(at);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+  });
+
+  it('a hold books no berth while the only ship sails off to moor at another island', () => {
+    const s = sim();
+    const ship = spawnShip(s, SHIP_HX, HOME.hy);
+    crewScout(s, ship, 16, HOME.hy);
+    const passenger = spawnSettler(s, HOME.hx, 20);
+
+    // The player sends the only ship off to dock at the far island's west coast: under way, it
+    // carries the point it sails toward, and that mooring lies on another island - no berth here
+    // waits for anybody.
+    s.enqueue(playerCommand(P0, { kind: 'dockVehicle', vehicle: ship, x: 28, y: 12 }));
+    s.step();
+    expect(s.world.get(ship, Vehicle).task).toBe('docks');
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx - 4, y: FAR.hy }));
+    s.step();
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+    expect(s.world.tryGet(passenger, FerryWaiting)?.wait).toBeNull();
+    expect(s.world.has(passenger, MoveGoal)).toBe(false);
+  });
+
+  it('a hold walks to the berth a dock order sails its ship back to and boards on arrival', () => {
+    const s = sim();
+    const ship = spawnShip(s, SHIP_HX, HOME.hy);
+    crewScout(s, ship, 16, HOME.hy);
+    const passenger = spawnSettler(s, HOME.hx, 20);
+
+    // The player sends the only ship off on a dock order to this island's south shore: the crossing
+    // order holds, and the hold walks its settler to the point the ship will moor at.
+    const berth = { hx: 18, hy: 32 } as const;
+    s.enqueue(playerCommand(P0, { kind: 'dockVehicle', vehicle: ship, x: berth.hx, y: berth.hy }));
+    s.step();
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+    const terrain = s.terrain;
+    if (terrain === undefined) throw new Error('the sim runs mapless');
+    expect(s.world.tryGet(passenger, FerryWaiting)?.wait).toBe(terrain.nodeAt(berth.hx, berth.hy));
+
+    // They walk to the berth and stand; the ship moors there, and the hold takes it on the spot.
+    stepOnto(s, passenger, berth, 2);
+    stepMooredAt(s, ship, berth);
+    let bookedAt = -1;
+    for (let t = 0; t < 80 && bookedAt < 0; t++) {
+      s.step();
+      if (s.world.has(passenger, FerryPassenger)) bookedAt = t;
+    }
+    expect(bookedAt).toBeGreaterThanOrEqual(0);
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.has(passenger, FerryWaiting)).toBe(false);
+    boardOut(s, ship, passenger);
+    expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('sail');
+    stepAshore(s, passenger, FAR);
+    stepOnto(s, passenger, FAR);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
   });
 
   it('an order of their own takes a held settler off the hold', () => {

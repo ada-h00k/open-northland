@@ -45,13 +45,15 @@ import { vehicleIndex } from './registry.js';
 // door, boards, and the ship docks at a shore of the target island nearest the clicked spot, where the
 // riders step off and walk on to their spots; the empty ship then sails back to the mooring the
 // crossing booked it at. A dispatched booking's passenger walks toward the water while the ship sails:
-// the shore the crossing holds for it, so they stand at the coast when the ship arrives. A route that
-// dies under the hull - a step another ship blocked, say - or a berth that went out from under the
-// ship ends no leg: the watcher runs the leg's berth choice again, the nearest shore the water still
-// takes, so the crossing always moors where the coast lets it and nobody is left ashore or adrift.
-// The pieces are the crew's attach and board, the dock order's sail and moor, and the rider rung's
-// held leaving; this file only books the crossing, flips it from boarding to sailing, sails it home,
-// and reads it over.
+// the shore the crossing holds for it, so they stand at the coast when the ship arrives. When no ship
+// takes a booking at all, the order stands as a hold: the settler walks to the berth an away ship of
+// theirs comes back to moor at on this island and stands there for its return, or keeps their spot
+// when none will come home. A route that dies under the hull - a step another ship blocked, say - or
+// a berth that went out from under the ship ends no leg: the watcher runs the leg's berth choice
+// again, the nearest shore the water still takes, so the crossing always moors where the coast lets
+// it and nobody is left ashore or adrift. The pieces are the crew's attach and board, the dock order's
+// sail and moor, and the rider rung's held leaving; this file only books the crossing, flips it from
+// boarding to sailing, sails it home, and reads it over.
 
 /**
  * Book `e`, standing on its island, the crossing to `goal` on another one: the nearest idle ship of
@@ -60,8 +62,11 @@ import { vehicleIndex } from './registry.js';
  * ship, the nearest one of another island whose sea reaches this shore is dispatched instead: it sails
  * here first (the phase `pickup`), and while it sails, the passenger walks toward the water and holds
  * at the shore the crossing booked for it, riding nothing; it takes its seat and the walk to the door
- * only once the ship has moored. False, leaving the order to the caller's ordinary refusal, when the
- * goal is no island away or no ship qualifies.
+ * only once the ship has moored. When no ship takes the booking at all, the order stands as a hold:
+ * while one of the owner's ships is away and comes back to moor on this island, the settler walks to
+ * that berth and stands there for the ship's return; otherwise they stay where they are. False,
+ * leaving the order to the caller's ordinary refusal, when the goal is no island away or no ship
+ * qualifies.
  */
 export function tryFerryPassage(
   world: World,
@@ -74,7 +79,9 @@ export function tryFerryPassage(
   const home = terrain.componentOf(start);
   const target = terrain.componentOf(goal);
   // Any fresh booking attempt ends an older hold: the settler is being aimed anew, at this goal or
-  // at another one. The hold is re-armed below when no ship is free for this goal either.
+  // at another one. The hold is re-armed below when no ship is free for this goal either, and its
+  // old wait walk, if the re-arm books no berth, stands down against the spot it walked to.
+  const previousWait = world.tryGet(e, FerryWaiting)?.wait ?? null;
   world.remove(e, FerryWaiting);
   if (home === NO_COMPONENT || target === NO_COMPONENT || home === target) return false;
   const owner = ownerOf(world, e);
@@ -104,10 +111,16 @@ export function tryFerryPassage(
     dispatched = ship !== null;
   }
   if (ship === null) {
-    // No free ship anywhere: the order stands as a hold instead of refusing lost. The settler stays
-    // where they are and the ferry system retries this booking until a ship comes free - one coming
-    // back from a crossing, newly crewed or newly built - or until their own new order ends the hold.
-    world.add(e, FerryWaiting, { goal, since: ctx.tick });
+    // No free ship anywhere: the order stands as a hold instead of refusing lost. When one of the
+    // owner's ships is away and comes back to moor on this island, the settler walks to that berth
+    // and stands there, so they board the moment the ship lies at it again; with no ship coming home
+    // they stay where they are. The ferry system retries this booking until a ship comes free - one
+    // coming back from a crossing, newly crewed or newly built - or until their own new order ends
+    // the hold.
+    const berth = returnBerthOf(world, ctx, terrain, owner, start);
+    world.add(e, FerryWaiting, { goal, since: ctx.tick, wait: berth });
+    if (berth !== null) holdAtShore(world, terrain, e, berth);
+    else if (previousWait !== null) endHoldWalk(world, e, previousWait);
     return true;
   }
   if (!dispatched) {
@@ -145,6 +158,60 @@ export function tryFerryPassage(
 }
 
 /**
+ * The berth a held booking waits at: the shore point the nearest of the owner's ships that is away
+ * comes back to moor at on the settler's island - a crossing's booked home mooring, which its return
+ * leg sails it to, or the point of a dock order still sailing in. Null when no ship will come back
+ * here - none is out, or the one under way moors at another island's shore - so the settler stands
+ * where they are. Ships pinned to a trader or carried by another are out of service and no berth.
+ * Nearest by the hex distance from the settler, ties broken by the ascending entity id the vehicle
+ * index lists.
+ */
+function returnBerthOf(
+  world: World,
+  ctx: SystemContext,
+  terrain: TerrainGraph,
+  owner: number,
+  start: NodeId,
+): NodeId | null {
+  const home = terrain.componentOf(start);
+  if (home === NO_COMPONENT) return null;
+  const from = terrain.coordsOf(start);
+  let best: NodeId | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const ship of vehicleIndex(world).ownedBy(owner)) {
+    const state = world.get(ship, Vehicle);
+    const type = contentIndex(ctx.content).vehicles.get(state.vehicleType);
+    if (type === undefined || !isShipVehicle(type)) continue;
+    if (state.carrier !== null || state.hauler !== null) continue; // riding or pinned out of service
+    if (world.has(ship, TradeShip)) continue;
+    const voyage = world.tryGet(ship, FerryVoyage);
+    const point =
+      voyage !== undefined ? voyage.home : state.task === 'docks' ? state.mooring : null;
+    if (point === null) continue; // no trip that ends at a mooring of its own
+    const berth = terrain.nodeAtClamped(point.hx, point.hy);
+    if (terrain.componentOf(berth) !== home) continue; // it comes back to another island, not this one
+    const distance = hexDistanceBetween(terrain.xOf(berth), terrain.yOf(berth), from.x, from.y);
+    if (distance < bestDistance) {
+      best = berth;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/**
+ * End a hold's own walk that the re-armed hold no longer books a berth for: the ship it waited for
+ * will come back elsewhere or not at all, so the walk to its old berth stands down. Only the walk
+ * aimed at the old spot ends - the settler's own business keeps going.
+ */
+function endHoldWalk(world: World, e: Entity, previous: NodeId): void {
+  const walk = world.tryGet(e, MoveGoal);
+  if (walk === undefined || walk.cell !== previous) return;
+  world.remove(e, MoveGoal);
+  world.remove(e, PathRequest);
+}
+
+/**
  * The mooring spot of the land `target` that the ship's water reaches, nearest `ref`: the berth the
  * shore choice will take unless the route to it is dead, and the spot a dispatched booking's waiting
  * passenger holds at while the ship sails. Null when the ship keeps no spot set for that shore.
@@ -174,10 +241,11 @@ function predictedShore(
 }
 
 /**
- * Hold a dispatched booking's passenger at the water: a bare move goal to the shore the crossing
- * booked - no player order, so the watcher's stray-route prune reads it against the marker's `wait`
- * and lets it stand. A passenger standing on the spot already is left alone; an in-flight route to a
- * previous wait is dropped, so the new goal replans from scratch instead of racing the prune.
+ * Hold a waiting booking's walker at `node`: a dispatched passenger at the water, a held settler at
+ * the berth their away ship comes back to. A bare move goal - no player order, so the watcher's
+ * stray-route prune reads it against the marker's `wait` and lets it stand. A walker standing on the
+ * spot already is left alone; an in-flight route to a previous wait is dropped, so the new goal
+ * replans from scratch instead of racing the prune.
  */
 function holdAtShore(world: World, terrain: TerrainGraph, e: Entity, node: NodeId): void {
   const walk = world.tryGet(e, MoveGoal);
@@ -352,9 +420,10 @@ export const ferrySystem: System = (world, ctx) => {
  * Advance every held booking: a settler whose move order found no free ship stands by it and takes
  * the first ship that comes free. Each retry runs the same search a click runs, so the held settler
  * joins a crossing still boarding, rides the ship that just moored home or takes a newly crewed one
- * the moment the search lets it. The hold ends when the booking is made, and the settler's own new
- * order ends it too: the hold is a stand-in for their move order, not a leash, so any command in
- * their slot or under way takes them off it.
+ * the moment the search lets it. Between retries they walk the berth the hold booked them - the spot
+ * an away ship comes back to moor at - and stand there for its return; a route anywhere but that
+ * spot ends the hold, so their own new order takes them off it. The hold also ends when the booking
+ * is made.
  */
 function retryHolds(world: World, ctx: SystemContext, terrain: TerrainGraph): void {
   for (const e of world.canonicalQuery(FerryWaiting)) {
@@ -369,7 +438,8 @@ function retryHolds(world: World, ctx: SystemContext, terrain: TerrainGraph): vo
       world.remove(e, FerryWaiting); // gone, or a fresh command of their own is in the slot or under way
       continue;
     }
-    if (world.has(e, PathRequest)) {
+    const route = world.tryGet(e, PathRequest);
+    if (route !== undefined && (marker.wait === null || route.goal !== marker.wait)) {
       world.remove(e, FerryWaiting); // they walk somewhere of their own instead
       continue;
     }

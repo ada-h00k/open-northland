@@ -53,10 +53,13 @@ export const FerryPassenger = defineComponent<{ ship: Entity; goal: NodeId; wait
  * A settler whose island-crossing move order found no free ship at booking time: the order stands as
  * this hold instead of refusing lost. The ferry system retries the booking every few ticks, so the
  * settler takes the first ship that comes free - one coming back from a crossing, newly crewed or
- * newly built. The hold ends when a booking is made (`FerryPassenger` replaces it) or when the
- * settler's own new order takes them somewhere else; while held they stand where they are.
+ * newly built. While one of the owner's ships is away and comes back to moor on their island, `wait`
+ * is that berth: a bare move goal of the hold's own walks them there, so they stand at the landing
+ * place when the ship moors and take it the moment the search lets it. Null when no ship will come
+ * back here, so they stand where they are instead. The hold ends when a booking is made
+ * (`FerryPassenger` replaces it) or when the settler's own new order takes them somewhere else.
  */
-export const FerryWaiting = defineComponent<{ goal: NodeId; since: number }>(
+export const FerryWaiting = defineComponent<{ goal: NodeId; since: number; wait: NodeId | null }>(
   'FerryWaiting',
   'movement',
 );
