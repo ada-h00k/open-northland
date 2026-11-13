@@ -36,7 +36,7 @@ import { ctxOf } from '../../fixtures/context.js';
 import { stampPost } from '../signposts/support.js';
 
 /**
- * The ferryman: a move order whose goal lies across open water takes the owner's idle ship with a scout
+ * The ferryman: a move order whose goal lies across open water takes the owner's idle ship with a ferryman
  * aboard, moored at a shore of the settler's island. The settler boards, the ship docks at a shore of the
  * target island and the passenger walks on from there to the spot the order named. A booking whose ship
  * lies on another island is dispatched: the ship sails to the passengers' shore first, and they walk to
@@ -48,6 +48,7 @@ import { stampPost } from '../signposts/support.js';
 const VIKING = 1;
 const P0 = 0;
 const SHIP_SMALL = 3;
+const FERRYMAN = 56;
 const SCOUT = 27;
 const CARRIER = 24;
 const CIVILIST = 6;
@@ -199,15 +200,15 @@ function crewAboard(
   return member;
 }
 
-/** The crossing's ferryman: a scout at the helm. */
-function crewScout(
+/** The crossing's crew: a ferryman at the helm. */
+function crewFerryman(
   s: Simulation,
   ship: Entity,
   x: number = 16,
   y: number = HOME.hy,
   limit: number = BOARD_TICKS,
 ): Entity {
-  return crewAboard(s, ship, SCOUT, x, y, limit);
+  return crewAboard(s, ship, FERRYMAN, x, y, limit);
 }
 
 function nodeOf(s: Simulation, e: Entity): { hx: number; hy: number } | null {
@@ -313,7 +314,7 @@ describe('ferryPassage', () => {
   it('sails a move order across the water and walks the passenger on to its spot', () => {
     const s = sim();
     const ship = spawnShip(s);
-    const scout = crewScout(s, ship);
+    const crew = crewFerryman(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
     const home = mooringPoint(s, ship);
 
@@ -335,7 +336,7 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('holds the order when no crewed ship lies at this island and sails once one comes free', () => {
@@ -353,8 +354,8 @@ describe('ferryPassage', () => {
     expect(s.world.has(passenger, LostWay)).toBe(false);
     expect(s.world.has(passenger, FerryWaiting)).toBe(true);
 
-    // A scout boards the waiting ship: the hold takes it the moment the search lets it.
-    crewScout(s, ship, 16, HOME.hy);
+    // A ferryman boards the waiting ship: the hold takes it the moment the search lets it.
+    crewFerryman(s, ship, 16, HOME.hy);
     for (let ticks = 0; ticks < 40 && !s.world.has(passenger, FerryPassenger); ticks++) s.step();
     expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
     expect(s.world.has(passenger, FerryWaiting)).toBe(false);
@@ -369,7 +370,7 @@ describe('ferryPassage', () => {
   it('a hold takes the ship the moment its crossing ends and brings the waiter over', () => {
     const s = sim();
     const ship = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, ship, 16, HOME.hy);
+    crewFerryman(s, ship, 16, HOME.hy);
     const first = spawnSettler(s, HOME.hx, HOME.hy);
     const second = spawnSettler(s, HOME.hx, 20);
 
@@ -407,7 +408,7 @@ describe('ferryPassage', () => {
   it('a hold walks to the berth the away taxi comes back to and boards when it moors', () => {
     const s = threeIslandSim();
     const ship = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, ship, 16, HOME.hy);
+    crewFerryman(s, ship, 16, HOME.hy);
     const home = mooringPoint(s, ship);
     const first = spawnSettler(s, HOME.hx, HOME.hy);
     const second = spawnSettler(s, HOME.hx, 20);
@@ -472,7 +473,7 @@ describe('ferryPassage', () => {
   it('a hold books no berth while the only ship sails off to moor at another island', () => {
     const s = sim();
     const ship = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, ship, 16, HOME.hy);
+    crewFerryman(s, ship, 16, HOME.hy);
     const passenger = spawnSettler(s, HOME.hx, 20);
 
     // The player sends the only ship off to dock at the far island's west coast: under way, it
@@ -491,7 +492,7 @@ describe('ferryPassage', () => {
   it('a hold walks to the berth a dock order sails its ship back to and boards on arrival', () => {
     const s = sim();
     const ship = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, ship, 16, HOME.hy);
+    crewFerryman(s, ship, 16, HOME.hy);
     const passenger = spawnSettler(s, HOME.hx, 20);
 
     // The player sends the only ship off on a dock order to this island's south shore: the crossing
@@ -544,10 +545,10 @@ describe('ferryPassage', () => {
     expect(s.world.has(passenger, LostWay)).toBe(false);
   });
 
-  it('a crew without a scout takes no booking, and the order holds until one boards', () => {
+  it('a crew without a ferryman takes no booking, and the order holds until one boards', () => {
     const s = sim();
     const ship = spawnShip(s);
-    crewAboard(s, ship, CARRIER); // a carrier at the helm commands the sail, but is no scout
+    crewAboard(s, ship, CARRIER); // a carrier at the helm commands the sail, but is no ferryman
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
 
     s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
@@ -560,8 +561,8 @@ describe('ferryPassage', () => {
     expect(s.world.has(passenger, LostWay)).toBe(false);
     expect(s.world.has(passenger, FerryWaiting)).toBe(true);
 
-    // A scout joins the carrier's crew: the hold takes the ship the moment the search lets it.
-    crewAboard(s, ship, SCOUT, 16, HOME.hy);
+    // A ferryman joins the carrier's crew: the hold takes the ship the moment the search lets it.
+    crewAboard(s, ship, FERRYMAN, 16, HOME.hy);
     for (let ticks = 0; ticks < 40 && !s.world.has(passenger, FerryPassenger); ticks++) s.step();
     expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
     expect(s.world.has(passenger, FerryWaiting)).toBe(false);
@@ -569,12 +570,12 @@ describe('ferryPassage', () => {
     expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('sail');
   });
 
-  it('takes the nearest ship with a scout at the helm', () => {
+  it('takes the nearest ship with a ferryman at the helm', () => {
     const s = sim();
     const near = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, near, 16, HOME.hy);
+    crewFerryman(s, near, 16, HOME.hy);
     const far = spawnShip(s, SHIP_HX, 24);
-    crewScout(s, far, 16, 24);
+    crewFerryman(s, far, 16, 24);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
 
     s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
@@ -586,9 +587,9 @@ describe('ferryPassage', () => {
   it('a ship already on a voyage leaves the next booking to a free ship', () => {
     const s = sim();
     const near = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, near, 16, HOME.hy);
+    crewFerryman(s, near, 16, HOME.hy);
     const free = spawnShip(s, SHIP_HX, 24);
-    crewScout(s, free, 16, 24);
+    crewFerryman(s, free, 16, 24);
     const first = spawnSettler(s, HOME.hx, HOME.hy);
     const second = spawnSettler(s, HOME.hx, 20);
 
@@ -617,9 +618,9 @@ describe('ferryPassage', () => {
   it('a voyage under way sends a far-side booking to the free ship, not the sailing one', () => {
     const s = sim();
     const near = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, near, 16, HOME.hy);
+    crewFerryman(s, near, 16, HOME.hy);
     const free = spawnShip(s, SHIP_HX, 24);
-    crewScout(s, free, 16, 24);
+    crewFerryman(s, free, 16, 24);
     const first = spawnSettler(s, HOME.hx, HOME.hy);
     const second = spawnSettler(s, FAR.hx, FAR.hy); // lives on the far island
 
@@ -638,9 +639,9 @@ describe('ferryPassage', () => {
   it('a crossing headed to one island leaves a booking for another island to a free ship', () => {
     const s = threeIslandSim();
     const near = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, near, 16, HOME.hy);
+    crewFerryman(s, near, 16, HOME.hy);
     const free = spawnShip(s, SOUTH_SEA.hx, SOUTH_SEA.hy); // moors at the third island's coast
-    crewScout(s, free, 28, 42);
+    crewFerryman(s, free, 28, 42);
     const first = spawnSettler(s, HOME.hx, HOME.hy);
     const second = spawnSettler(s, HOME.hx, 20);
 
@@ -670,9 +671,9 @@ describe('ferryPassage', () => {
   it('a boarding ship headed to one island takes no booking for another island', () => {
     const s = threeIslandSim();
     const near = spawnShip(s, SHIP_HX, HOME.hy);
-    crewScout(s, near, 16, HOME.hy);
+    crewFerryman(s, near, 16, HOME.hy);
     const free = spawnShip(s, SOUTH_SEA.hx, SOUTH_SEA.hy);
-    crewScout(s, free, 28, 42);
+    crewFerryman(s, free, 28, 42);
     const first = spawnSettler(s, HOME.hx, HOME.hy);
     const second = spawnSettler(s, HOME.hx, 20);
 
@@ -702,7 +703,7 @@ describe('ferryPassage', () => {
   it('shares the waiting ship with a second island-crossing click', () => {
     const s = sim();
     const ship = spawnShip(s);
-    crewScout(s, ship);
+    crewFerryman(s, ship);
     const home = mooringPoint(s, ship);
     const first = spawnSettler(s, HOME.hx, 10);
     const second = spawnSettler(s, HOME.hx, 14);
@@ -731,7 +732,7 @@ describe('ferryPassage', () => {
   it('a re-click while the crossing stands re-aims the walk on from the far shore', () => {
     const s = sim();
     const ship = spawnShip(s);
-    crewScout(s, ship);
+    crewFerryman(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
     const home = mooringPoint(s, ship);
     const retarget = { hx: 42, hy: 16 } as const;
@@ -756,7 +757,7 @@ describe('ferryPassage', () => {
   it('a group move order onto another island ferries its member, as the click dispatch issues it', () => {
     const s = sim();
     const ship = spawnShip(s);
-    crewScout(s, ship);
+    crewFerryman(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
     const home = mooringPoint(s, ship);
 
@@ -797,7 +798,7 @@ describe('ferryPassage', () => {
   it('the homebound taxi takes the next booking from its old mooring', () => {
     const s = sim();
     const ship = spawnShip(s);
-    crewScout(s, ship);
+    crewFerryman(s, ship);
     const home = mooringPoint(s, ship);
     const first = spawnSettler(s, HOME.hx, HOME.hy);
 
@@ -821,8 +822,8 @@ describe('ferryPassage', () => {
   it('a crossing to a spot next to another ship on the far island still brings the taxi home', () => {
     const s = sim();
     const ship = spawnShip(s);
-    const scout = crewScout(s, ship);
-    const other = spawnShip(s, 26, 18); // moored at the far shore, no scout: it takes no booking
+    const crew = crewFerryman(s, ship);
+    const other = spawnShip(s, 26, 18); // moored at the far shore, no ferryman: it takes no booking
     const berth = mooringPoint(s, other);
     const goal = { hx: berth.hx + 2, hy: berth.hy + 2 } as const;
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
@@ -840,13 +841,13 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('a return whose start lapsed retries while the ship lies at the far shore', () => {
     const s = sim();
     const ship = spawnShip(s);
-    const scout = crewScout(s, ship);
+    const crew = crewFerryman(s, ship);
     const home = mooringPoint(s, ship);
 
     // Sail the taxi to the far shore, as a delivered crossing leaves it, and craft the delivered
@@ -864,15 +865,15 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('a ship on the passenger\u2019s own island beats a dispatch from another one', () => {
     const s = sim();
-    const local = spawnShip(s); // moors at the home shore, scout at the helm
-    crewScout(s, local);
-    const far = spawnShip(s, 26, 18); // moors at the far shore, also scout-manned
-    crewScout(s, far, 30, 18);
+    const local = spawnShip(s); // moors at the home shore, ferryman at the helm
+    crewFerryman(s, local);
+    const far = spawnShip(s, 26, 18); // moors at the far shore, also ferryman-manned
+    crewFerryman(s, far, 30, 18);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
 
     s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
@@ -884,9 +885,9 @@ describe('ferryPassage', () => {
 
   it('a crossing from an island without a ship dispatches one from another and brings it back', () => {
     const s = sim();
-    // The player's only ship lies at the far shore, a scout at the helm.
+    // The player's only ship lies at the far shore, a ferryman at the helm.
     const ship = spawnShip(s, 26, 18);
-    const scout = crewScout(s, ship, 30, 18);
+    const crew = crewFerryman(s, ship, 30, 18);
     const home = mooringPoint(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
 
@@ -930,13 +931,13 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('a return whose route died under it keeps its watcher and still moors home', () => {
     const s = sim();
     const ship = spawnShip(s);
-    const scout = crewScout(s, ship);
+    const crew = crewFerryman(s, ship);
     const home = mooringPoint(s, ship);
 
     // Sail the taxi to the far shore, craft the delivered bookkeeping, start the return, then kill
@@ -967,13 +968,13 @@ describe('ferryPassage', () => {
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
     expect(state.moored).toBe(true);
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('a delivery whose route died under it sails on and lands its passengers', () => {
     const s = sim();
     const ship = spawnShip(s);
-    const scout = crewScout(s, ship);
+    const crew = crewFerryman(s, ship);
     const home = mooringPoint(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
 
@@ -1002,13 +1003,13 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('a pickup whose route died under it sails on to its waiting passengers', () => {
     const s = sim();
     const ship = spawnShip(s, 26, 18); // the player's only ship: the far shore
-    const scout = crewScout(s, ship, 30, 18);
+    const crew = crewFerryman(s, ship, 30, 18);
     const home = mooringPoint(s, ship);
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
 
@@ -1042,13 +1043,13 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('a pickup whose berth died under it re-picks the next berth and the passenger walks there', () => {
     const s = fjordSim();
-    const ship = spawnShip(s); // moors at the near shore, scout at the helm
-    const scout = crewScout(s, ship);
+    const ship = spawnShip(s); // moors at the near shore, ferryman at the helm
+    const crew = crewFerryman(s, ship);
     const home = mooringPoint(s, ship);
     // The passenger stands at the fjord's inner end, where no berth fits; the goal lies on the
     // ship's own island, so the taxi is dispatched across.
@@ -1102,13 +1103,13 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('a dispatched passenger far from the water walks to the coast and holds there', () => {
     const s = fjordSim();
-    const ship = spawnShip(s); // moors at the near shore, scout at the helm
-    const scout = crewScout(s, ship);
+    const ship = spawnShip(s); // moors at the near shore, ferryman at the helm
+    const crew = crewFerryman(s, ship);
     const home = mooringPoint(s, ship);
     // Deep inland on the far island, far from any water: the crossing walks them to the coast while
     // the ship sails, so they stand at the shore when it arrives.
@@ -1144,13 +1145,13 @@ describe('ferryPassage', () => {
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
     const state = s.world.get(ship, Vehicle);
     expect(state.task).toBe('none');
-    expect(vehicleCommander(state)).toBe(scout);
+    expect(vehicleCommander(state)).toBe(crew);
   });
 
   it('an order of their own still takes a waiting passenger off the crossing', () => {
     const s = fjordSim();
     const ship = spawnShip(s);
-    crewScout(s, ship); // a scout at the helm, so the dispatch search qualifies the ship
+    crewFerryman(s, ship); // a ferryman at the helm, so the dispatch search qualifies the ship
     const home = mooringPoint(s, ship);
     const passenger = spawnSettler(s, 34, 16);
     s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: HOME.hx, y: HOME.hy }));
@@ -1184,7 +1185,7 @@ describe('ferryPassage under the signpost rule', () => {
   /**
    * A confined civilian ordered to another island is judged at the crossing's landing place, not at
    * the far goal: the posts must lead them to the shore where they board or wait for the ship, and
-   * whether they could walk the far island themselves is the ferryman's business - the scout at the
+   * whether they could walk the far island themselves is the ferryman's business - the ferryman at the
    * helm knows it. The wide map's banks put the coast past the walk range of a deep-inland settler,
    * so only a signpost chain to the landing place opens the crossing.
    */
@@ -1192,7 +1193,7 @@ describe('ferryPassage under the signpost rule', () => {
   it('a civilian whose posts reach no landing place is refused the far island', () => {
     const s = wideSim();
     const ship = spawnShip(s, 49, 16); // moors at the east bank, the settler's island
-    crewScout(s, ship, 56, 16);
+    crewFerryman(s, ship, 56, 16);
     const passenger = spawnSettler(s, WIDE_SPOT.hx, WIDE_SPOT.hy);
     const terrain = s.terrain;
     if (terrain === undefined) throw new Error('the sim runs mapless');
@@ -1221,7 +1222,7 @@ describe('ferryPassage under the signpost rule', () => {
   it('a post chain to the landing place takes the civilian across, and the far island asks none', () => {
     const s = wideSim();
     const ship = spawnShip(s, 49, 16);
-    const scout = crewScout(s, ship, 56, 16);
+    const crew = crewFerryman(s, ship, 56, 16);
     const home = mooringPoint(s, ship);
     stampPost(s, WIDE_POST_NEAR.x, WIDE_POST_NEAR.y); // caught: 20 nodes from the settler
     stampPost(s, WIDE_POST_COAST.x, WIDE_POST_COAST.y); // linked to it; covers the coast door
@@ -1243,13 +1244,13 @@ describe('ferryPassage under the signpost rule', () => {
     expect(s.world.has(passenger, FerryPassenger)).toBe(false);
     stepReturnHome(s, ship, home);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
-    expect(vehicleCommander(s.world.get(ship, Vehicle))).toBe(scout);
+    expect(vehicleCommander(s.world.get(ship, Vehicle))).toBe(crew);
   });
 
   it('a dispatched crossing holds its civilian at their own coast once the posts lead there', () => {
     const s = wideSim();
     const ship = spawnShip(s, 47, 16); // moors at the west bank: the east island keeps no ferry
-    crewScout(s, ship, 30, 16, WIDE_WALK_TICKS);
+    crewFerryman(s, ship, 30, 16, WIDE_WALK_TICKS);
     const home = mooringPoint(s, ship);
     stampPost(s, WIDE_POST_NEAR.x, WIDE_POST_NEAR.y);
     stampPost(s, WIDE_POST_COAST.x, WIDE_POST_COAST.y);
@@ -1346,7 +1347,7 @@ describe('ferryPassage with the drives running', () => {
   it('a lonely neighbor leaves the held booking standing, and the taxi takes its passenger', () => {
     const s = longSim();
     const ship = spawnShip(s, LONG_SHIP_SPAWN.hx, LONG_SHIP_SPAWN.hy); // moors on the north island
-    const scout = crewScout(s, ship, 56, 16, LONG_WALK_TICKS);
+    const crew = crewFerryman(s, ship, 56, 16, LONG_WALK_TICKS);
     const home = mooringPoint(s, ship);
     // A neighbor by the berth with a full leisure deficit: the company rung seeks a partner at once.
     const neighbor = spawnSettler(s, 56, 20);
@@ -1398,7 +1399,7 @@ describe('ferryPassage with the drives running', () => {
     expect(s.world.has(passenger, LostWay)).toBe(false);
     stepMooredAt(s, ship, home, LONG_SAIL_TICKS);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
-    expect(vehicleCommander(s.world.get(ship, Vehicle))).toBe(scout);
+    expect(vehicleCommander(s.world.get(ship, Vehicle))).toBe(crew);
   });
 
   it('hunger meal-breaks a held booking, and the move order starts afresh after the break', () => {

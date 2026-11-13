@@ -25,7 +25,7 @@ import { hexDistanceBetween } from '../../nav/halfcell.js';
 import { NO_COMPONENT, type NodeId, type TerrainGraph } from '../../nav/terrain/index.js';
 import type { System, SystemContext } from '../context.js';
 import { stopAtNextNode } from '../movement/nav-state.js';
-import { isScoutJob } from '../readviews/jobs.js';
+import { isFerrymanJob } from '../readviews/jobs.js';
 import { isShipVehicle } from '../readviews/vehicles.js';
 import { markLostWay } from '../settlers/lost-way.js';
 import { breaksForMeal, suspendWalkForMeal } from '../orders/meal-break.js';
@@ -42,7 +42,7 @@ import { nodeOf } from './movement.js';
 import { vehicleIndex } from './registry.js';
 
 // The ferryman: a move order whose goal lies across open water is no walk, so with the owner's idle
-// ship lying at a shore of this island with a scout aboard, the settler sails instead. It walks to the
+// ship lying at a shore of this island with a ferryman aboard, the settler sails instead. It walks to the
 // door, boards, and the ship docks at a shore of the target island nearest the clicked spot, where the
 // riders step off and walk on to their spots; the empty ship then sails back to the mooring the
 // crossing booked it at. A dispatched booking's passenger walks toward the water while the ship sails:
@@ -58,7 +58,7 @@ import { vehicleIndex } from './registry.js';
 
 /**
  * Book `e`, standing on its island, the crossing to `goal` on another one: the nearest idle ship of
- * `e`'s owner moored at a shore of this island with a scout aboard takes the booking, `e` walks to its
+ * `e`'s owner moored at a shore of this island with a ferryman aboard takes the booking, `e` walks to its
  * door and boards, and the ship sails once every passenger is inside. When this island keeps no such
  * ship, the nearest one of another island whose sea reaches this shore is dispatched instead: it sails
  * here first (the phase `pickup`), and while it sails, the passenger walks toward the water and holds
@@ -167,7 +167,7 @@ export function tryFerryPassage(
  * crossing away - the settler's own land, or off it - leaving the goal to the caller's ordinary
  * confinement. This is the signpost question a cross-island order asks: the posts must lead the
  * settler to the landing place, and whether they could walk the far island themselves is the
- * ferryman's business - the scout at the helm knows it.
+ * ferryman's business - the ferryman at the helm knows it.
  */
 export function ferryLandingOf(
   world: World,
@@ -318,7 +318,7 @@ function syncWaitShore(
 /**
  * The nearest ship that takes the booking: owned, a ship, lying moored at a shore of the settler's
  * island under no order and no pin, held by no colony's plan or trade route, commanded, with a free
- * seat and a scout aboard, its door on this island's ground. One already booked takes another
+ * seat and a ferryman aboard, its door on this island's ground. One already booked takes another
  * passenger only while it still boards at this shore for the same target island. Nearest by the
  * door's hex distance, ties broken by the ascending entity id the vehicle index lists.
  */
@@ -353,7 +353,7 @@ function nearestFerry(
     if (heldSet?.has(ship) === true) continue;
     if (vehicleCommander(state) === null) continue; // a sail needs somebody at the helm
     if (!hasFreeSeat(state)) continue;
-    if (!hasScoutAboard(world, ctx, state)) continue;
+    if (!hasFerrymanAboard(world, ctx, state)) continue;
     if (!doorReachable(world, ctx, e, ship)) continue;
     const door = landingOf(world, ctx, ship);
     if (door === null) continue;
@@ -366,11 +366,11 @@ function nearestFerry(
   return best;
 }
 
-/** Whether a living scout's seat is booked on `state`: the trade that crews the crossing. */
-function hasScoutAboard(world: World, ctx: SystemContext, state: VehicleStateView): boolean {
+/** Whether a living ferryman's seat is booked on `state`: the trade that crews the crossing. */
+function hasFerrymanAboard(world: World, ctx: SystemContext, state: VehicleStateView): boolean {
   for (const seat of state.passengers) {
     if (seat === null || !world.isAlive(seat.entity)) continue;
-    if (isScoutJob(ctx.content, world.tryGet(seat.entity, Settler)?.jobType ?? null)) return true;
+    if (isFerrymanJob(ctx.content, world.tryGet(seat.entity, Settler)?.jobType ?? null)) return true;
   }
   return false;
 }
@@ -413,7 +413,7 @@ function nearestFerryAcross(
     if (heldSet?.has(ship) === true) continue;
     if (vehicleCommander(state) === null) continue; // a sail needs somebody at the helm
     if (!hasFreeSeat(state)) continue;
-    if (!hasScoutAboard(world, ctx, state)) continue;
+    if (!hasFerrymanAboard(world, ctx, state)) continue;
     const spots = mooringSpotsOf(world, ctx, terrain, ship);
     if (spots === null) continue;
     let reaches = false;
