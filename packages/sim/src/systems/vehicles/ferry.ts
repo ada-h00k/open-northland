@@ -28,6 +28,7 @@ import { stopAtNextNode } from '../movement/nav-state.js';
 import { isScoutJob } from '../readviews/jobs.js';
 import { isShipVehicle } from '../readviews/vehicles.js';
 import { markLostWay } from '../settlers/lost-way.js';
+import { breaksForMeal, suspendWalkForMeal } from '../orders/meal-break.js';
 import { entityNode } from '../spatial/nodes.js';
 import {
   attachToVehicle,
@@ -456,8 +457,11 @@ export const ferrySystem: System = (world, ctx) => {
  * joins a crossing still boarding, rides the ship that just moored home or takes a newly crewed one
  * the moment the search lets it. Between retries they walk the berth the hold booked them - the spot
  * an away ship comes back to moor at - and stand there for its return; a route anywhere but that
- * spot ends the hold, so their own new order takes them off it. The hold also ends when the booking
- * is made.
+ * spot ends the hold, so their own new order takes them off it. A hold standing free (no berth to
+ * walk) ends on whatever the settler takes up where they stand; a hold with a berth keeps its walk
+ * through a pause put on them - hunger queues the move order for a meal break, and any other atomic
+ * was never the planner's, so the booking reads neither as given up. The hold also ends when the
+ * booking is made.
  */
 function retryHolds(world: World, ctx: SystemContext, terrain: TerrainGraph): void {
   for (const e of world.canonicalQuery(FerryWaiting)) {
@@ -466,15 +470,32 @@ function retryHolds(world: World, ctx: SystemContext, terrain: TerrainGraph): vo
       !world.isAlive(e) ||
       !world.has(e, Settler) ||
       !world.has(e, Position) ||
-      world.has(e, PlayerOrder) ||
-      world.has(e, CurrentAtomic)
+      world.has(e, PlayerOrder)
     ) {
-      world.remove(e, FerryWaiting); // gone, or a fresh command of their own is in the slot or under way
+      world.remove(e, FerryWaiting); // gone, or a fresh command of their own is in the slot
+      continue;
+    }
+    // Hunger takes the held booking off its walk the way it takes any long walk off: the meal break
+    // queues the move order itself, so the settler eats and then sets out again - and the fresh order
+    // re-arms the hold, berth walk included, once the break ends. Dropping the order here would leave
+    // a hungry holder standing at the coast forever, for the planner never re-tasks them.
+    if (breaksForMeal(world, ctx, e)) {
+      const at = terrain.coordsOf(marker.goal);
+      suspendWalkForMeal(world, terrain, e, { kind: 'moveUnit', entity: e, x: at.x, y: at.y });
+      world.remove(e, FerryWaiting);
       continue;
     }
     const route = world.tryGet(e, PathRequest);
     if (route !== undefined && (marker.wait === null || route.goal !== marker.wait)) {
       world.remove(e, FerryWaiting); // they walk somewhere of their own instead
+      continue;
+    }
+    // The planner never re-tasks a hold with a berth to walk to, and a chat claim refuses one, so an
+    // atomic on such a holder came from elsewhere - a script's errand, say: a pause put on them, not
+    // their own business, and the hold keeps its walk the way it keeps the pause. A hold standing
+    // free is planner-visible; whatever it takes up there - work, a chat - ends it.
+    if (marker.wait === null && world.has(e, CurrentAtomic)) {
+      world.remove(e, FerryWaiting); // they took up something of their own where they stand
       continue;
     }
     if (!holdAttemptDue(world, e, ctx.tick)) continue;

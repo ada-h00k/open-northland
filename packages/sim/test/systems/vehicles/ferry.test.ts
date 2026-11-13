@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  Chat,
   FerryPassenger,
   FerryVoyage,
   FerryWaiting,
   LostWay,
+  MealBreak,
   MoveGoal,
   Position,
   Rider,
   Settler,
+  SettlerNeeds,
   Vehicle,
   VehicleDrive,
   vehicleCommander,
@@ -15,6 +18,7 @@ import {
   WALK_RANGE_NODES,
 } from '../../../src/components/index.js';
 import type { Entity } from '../../../src/ecs/world.js';
+import { fx, ONE } from '../../../src/core/fixed.js';
 import {
   halfCellMapFromCells,
   hexDistanceBetween,
@@ -1287,6 +1291,146 @@ describe('ferryPassage under the signpost rule', () => {
     expect(s.world.has(passenger, LostWay)).toBe(false);
     for (let ticks = 0; ticks < LOST_TICKS; ticks++) s.step();
     expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+  });
+});
+
+/** A tall map: the west-east sea column plus a horizontal band far south, so the east bank splits
+ *  into a north island - the civilians' - and a south one. A crossing there keeps the only ship away
+ *  long enough for the drives that run beside the hold to matter. */
+function longIslandMap(): TerrainMap {
+  const width = 128;
+  const height = 100;
+  const typeIds = new Array<number>(width * height).fill(GRASS);
+  for (let row = 0; row < height; row++) {
+    for (let col = LONG_SEA_FROM; col < LONG_SEA_TO; col++) typeIds[row * width + col] = WATER;
+  }
+  for (let row = LONG_BAND_FROM; row < LONG_BAND_TO; row++) {
+    for (let col = LONG_SEA_FROM; col < width; col++) typeIds[row * width + col] = WATER;
+  }
+  return halfCellMapFromCells({ width, height, typeIds });
+}
+
+/** The tall map's sea column cells and the south band's rows, both in cells. */
+const LONG_SEA_FROM = 22;
+const LONG_SEA_TO = 26;
+const LONG_BAND_FROM = 90;
+const LONG_BAND_TO = 94;
+/** A spot on the south island the ship sails to, and a goal on the west island. */
+const SOUTH_GOAL = { hx: 70, hy: 190 } as const;
+const LONG_HOME = { hx: 20, hy: 16 } as const;
+/** A deep-inland spot on the north island, and the ship's spawn that moors at its east shore. */
+const LONG_SPOT = { hx: 108, hy: 16 } as const;
+const LONG_SHIP_SPAWN = { hx: 49, hy: 16 } as const;
+/** The long walks and sails of the tall map, with margin. */
+const LONG_WALK_TICKS = 3000;
+const LONG_SAIL_TICKS = 12000;
+
+/** The tall map with the needs drives running and the signpost rule off: these tests read the hold
+ *  against the planner's chats and meals, which run beside it in the game. */
+function longSim(): Simulation {
+  const s = new Simulation({ seed: 5, content: testContent(), map: longIslandMap() });
+  s.step();
+  return s;
+}
+
+describe('ferryPassage with the drives running', () => {
+  /**
+   * The hold and its wait walk live beside the needs planner, which never re-tasks a hold with a
+   * berth to walk to - so the systems that reach past the planner must keep off it too: a chat claim
+   * would clear the walk and its talk atomic would read as the settler's own business, quietly
+   * ending the booking while the ship stays out. Hunger may take the walk off, but it queues the
+   * move order, so the booking starts afresh once the break is over.
+   */
+
+  it('a lonely neighbor leaves the held booking standing, and the taxi takes its passenger', () => {
+    const s = longSim();
+    const ship = spawnShip(s, LONG_SHIP_SPAWN.hx, LONG_SHIP_SPAWN.hy); // moors on the north island
+    const scout = crewScout(s, ship, 56, 16, LONG_WALK_TICKS);
+    const home = mooringPoint(s, ship);
+    // A neighbor by the berth with a full leisure deficit: the company rung seeks a partner at once.
+    const neighbor = spawnSettler(s, 56, 20);
+    s.world.add(neighbor, SettlerNeeds, {
+      hunger: fx.fromInt(0),
+      fatigue: fx.fromInt(0),
+      piety: fx.fromInt(0),
+      enjoyment: ONE,
+      asOf: 0,
+      drain: 'none',
+    });
+
+    // The only ship sails south on a long crossing, ordered by a scout (exempt from the gate).
+    const rider = spawnSettler(s, 116, 20, SCOUT);
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: rider, x: SOUTH_GOAL.hx, y: SOUTH_GOAL.hy }));
+    s.step();
+    let sailing = false;
+    for (let ticks = 0; ticks < 6000 && !sailing; ticks++) {
+      s.step();
+      sailing = s.world.tryGet(ship, FerryVoyage)?.phase === 'sail';
+    }
+    expect(sailing).toBe(true);
+
+    // The civilian is ordered to the west island while the ship is away: the hold walks them
+    // backwards to the berth, past the lonely neighbor, and no claim ends the booking there.
+    const passenger = spawnSettler(s, LONG_SPOT.hx, LONG_SPOT.hy);
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: LONG_HOME.hx, y: LONG_HOME.hy }));
+    s.step();
+    let chatted = false;
+    let aboard = false;
+    for (let ticks = 0; ticks < 30000 && !aboard; ticks++) {
+      s.step();
+      if (s.world.has(passenger, Chat)) chatted = true;
+      aboard = seatOf(s, ship, passenger)?.inside === true;
+    }
+    expect(chatted).toBe(false); // the neighbor's seek found the holder reserved
+    expect(aboard).toBe(true); // the hold booked the ship the moment it lay at the berth again
+
+    // The crossing delivers them to the ordered spot on the west island, and the taxi sails home.
+    const farLand = landOf(s, LONG_HOME);
+    let ashore = false;
+    for (let ticks = 0; ticks < LONG_SAIL_TICKS && !ashore; ticks++) {
+      s.step();
+      const at = nodeOf(s, passenger);
+      ashore = at !== null && !s.world.has(passenger, Rider) && landOf(s, at) === farLand;
+    }
+    expect(ashore).toBe(true);
+    stepOnto(s, passenger, LONG_HOME, 2, LONG_WALK_TICKS);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    stepMooredAt(s, ship, home, LONG_SAIL_TICKS);
+    expect(s.world.has(ship, FerryVoyage)).toBe(false);
+    expect(vehicleCommander(s.world.get(ship, Vehicle))).toBe(scout);
+  });
+
+  it('hunger meal-breaks a held booking, and the move order starts afresh after the break', () => {
+    const s = longSim(); // no ship anywhere, and nothing to eat on the map either
+    const passenger = spawnSettler(s, LONG_SPOT.hx, LONG_SPOT.hy);
+    s.world.add(passenger, SettlerNeeds, {
+      hunger: ONE, // critical: hunger takes the booking off its stand for a meal
+      fatigue: fx.fromInt(0),
+      piety: fx.fromInt(0),
+      enjoyment: fx.fromInt(0),
+      asOf: 0,
+      drain: 'none',
+    });
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: LONG_HOME.hx, y: LONG_HOME.hy }));
+    s.step();
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+    // The break suspends the stand and queues the move order behind it.
+    let broke = false;
+    for (let ticks = 0; ticks < 1200 && !broke; ticks++) {
+      s.step();
+      broke = s.world.has(passenger, MealBreak) && !s.world.has(passenger, FerryWaiting);
+    }
+    expect(broke).toBe(true);
+    // Nothing to eat here, so the break ends hungry and the queued order starts afresh: the hold
+    // re-arms instead of the settler drifting into the planner's hands and the order lapsing.
+    let rearmed = false;
+    for (let ticks = 0; ticks < 6000 && !rearmed; ticks++) {
+      s.step();
+      rearmed = s.world.has(passenger, FerryWaiting);
+    }
+    expect(rearmed).toBe(true);
     expect(s.world.has(passenger, LostWay)).toBe(false);
   });
 });
