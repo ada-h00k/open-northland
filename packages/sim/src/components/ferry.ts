@@ -48,3 +48,15 @@ export const FerryPassenger = defineComponent<{ ship: Entity; goal: NodeId; wait
   'FerryPassenger',
   'movement',
 );
+
+/**
+ * A settler whose island-crossing move order found no free ship at booking time: the order stands as
+ * this hold instead of refusing lost. The ferry system retries the booking every few ticks, so the
+ * settler takes the first ship that comes free - one coming back from a crossing, newly crewed or
+ * newly built. The hold ends when a booking is made (`FerryPassenger` replaces it) or when the
+ * settler's own new order takes them somewhere else; while held they stand where they are.
+ */
+export const FerryWaiting = defineComponent<{ goal: NodeId; since: number }>(
+  'FerryWaiting',
+  'movement',
+);

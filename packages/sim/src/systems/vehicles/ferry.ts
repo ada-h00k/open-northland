@@ -3,6 +3,7 @@ import {
   CurrentAtomic,
   FerryPassenger,
   FerryVoyage,
+  FerryWaiting,
   type FerryVoyageState,
   MoveGoal,
   PlayerOrder,
@@ -72,6 +73,9 @@ export function tryFerryPassage(
   const start = entityNode(world, terrain, e);
   const home = terrain.componentOf(start);
   const target = terrain.componentOf(goal);
+  // Any fresh booking attempt ends an older hold: the settler is being aimed anew, at this goal or
+  // at another one. The hold is re-armed below when no ship is free for this goal either.
+  world.remove(e, FerryWaiting);
   if (home === NO_COMPONENT || target === NO_COMPONENT || home === target) return false;
   const owner = ownerOf(world, e);
   if (owner === undefined) return false;
@@ -99,7 +103,13 @@ export function tryFerryPassage(
     ship = nearestFerryAcross(world, ctx, terrain, e, owner, start, target);
     dispatched = ship !== null;
   }
-  if (ship === null) return false;
+  if (ship === null) {
+    // No free ship anywhere: the order stands as a hold instead of refusing lost. The settler stays
+    // where they are and the ferry system retries this booking until a ship comes free - one coming
+    // back from a crossing, newly crewed or newly built - or until their own new order ends the hold.
+    world.add(e, FerryWaiting, { goal, since: ctx.tick });
+    return true;
+  }
   if (!dispatched) {
     // The ship lies at this shore: the seat is taken now and the walk to the door goes out.
     if (!attachToVehicle(world, ctx, { kind: 'attachToVehicle', entity: e, vehicle: ship })) return false;
@@ -335,7 +345,62 @@ export const ferrySystem: System = (world, ctx) => {
   for (const ship of world.canonicalQuery(FerryVoyage)) {
     advanceVoyage(world, ctx, terrain, ship);
   }
+  retryHolds(world, ctx, terrain);
 };
+
+/**
+ * Advance every held booking: a settler whose move order found no free ship stands by it and takes
+ * the first ship that comes free. Each retry runs the same search a click runs, so the held settler
+ * joins a crossing still boarding, rides the ship that just moored home or takes a newly crewed one
+ * the moment the search lets it. The hold ends when the booking is made, and the settler's own new
+ * order ends it too: the hold is a stand-in for their move order, not a leash, so any command in
+ * their slot or under way takes them off it.
+ */
+function retryHolds(world: World, ctx: SystemContext, terrain: TerrainGraph): void {
+  for (const e of world.canonicalQuery(FerryWaiting)) {
+    const marker = world.get(e, FerryWaiting);
+    if (
+      !world.isAlive(e) ||
+      !world.has(e, Settler) ||
+      !world.has(e, Position) ||
+      world.has(e, PlayerOrder) ||
+      world.has(e, CurrentAtomic)
+    ) {
+      world.remove(e, FerryWaiting); // gone, or a fresh command of their own is in the slot or under way
+      continue;
+    }
+    if (world.has(e, PathRequest)) {
+      world.remove(e, FerryWaiting); // they walk somewhere of their own instead
+      continue;
+    }
+    if (!holdAttemptDue(world, e, ctx.tick)) continue;
+    stampHoldTry(world, e, ctx.tick);
+    tryFerryPassage(world, ctx, terrain, e, marker.goal);
+    // The retry re-arms the hold when the search still finds no ship; a booking replaces it.
+    if (world.has(e, FerryPassenger)) world.remove(e, FerryWaiting);
+  }
+}
+
+/** Ticks between the hold's booking retries: the same rhythm the voyage watcher retries lapsed legs. */
+const HOLD_RETRY_TICKS = 8;
+/** The last try per held settler, so a crowd of holds does not search the whole roster every tick. */
+const holdRetry = new WeakMap<World, Map<Entity, number>>();
+
+/** Whether `e`'s hold may make its next booking try: the first one at once, then throttled. */
+function holdAttemptDue(world: World, e: Entity, tick: number): boolean {
+  const last = holdRetry.get(world)?.get(e);
+  return last === undefined || tick - last >= HOLD_RETRY_TICKS;
+}
+
+/** Note `e`'s hold try as made now, so the next one waits its throttle. */
+function stampHoldTry(world: World, e: Entity, tick: number): void {
+  let held = holdRetry.get(world);
+  if (held === undefined) {
+    held = new Map();
+    holdRetry.set(world, held);
+  }
+  held.set(e, tick);
+}
 
 /** One ship's voyage step: prune the passenger list, then run the leg the voyage stands in. */
 function advanceVoyage(world: World, ctx: SystemContext, terrain: TerrainGraph, ship: Entity): void {

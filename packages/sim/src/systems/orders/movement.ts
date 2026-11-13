@@ -194,22 +194,10 @@ function startPlayerWalk(
     confined && command.kind === 'moveUnit'
       ? walkerSideMoveGoal(world, ctx, terrain, clicked, entityNode(world, terrain, e))
       : reachableMoveGoal(world, ctx, terrain, clicked);
-  // A goal across open water is no walk, the route dying at the sea. With the owner's idle ship
-  // moored at a shore of this island with a scout aboard, the order becomes a crossing instead: the
-  // settler boards, the ship docks at the target island, the walk on resumes there. No ship takes the
-  // booking, the order refuses as before. A settler held by an atomic waits for the parked order the
-  // same way a walk does.
-  if (
-    confined &&
-    command.kind === 'moveUnit' &&
-    !atomicHoldsSettler(world, e) &&
-    tryFerryPassage(world, ctx, terrain, e, goal)
-  ) {
-    return true;
-  }
-  // Signpost confinement: a civilian ordered beyond its allowed area doesn't know the way, so the order is
-  // refused and the unit stays put. Approximation: the original starts the walk and lets its guided
-  // pathfinder fail it, raising the same "lost" note.
+  // Signpost confinement: a civilian ordered beyond its allowed area doesn't know the way, so the
+  // order is refused and the unit stays put. Approximation: the original starts the walk and lets its
+  // guided pathfinder fail it, raising the same "lost" note. Refused before the ferry hold is
+  // considered: a goal the signposts forbid is refused whatever the ships could do for it.
   if (confined) {
     const limit = navigationLimitFor(world, ctx.content, terrain, e);
     if (limit !== null && !limit.allowsNode(goal)) {
@@ -220,6 +208,20 @@ function startPlayerWalk(
       else markLostWay(world, ctx, e, goal);
       return false;
     }
+  }
+  // A goal across open water is no walk, the route dying at the sea. With the owner's idle ship
+  // moored at a shore of this island with a scout aboard, the order becomes a crossing instead: the
+  // settler boards, the ship docks at the target island, the walk on resumes there. No ship takes the
+  // booking, the order stands as a hold and the ferry system retries it until a ship comes free. A
+  // settler held by an atomic waits for the parked order the
+  // same way a walk does.
+  if (
+    confined &&
+    command.kind === 'moveUnit' &&
+    !atomicHoldsSettler(world, e) &&
+    tryFerryPassage(world, ctx, terrain, e, goal)
+  ) {
+    return true;
   }
   const existingOrder = world.tryGet(e, PlayerOrder);
   if (

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   FerryPassenger,
   FerryVoyage,
+  FerryWaiting,
   LostWay,
   Position,
   Rider,
@@ -283,24 +284,93 @@ describe('ferryPassage', () => {
     expect(vehicleCommander(state)).toBe(scout);
   });
 
-  it('refuses the crossing lost when no ship with a scout at the helm lies at this island', () => {
+  it('holds the order when no crewed ship lies at this island and sails once one comes free', () => {
     const s = sim();
     const ship = spawnShip(s); // moored at the west shore, but nobody aboard
     const passenger = spawnSettler(s, HOME.hx, HOME.hy);
 
     s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
     s.step();
+    // No ship takes the booking: the order stands as a hold instead of refusing lost.
     expect(s.world.has(passenger, FerryPassenger)).toBe(false);
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
-    let lost = false;
-    for (let ticks = 0; ticks < LOST_TICKS && !lost; ticks++) {
-      s.step();
-      lost = s.world.has(passenger, LostWay);
-    }
-    expect(lost).toBe(true);
+    for (let ticks = 0; ticks < LOST_TICKS; ticks++) s.step();
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+
+    // A scout boards the waiting ship: the hold takes it the moment the search lets it.
+    crewScout(s, ship, 16, HOME.hy);
+    for (let ticks = 0; ticks < 40 && !s.world.has(passenger, FerryPassenger); ticks++) s.step();
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.has(passenger, FerryWaiting)).toBe(false);
+    // The held booking sails like any other crossing.
+    boardOut(s, ship, passenger);
+    expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('sail');
+    stepAshore(s, passenger, FAR);
+    stepOnto(s, passenger, FAR);
+    expect(s.world.has(passenger, LostWay)).toBe(false);
   });
 
-  it('takes no crossing from a ship whose crew holds no scout', () => {
+  it('a hold takes the ship the moment its crossing ends and brings the waiter over', () => {
+    const s = sim();
+    const ship = spawnShip(s, SHIP_HX, HOME.hy);
+    crewScout(s, ship, 16, HOME.hy);
+    const first = spawnSettler(s, HOME.hx, HOME.hy);
+    const second = spawnSettler(s, HOME.hx, 20);
+
+    // The only ship sails with the first booking: no ship is free for the second.
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: first, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    for (let t = 0; t < BOARD_TICKS && seatOf(s, ship, first)?.inside !== true; t++) s.step();
+    for (let t = 0; t < 40 && s.world.tryGet(ship, FerryVoyage)?.phase !== 'sail'; t++) s.step();
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: second, x: FAR.hx, y: 20 }));
+    s.step();
+    expect(s.world.has(second, FerryWaiting)).toBe(true);
+    expect(s.world.has(second, LostWay)).toBe(false);
+    for (let t = 0; t < LOST_TICKS; t++) s.step();
+    expect(s.world.has(second, FerryWaiting)).toBe(true);
+    expect(s.world.has(second, LostWay)).toBe(false);
+
+    // The crossing delivers and the taxi moors home: the hold takes the ship the moment it is free.
+    stepAshore(s, first, FAR);
+    stepOnto(s, first, FAR);
+    let bookedAt = -1;
+    for (let t = 0; t < SAIL_TICKS * 2 && bookedAt < 0; t++) {
+      s.step();
+      if (s.world.has(second, FerryPassenger)) bookedAt = t;
+    }
+    expect(bookedAt).toBeGreaterThanOrEqual(0);
+    expect(s.world.tryGet(second, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.has(second, FerryWaiting)).toBe(false);
+    boardOut(s, ship, second);
+    stepAshore(s, second, { hx: FAR.hx, hy: 20 });
+    stepOnto(s, second, { hx: FAR.hx, hy: 20 });
+    expect(s.world.has(second, LostWay)).toBe(false);
+    expect(s.world.has(first, LostWay)).toBe(false);
+  });
+
+  it('an order of their own takes a held settler off the hold', () => {
+    const s = sim();
+    const ship = spawnShip(s); // moored, nobody aboard: no booking, the order holds
+    const passenger = spawnSettler(s, HOME.hx, HOME.hy);
+
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
+    s.step();
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+
+    // A new order of their own on this island ends the hold instead of the ferry taking them later.
+    s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: HOME.hx, y: 8 }));
+    s.step();
+    expect(s.world.has(passenger, FerryWaiting)).toBe(false);
+    for (let t = 0; t < LOST_TICKS; t++) s.step();
+    expect(s.world.has(passenger, FerryWaiting)).toBe(false);
+    expect(s.world.has(passenger, FerryPassenger)).toBe(false);
+    stepOnto(s, passenger, { hx: HOME.hx, hy: 8 });
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+  });
+
+  it('a crew without a scout takes no booking, and the order holds until one boards', () => {
     const s = sim();
     const ship = spawnShip(s);
     crewAboard(s, ship, CARRIER); // a carrier at the helm commands the sail, but is no scout
@@ -308,14 +378,21 @@ describe('ferryPassage', () => {
 
     s.enqueue(playerCommand(P0, { kind: 'moveUnit', entity: passenger, x: FAR.hx, y: FAR.hy }));
     s.step();
+    // The carrier commands no crossing: the order stands as a hold instead of refusing lost.
     expect(s.world.has(passenger, FerryPassenger)).toBe(false);
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
     expect(s.world.has(ship, FerryVoyage)).toBe(false);
-    let lost = false;
-    for (let ticks = 0; ticks < LOST_TICKS && !lost; ticks++) {
-      s.step();
-      lost = s.world.has(passenger, LostWay);
-    }
-    expect(lost).toBe(true);
+    for (let ticks = 0; ticks < LOST_TICKS; ticks++) s.step();
+    expect(s.world.has(passenger, LostWay)).toBe(false);
+    expect(s.world.has(passenger, FerryWaiting)).toBe(true);
+
+    // A scout joins the carrier's crew: the hold takes the ship the moment the search lets it.
+    crewAboard(s, ship, SCOUT, 16, HOME.hy);
+    for (let ticks = 0; ticks < 40 && !s.world.has(passenger, FerryPassenger); ticks++) s.step();
+    expect(s.world.tryGet(passenger, FerryPassenger)?.ship).toBe(ship);
+    expect(s.world.has(passenger, FerryWaiting)).toBe(false);
+    boardOut(s, ship, passenger);
+    expect(s.world.tryGet(ship, FerryVoyage)?.phase).toBe('sail');
   });
 
   it('takes the nearest ship with a scout at the helm', () => {
