@@ -582,10 +582,15 @@ export const enSurfaces = {
     },
   },
   deviceNotice: {
+    portrait: {
+      title: 'Landscape fits best',
+      body: 'The interface is drawn for a wide screen. Turn the phone sideways to see it whole; in portrait the game keeps playing.',
+      proceed: 'Play in portrait',
+    },
     touch: {
-      title: 'Open Northland needs a computer',
-      body: 'The game needs a mouse, a keyboard and a larger screen. Phones and tablets are not supported. Open this page on a computer to play.',
-      proceed: 'I have a mouse and keyboard, start anyway',
+      title: 'Playing with a touch screen',
+      body: 'The world answers a finger: a tap selects, a held finger gives the orders a right click does, a dragged finger pans the map, and two fingers pinch the zoom. The game plays most comfortably with a mouse and a keyboard on a larger screen.',
+      proceed: 'Play with touch',
     },
     webgl: {
       title: 'This browser does not offer WebGL',

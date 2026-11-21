@@ -5,9 +5,10 @@ import { type CanvasReadback, canvasReadback, isBrave, webglAvailable } from './
 import { servedByBrowser } from './host.js';
 
 /**
- * What a browser that cannot play properly sees before the game: a touch-only device (orders need a
- * mouse and a keyboard), no WebGL, canvas reads a privacy setting replaces, or Brave Shields left on.
- * The notice only advises, so the player can always start the game from it.
+ * What a browser that cannot play properly sees before the game: a phone held in portrait, no WebGL,
+ * canvas reads a privacy setting replaces, or Brave Shields left on — and what a touch screen sees
+ * once, the gestures it plays with, since the game answers a finger too. The notice only advises, so
+ * the player can always start the game from it.
  */
 
 /** The modes a shared link opens; developer modes never show the notice. */
@@ -16,10 +17,10 @@ const PLAYER_ROUTES: readonly RouteId[] = ['menu', 'map', 'relay'];
 const DISMISSED_KEY_PREFIX = 'open-northland.device-notice.';
 const DISMISSED = 'dismissed';
 
-export type DeviceNoticeKind = 'webgl' | 'touch' | 'canvasReadback' | 'braveShields';
+export type DeviceNoticeKind = 'webgl' | 'portrait' | 'touch' | 'canvasReadback' | 'braveShields';
 
 /** The game still plays behind these, so starting anyway once silences them; the others return until fixed. */
-const DISMISSABLE: readonly DeviceNoticeKind[] = ['touch', 'braveShields'];
+const DISMISSABLE: readonly DeviceNoticeKind[] = ['touch', 'portrait', 'braveShields'];
 
 export interface DeviceEnv {
   readonly servedByBrowser: boolean;
@@ -29,6 +30,8 @@ export interface DeviceEnv {
   readonly coarsePointer: boolean;
   /** `(any-pointer: fine)`: some attached pointer, a mouse or a trackpad, can aim precisely. */
   readonly finePointer: boolean;
+  /** `(orientation: portrait)`: the window stands taller than it is wide. */
+  readonly portrait: boolean;
   readonly webgl: boolean;
   readonly canvasReadback: CanvasReadback;
   readonly brave: boolean;
@@ -37,10 +40,13 @@ export interface DeviceEnv {
 /**
  * The one notice to show, the gravest first. A touchscreen beside a trackpad or a mouse can play, and
  * a browser that answers neither pointer query (no pointer reported, or no support) is let through.
+ * The portrait ask comes ahead of the touch tips: the layout problem fixes itself by turning the
+ * phone, which the touch tips do not.
  */
 export function deviceNotice(env: DeviceEnv): DeviceNoticeKind | null {
   if (!env.servedByBrowser || !env.playerRoute) return null;
   if (!env.webgl) return 'webgl';
+  if (!env.dismissed.has('portrait') && env.coarsePointer && env.portrait) return 'portrait';
   if (!env.dismissed.has('touch') && env.coarsePointer && !env.finePointer) return 'touch';
   if (env.canvasReadback === 'replaced') return 'canvasReadback';
   // Shields shift canvas reads only while on, so an exact read means the player turned them off.
@@ -74,6 +80,7 @@ function readDeviceEnv(params: URLSearchParams): DeviceEnv {
     dismissed: readDismissed(),
     coarsePointer: window.matchMedia('(any-pointer: coarse)').matches,
     finePointer: window.matchMedia('(any-pointer: fine)').matches,
+    portrait: window.matchMedia('(orientation: portrait)').matches,
     webgl: webglAvailable(),
     canvasReadback: canvasReadback(),
     brave: isBrave(),
@@ -120,8 +127,9 @@ function mountNotice(params: URLSearchParams, kind: DeviceNoticeKind, proceed: (
     element('p', 'device-notice__body', copy.body),
     button,
   );
-  // A touch device needs a computer, not another browser.
-  if (kind !== 'touch') card.append(element('p', 'device-notice__browser', notices.recommendedBrowser));
+  // A mouse-and-keyboard device is the comfortable one; a touch or portrait one plays here.
+  if (kind !== 'touch' && kind !== 'portrait')
+    card.append(element('p', 'device-notice__browser', notices.recommendedBrowser));
   root.append(card);
   document.body.append(root);
 }

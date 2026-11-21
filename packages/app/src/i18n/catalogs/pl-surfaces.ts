@@ -582,10 +582,15 @@ export const plSurfaces = {
     },
   },
   deviceNotice: {
+    portrait: {
+      title: 'Najlepiej w poziomie',
+      body: 'Interfejs jest rysowany dla szerokiego ekranu. Obróć telefon poziomo, żeby zobaczyć go w całości; w pionie gra nadal działa.',
+      proceed: 'Graj w pionie',
+    },
     touch: {
-      title: 'Open Northland wymaga komputera',
-      body: 'Do gry potrzebne są mysz, klawiatura i większy ekran. Telefony i tablety nie są obsługiwane. Otwórz tę stronę na komputerze, żeby zagrać.',
-      proceed: 'Mam mysz i klawiaturę, uruchom mimo to',
+      title: 'Gra na ekranie dotykowym',
+      body: 'Świat reaguje na palec: stuknięcie zaznacza, przytrzymanie wydaje rozkazy jak prawy przycisk myszy, przeciągnięcie przesuwa mapę, a dwa palce przybliżają ruchem szczypcowym. Najwygodniej gra się myszą i klawiaturą na większym ekranie.',
+      proceed: 'Graj dotykiem',
     },
     webgl: {
       title: 'Przeglądarka nie udostępnia WebGL',

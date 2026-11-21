@@ -54,6 +54,9 @@
   width: var(--map-w);
   height: var(--map-h);
   pointer-events: auto;
+  /* A finger drags the jump-to-camera drag its whole length: a scroll takeover would
+     pointercancel it (and would turn the drag's compatibility mouse moves off). */
+  touch-action: none;
 }
 /* Starts under the frame's rails, so no gap shows between the wood and the frame. */
 .on-hud .on-minimap-backing {

@@ -14,6 +14,7 @@ const PHONE: DeviceEnv = {
   dismissed: new Set(),
   coarsePointer: true,
   finePointer: false,
+  portrait: false,
   webgl: true,
   canvasReadback: 'exact',
   brave: false,
@@ -23,6 +24,16 @@ const PHONE: DeviceEnv = {
 const DESKTOP: DeviceEnv = { ...PHONE, coarsePointer: false, finePointer: true };
 
 describe('deviceNotice', () => {
+  it('asks a portrait phone to turn sideways first, since turning fixes what the layout problem is', () => {
+    expect(deviceNotice({ ...PHONE, portrait: true })).toBe('portrait');
+    // Dismissed, the touch tips still show: two separate asks, each remembered once.
+    expect(deviceNotice({ ...PHONE, portrait: true, dismissed: new Set(['portrait']) })).toBe('touch');
+    // A landscape phone meets no layout problem and goes to the touch tips directly.
+    expect(deviceNotice(PHONE)).toBe('touch');
+    // A mouse-and-keyboard browser never asks, however the window stands.
+    expect(deviceNotice({ ...DESKTOP, portrait: true })).toBeNull();
+  });
+
   it('holds a device with only a finger to point with at the notice', () => {
     expect(deviceNotice(PHONE)).toBe('touch');
   });

@@ -4,6 +4,7 @@ import {
   MIN_UI_SCALE,
   REFERENCE_DISPLAY_HEIGHT,
   SMALL_DISPLAY_UI_SCALE,
+  SMALL_VIEWPORT_UI_SCALE,
   START_WORLD_ZOOM_PER_UI_SCALE,
   startWorldZoomFor,
   UI_SCALE_FACTOR_MAX,
@@ -60,10 +61,25 @@ describe('uiScaleFor', () => {
   });
 
   it('floors at the legibility minimum', () => {
-    expect(uiScaleFor({ displayHeight: 500, viewportWidth: 800, viewportHeight: 500 })).toBe(MIN_UI_SCALE);
     expect(
       uiScaleFor({ displayHeight: REFERENCE_DISPLAY_HEIGHT, viewportWidth: 1920, viewportHeight: 1000 }, 0.5),
     ).toBe(MIN_UI_SCALE);
+  });
+
+  it('scales to fit a window too small for the chrome at the floor, instead of cropping it', () => {
+    // 800×500 holds 0.65×, above the small-viewport floor: the whole chrome fits, smaller.
+    expect(uiScaleFor({ displayHeight: 500, viewportWidth: 800, viewportHeight: 500 })).toBeCloseTo(
+      500 / 768,
+    );
+  });
+
+  it('floors at the small-viewport minimum a phone cannot fit the shrunken chrome under', () => {
+    const phonePortrait = { displayHeight: 844, viewportWidth: 390, viewportHeight: 844 };
+    expect(uiScaleFor(phonePortrait)).toBe(SMALL_VIEWPORT_UI_SCALE);
+    // Landscape, with the player's smallest factor: the floor still holds the chrome up.
+    expect(
+      uiScaleFor({ displayHeight: 844, viewportWidth: 844, viewportHeight: 390 }, UI_SCALE_FACTOR_MIN),
+    ).toBe(SMALL_VIEWPORT_UI_SCALE);
   });
 
   it('takes a display reported shorter than its window as the window', () => {

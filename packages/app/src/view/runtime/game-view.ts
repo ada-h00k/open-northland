@@ -118,6 +118,7 @@ import { assistantGrantsSeam } from '../assistant/grants.js';
 import { assistantShortagesOf } from '../assistant/shortages.js';
 import type { CameraController } from '../camera/index.js';
 import { cameraCenteredOnWorld, clientToScreen as clientToScreenPx } from '../camera/index.js';
+import { installTouchInput } from '../camera/touch.js';
 import { clearCanvasCursors } from '../cursors/element.js';
 import { createDiplomacyActions } from '../diplomacy-actions.js';
 import { ATTACK_MUSIC } from '../escalation/attack-music.js';
@@ -1168,6 +1169,10 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
     cameraCtl.setPointerGuard(hudClaims);
     // A minimap drag jumps the camera on every move, which an edge pan in between would fight.
     cameraCtl.setEdgeHold(() => mountedMinimap.dragging());
+    // A touch screen drives the same world through gestures: the tap and the long-press reach the
+    // mouse handlers as ordinary events, the pan and the pinch the camera above, so nothing here
+    // learns of a finger twice. Taps land on the canvas alone; HUD panels take their own presses.
+    cleanup.push(installTouchInput(canvas, cameraCtl));
 
     // Late-bound: the badge projection below needs the fog gates and the building index.
     let pickableDoorBadges: (() => readonly DoorBadge[]) | undefined;

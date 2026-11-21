@@ -624,10 +624,15 @@ export const deSurfaces = {
     },
   },
   deviceNotice: {
+    portrait: {
+      title: 'Querformat passt am besten',
+      body: 'Die Oberfläche ist für einen breiten Bildschirm gezeichnet. Dreh das Handy quer, um sie ganz zu sehen; im Hochformat spielt es trotzdem.',
+      proceed: 'Im Hochformat spielen',
+    },
     touch: {
-      title: 'Open Northland benötigt einen Computer',
-      body: 'Das Spiel benötigt Maus, Tastatur und einen größeren Bildschirm. Smartphones und Tablets werden nicht unterstützt. Öffne diese Seite zum Spielen auf einem Computer.',
-      proceed: 'Ich habe Maus und Tastatur, trotzdem starten',
+      title: 'Spiel mit dem Touchscreen',
+      body: 'Die Welt antwortet auf den Finger: Ein Tippen wählt aus, ein gehaltener Finger erteilt die Befehle eines Rechtsklicks, ein gezogener Finger verschiebt die Karte, und zwei Finger zoomen mit einer Pinch-Geste. Am bequemsten spielt es sich mit Maus und Tastatur auf einem größeren Bildschirm.',
+      proceed: 'Mit Touch spielen',
     },
     webgl: {
       title: 'Dieser Browser bietet kein WebGL',

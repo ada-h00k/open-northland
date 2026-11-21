@@ -626,10 +626,15 @@ export const itSurfaces = {
     },
   },
   deviceNotice: {
+    portrait: {
+      title: 'Meglio in orizzontale',
+      body: "L'interfaccia è disegnata per uno schermo largo. Ruota il telefono in orizzontale per vederla tutta; in verticale il gioco continua.",
+      proceed: 'Gioca in verticale',
+    },
     touch: {
-      title: 'Open Northland richiede un computer',
-      body: 'Il gioco richiede mouse, tastiera e uno schermo più grande. Telefoni e tablet non sono supportati. Apri questa pagina su un computer per giocare.',
-      proceed: 'Ho mouse e tastiera, avvia comunque',
+      title: 'Gioca con il touch screen',
+      body: 'Il mondo risponde al dito: un tocco seleziona, una pressione prolungata impartisce gli ordini come il clic destro, un dito trascinato sposta la mappa e due dita ingrandiscono con il pinch. Il gioco si gioca più comodamente con mouse e tastiera su uno schermo più grande.',
+      proceed: 'Gioca col tocco',
     },
     webgl: {
       title: 'Questo browser non offre WebGL',

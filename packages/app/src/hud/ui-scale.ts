@@ -26,6 +26,15 @@ export const SMALL_DISPLAY_UI_SCALE = 1;
 /** Floor for the HUD scale: below 0.75× the 11 design-px labels drop under ~8 px and stop being legible. */
 export const MIN_UI_SCALE = 0.75;
 
+/**
+ * The floor for a viewport too small to hold the chrome even at {@link MIN_UI_SCALE}: a phone's
+ * window. Cropping the 0.75× chrome (columns and beam over each other) reads worse than the shrunken
+ * chrome, and the regions — the minimap, the selection column, the beam — clamp their layout to what
+ * the viewport has, so a smaller scale still fits. 0.62 keeps the 11 design-px labels at ~7 px, the
+ * smallest a phone's density holds legibly.
+ */
+export const SMALL_VIEWPORT_UI_SCALE = 0.62;
+
 /** The neutral settings factor: the display-derived base applies unmodified. */
 export const DEFAULT_UI_SCALE_FACTOR = 1;
 
@@ -61,19 +70,23 @@ function displayHeightOf(view: DisplayView): number {
 
 /**
  * Effective HUD scale: the display-derived base, held at {@link SMALL_DISPLAY_UI_SCALE} on a small
- * display and lowered to what the viewport holds, times the user's relative factor.
+ * display and lowered to what the viewport holds, times the user's relative factor. A viewport that
+ * cannot hold the {@link MIN_UI_SCALE} chrome (a phone's window) scales to
+ * {@link SMALL_VIEWPORT_UI_SCALE} instead, where the clamping regions still fit it.
  */
 export function uiScaleFor(view: DisplayView, factor: number = DEFAULT_UI_SCALE_FACTOR): number {
   const byDisplay = Math.max(
     SMALL_DISPLAY_UI_SCALE,
     (UI_SCALE_AT_REFERENCE_DISPLAY * displayHeightOf(view)) / REFERENCE_DISPLAY_HEIGHT,
   );
-  return Math.max(MIN_UI_SCALE, Math.min(byDisplay, viewportFitScale(view)) * factor);
+  const floor = viewportFitScale(view) >= MIN_UI_SCALE ? MIN_UI_SCALE : SMALL_VIEWPORT_UI_SCALE;
+  return Math.max(floor, Math.min(byDisplay, viewportFitScale(view)) * factor);
 }
 
 /**
  * Opening world zoom per unit of HUD base scale (owner choice: a magnified start was zoomed out by almost
- * 2x at once). Stays above the camera's zoom-out floor for every HUD scale down to {@link MIN_UI_SCALE}.
+ * 2x at once). Stays above the camera's zoom-out floor for every HUD scale down to {@link MIN_UI_SCALE};
+ * below it (the {@link SMALL_VIEWPORT_UI_SCALE} phone floor) the camera's own bounds clamp the start.
  */
 export const START_WORLD_ZOOM_PER_UI_SCALE = 0.55;
 

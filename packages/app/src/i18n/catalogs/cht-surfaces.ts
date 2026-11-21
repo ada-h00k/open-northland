@@ -562,10 +562,15 @@ export const chtSurfaces = {
     },
   },
   deviceNotice: {
+    portrait: {
+      title: '橫向效果最佳',
+      body: '介面為寬螢幕設計。將手機橫向旋轉即可完整顯示；直向仍可繼續遊戲。',
+      proceed: '以直向遊玩',
+    },
     touch: {
-      title: 'Open Northland 需要電腦',
-      body: '這款遊戲需要滑鼠、鍵盤與較大的螢幕。不支援手機與平板。請在電腦上開啟此頁面來遊玩。',
-      proceed: '我有滑鼠與鍵盤，仍要開始',
+      title: '以觸控螢幕遊玩',
+      body: '世界會回應手指：輕點選取，長按等同右鍵下達命令，拖動手指平移地圖，雙指捏合縮放。以滑鼠和鍵盤在較大的螢幕上遊玩最為舒適。',
+      proceed: '以觸控開始',
     },
     webgl: {
       title: '此瀏覽器未提供 WebGL',

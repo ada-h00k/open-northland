@@ -161,6 +161,9 @@
       :focus-visible { outline: none; }
       /* A horizontal overscroll (a trackpad swipe) is not a history gesture here. */
       html, body { margin: 0; height: 100%; background: #0c1420; overflow: hidden; overscroll-behavior: none; }
+      /* A double tap on a HUD button zooms the page on a phone otherwise; the scrollable lists keep
+         their pan, and the canvas tightens this to `none` of its own below. */
+      html, body { touch-action: manipulation; }
       /* Nearest upscaling of the canvas's backing store. It is the upscale itself under the `whole`
          backing density (the store at a whole fraction of the device pixels) and for the fixed-size
          ?shot canvas, which is CSS-stretched to the viewport; at native density the canvas maps 1:1 to
@@ -168,6 +171,10 @@
       #game { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
       /* An author `display` outranks the UA rule behind `hidden`, so the attribute needs its own. */
       #game[hidden] { display: none; }
+      /* A finger drags the world, never the page: no scroll, pinch or double-tap zoom on the canvas,
+         and no long-press callout or text selection on it. The touch layer's gestures need this —
+         a scroll takeover would pointercancel them mid-drag. */
+      #game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     </style>
   </head>
   <body>

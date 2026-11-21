@@ -63,6 +63,14 @@ export interface CameraGestures {
 export interface CameraController {
   camera(): Camera;
   readonly gestures: CameraGestures;
+  /** One-finger touch pan: the world follows the finger 1:1, clamped as every pan is. */
+  panBy(dxCss: number, dyCss: number): void;
+  /** The two-finger pinch: glide freely while it lasts; the integer level snap waits for its end. */
+  readonly touchZoom: {
+    begin(): void;
+    move(factor: number, clientX: number, clientY: number): void;
+    end(): void;
+  };
   /** Apply camera input preferences immediately, including to an in-flight middle drag. */
   setInputSettings(settings: CameraInputSettings): void;
   /**
@@ -153,6 +161,9 @@ export function createCameraController(
     return !Object.values(activeBindings).some((bound) => bound === binding);
   };
   let dragging = false;
+  // The two-finger pinch zooms past the integer levels while it lasts: `update`'s per-frame
+  // `onLevel` snap would fight the glide, so the snap waits for the gesture's end instead.
+  let touchZooming = false;
   let pointerGuard: ((clientX: number, clientY: number) => boolean) | null = null;
   let edgeHold: (() => boolean) | null = null;
   // The clamped scale the wheel glide eases toward, anchored at the last wheel cursor in screen px, so
@@ -265,6 +276,15 @@ export function createCameraController(
     zoomAnchorX = x;
     zoomAnchorY = y;
   };
+  /** The touch pinch's step: the same glide retarget the wheel's burst of notches takes, anchored
+   *  at the fingers' midpoint so a moving pinch magnifies about the point under it. */
+  const pinchZoomStep = (factor: number, clientX: number, clientY: number): void => {
+    if (!Number.isFinite(factor) || factor <= 0 || factor === 1) return;
+    const { x, y } = clientToScreen(canvas, resolution(), clientX, clientY);
+    targetScale = Math.min(MAX_ZOOM, Math.max(minZoom, targetScale * factor));
+    zoomAnchorX = x;
+    zoomAnchorY = y;
+  };
   const onWheel = (e: WheelEvent): void => {
     // The event is left for the claiming panel's own handler, which scrolls its list and preventDefaults.
     if (!pointerGuard?.(e.clientX, e.clientY)) wheelZoom(e);
@@ -328,6 +348,30 @@ export function createCameraController(
   return {
     camera: () => cam,
     gestures: { key: holdPanKey, press: pressDrag, wheel: wheelZoom },
+    panBy: (dxCss, dyCss) => {
+      if (suspended || (dxCss === 0 && dyCss === 0)) return;
+      const { sx, sy } = screenScale(canvas, resolution());
+      // The touch pan runs at the drag's 1:1 speed (the world follows the finger), no ramp or glide.
+      cam = clampCam(panCamera(cam, dxCss * sx, dyCss * sy));
+    },
+    touchZoom: {
+      begin: () => {
+        if (suspended) return;
+        touchZooming = true;
+      },
+      move: (factor, clientX, clientY) => {
+        if (suspended || !touchZooming) return;
+        pinchZoomStep(factor, clientX, clientY);
+      },
+      end: () => {
+        if (!touchZooming) return;
+        touchZooming = false;
+        // The pinch stops where the fingers stopped: the glide is cut (its target is now where the
+        // camera is), and the integer level snap resumes, pulling the view to the nearest level.
+        targetScale = cam.scale ?? 1;
+        cam = clampCam(onLevel(cam));
+      },
+    },
     setInputSettings: (next) => {
       activeInputSettings = next;
       cam = clampCam(onLevel(cam));
@@ -363,6 +407,7 @@ export function createCameraController(
       held.clear();
       heldNumpad.clear();
       endMiddleDrag();
+      touchZooming = false;
       pointerSample = null;
       targetScale = cam.scale ?? 1;
     },
@@ -376,7 +421,8 @@ export function createCameraController(
       if (suspended) return;
       const dt = Math.min(dtMs, MAX_PAN_STEP_MS);
       // A display or render-scale change moves the device px under a level, so it is checked per frame.
-      const settled = clampCam(onLevel(cam));
+      // A live pinch skips the level snap (its `end` applies it), so the glide is not fought.
+      const settled = touchZooming ? clampCam(cam) : clampCam(onLevel(cam));
       if (settled !== cam) {
         cam = settled;
         targetScale = cam.scale ?? 1;

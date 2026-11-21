@@ -562,10 +562,15 @@ export const chsSurfaces = {
     },
   },
   deviceNotice: {
+    portrait: {
+      title: '横屏效果最佳',
+      body: '界面为宽屏幕设计。将手机横向旋转即可完整显示；竖屏仍可继续游戏。',
+      proceed: '竖屏游玩',
+    },
     touch: {
-      title: 'Open Northland 需要电脑',
-      body: '游戏需要鼠标、键盘和较大的屏幕，不支持手机和平板电脑。请在电脑上打开此页面进行游戏。',
-      proceed: '我有鼠标和键盘，仍然开始',
+      title: '用触摸屏游玩',
+      body: '世界会回应手指：轻点选中，长按相当于右键下达命令，拖动手指平移地图，双指捏合缩放。用鼠标和键盘在更大的屏幕上玩最舒适。',
+      proceed: '以触摸开始',
     },
     webgl: {
       title: '此浏览器不支持 WebGL',
