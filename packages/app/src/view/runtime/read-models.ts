@@ -9,6 +9,7 @@ import { workerRoleOf } from '../../game/sandbox/index.js';
 import { buildingRecordOf, buildingTribeOf, buildingTypeOf } from '../../game/snapshot/index.js';
 import type { ViewerSeat } from '../../game/viewer-seat.js';
 import type { WorldTribes } from '../../game/world-tribes.js';
+import { jobDisplayName } from '../../hud/details-panel/model/context.js';
 import { goodName } from '../../i18n/index.js';
 import type { SessionHost } from '../../session/index.js';
 import type { PlacementProbeViews } from '../placement/gates.js';
@@ -18,6 +19,7 @@ import {
   makeOverlayFrameSource,
   makeSignpostOverlaySource,
 } from '../placement/overlay.js';
+import { isTouchDevice } from '../platform/touch-device.js';
 import {
   type BuildingDoorInfo,
   type BuildingDoorInfoOf,
@@ -28,6 +30,7 @@ import {
   type GeometryBuildingInfoOf,
   type HeartSelection,
 } from '../projections/index.js';
+import { setJobLabelFeed } from './job-label-feed.js';
 
 export interface ViewReadModelDeps {
   readonly authoredBuildings?: BuildingTypeBinding['byEntity'];
@@ -133,6 +136,27 @@ export async function createViewReadModels(deps: ViewReadModelDeps): Promise<Vie
   const goodLabelByType = new Map(host.content.goods.map((g) => [g.typeId, goodName(g)]));
   const ir = await loadIr();
   const buildings = buildingModels(host.content.buildings, ir, deps.tribes, deps.authoredBuildings);
+  const projections = createSnapshotProjections(
+    deps.viewer,
+    buildings.infoOf,
+    workerRoleOf,
+    fogGates,
+    {
+      // The same content read the sim's capture drive keys on.
+      isLivestockTribe: (tribe) => systems.isCatchableAnimal(host.content, tribe),
+      playerColourOf: deps.playerColourOf,
+      selection: deps.selection,
+      starRules: experienceStarRules(host.content),
+    },
+    // The profession name a working settler wears over his head, named through the locale catalog.
+    (jobType) => jobDisplayName({ jobs: host.content.jobs }, jobType),
+    deps.signpostReach,
+    deps.inventoryVersion,
+  );
+  // The profession names are the touch game's aid — a thumb cannot hover a settler and open him —
+  // so the mouse game registers none and its frames compute no label projection. The feed travels
+  // its own seam, so the game view's wiring stays out of the labels' files.
+  setJobLabelFeed(isTouchDevice() ? projections.jobLabelsFor : null);
   return {
     goodLabel: (typeId) => goodLabelByType.get(typeId),
     buildingGeometry: buildings.geometryOf,
@@ -141,20 +165,6 @@ export async function createViewReadModels(deps: ViewReadModelDeps): Promise<Vie
     signpostOverlayFrame: makeSignpostOverlaySource(deps.probes, host, mapSize, localPlayer),
     litOverlayFrame: makeLitOverlaySource(deps.probes, host, mapSize, localPlayer),
     dockOverlayFrame: makeDockOverlaySource(deps.probes, host, mapSize, localPlayer),
-    ...createSnapshotProjections(
-      deps.viewer,
-      buildings.infoOf,
-      workerRoleOf,
-      fogGates,
-      {
-        // The same content read the sim's capture drive keys on.
-        isLivestockTribe: (tribe) => systems.isCatchableAnimal(host.content, tribe),
-        playerColourOf: deps.playerColourOf,
-        selection: deps.selection,
-        starRules: experienceStarRules(host.content),
-      },
-      deps.signpostReach,
-      deps.inventoryVersion,
-    ),
+    ...projections,
   };
 }

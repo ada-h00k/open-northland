@@ -35,6 +35,9 @@ export interface WorldSceneLayers {
   readonly hearts: Container;
   readonly importMarkers: Container;
   readonly groupNumbers: Container;
+  /** A settler's profession name over his head: over the group numbers, so a label never hides under
+   *  a number and both read. */
+  readonly jobLabels: Container;
   /** A barracks' rally banner: over every sprite, so the soldiers gathered on it never hide it. */
   readonly rallyBanners: Container;
   /** A player's map pings: over every sprite and mark, so a ping behind a building still shows. */
@@ -70,6 +73,7 @@ export function mountPainterOrder(world: Container, layers: WorldSceneLayers): v
     layers.hearts,
     layers.importMarkers,
     layers.groupNumbers,
+    layers.jobLabels,
     layers.rallyBanners,
     layers.mapPings,
     layers.geometryDebug,

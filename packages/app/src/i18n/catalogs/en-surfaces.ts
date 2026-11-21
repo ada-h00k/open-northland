@@ -589,7 +589,7 @@ export const enSurfaces = {
     },
     touch: {
       title: 'Playing with a touch screen',
-      body: 'The world answers a finger: a tap selects, a held finger gives the orders a right click does, a dragged finger pans the map, and two fingers pinch the zoom. The game plays most comfortably with a mouse and a keyboard on a larger screen.',
+      body: 'The world answers a finger: a tap selects, a held finger gives the orders a right click does, a held finger then dragged draws a selection box over several units, a dragged finger pans the map, and two fingers pinch the zoom. The game plays most comfortably with a mouse and a keyboard on a larger screen.',
       proceed: 'Play with touch',
     },
     webgl: {

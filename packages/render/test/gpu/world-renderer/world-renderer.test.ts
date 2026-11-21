@@ -79,6 +79,7 @@ const SLOTS = [
   'hearts',
   'importMarkers',
   'groupNumbers',
+  'jobLabels',
   'rallyBanners',
   'mapPings',
   'geometryDebug',

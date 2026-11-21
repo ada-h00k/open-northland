@@ -633,7 +633,7 @@ export const itSurfaces = {
     },
     touch: {
       title: 'Gioca con il touch screen',
-      body: 'Il mondo risponde al dito: un tocco seleziona, una pressione prolungata impartisce gli ordini come il clic destro, un dito trascinato sposta la mappa e due dita ingrandiscono con il pinch. Il gioco si gioca più comodamente con mouse e tastiera su uno schermo più grande.',
+      body: 'Il mondo risponde al dito: un tocco seleziona, una pressione prolungata impartisce gli ordini come il clic destro, una pressione prolungata poi trascinata disegna un riquadro di selezione su più unità, un dito trascinato sposta la mappa e due dita ingrandiscono con il pinch. Il gioco si gioca più comodamente con mouse e tastiera su uno schermo più grande.',
       proceed: 'Gioca col tocco',
     },
     webgl: {

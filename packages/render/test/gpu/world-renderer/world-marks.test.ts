@@ -61,6 +61,7 @@ function frameOf(over: Partial<WorldMarksFrame> = {}): WorldMarksFrame {
     lifeHearts: [],
     experienceStars: [],
     groupNumbers: new Map(),
+    jobLabels: new Map(),
     ...over,
   };
 }
@@ -77,6 +78,18 @@ describe('WorldMarks', () => {
     const { marks } = marksIn();
     const slots = Object.values(marks.slots);
     expect(new Set(slots).size).toBe(slots.length);
+    marks.destroy();
+  });
+
+  it('wears the profession names in every tier: the sparse view keeps what the icons drop', () => {
+    const { marks } = marksIn();
+    marks.draw(
+      frameOf({
+        detail: VIEW_DETAILS.sparse,
+        jobLabels: new Map([[SETTLER, { name: 'Bauer', x: 3 * ONE, y: 4 * ONE }]]),
+      }),
+    );
+    expect(marks.slots.jobLabels.children).toHaveLength(1);
     marks.destroy();
   });
 

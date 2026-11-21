@@ -631,7 +631,7 @@ export const deSurfaces = {
     },
     touch: {
       title: 'Spiel mit dem Touchscreen',
-      body: 'Die Welt antwortet auf den Finger: Ein Tippen wählt aus, ein gehaltener Finger erteilt die Befehle eines Rechtsklicks, ein gezogener Finger verschiebt die Karte, und zwei Finger zoomen mit einer Pinch-Geste. Am bequemsten spielt es sich mit Maus und Tastatur auf einem größeren Bildschirm.',
+      body: 'Die Welt antwortet auf den Finger: Ein Tippen wählt aus, ein gehaltener Finger erteilt die Befehle eines Rechtsklicks, ein gehaltener Finger, der dann gezogen wird, zieht einen Auswahlrahmen über mehrere Einheiten, ein gezogener Finger verschiebt die Karte, und zwei Finger zoomen mit einer Pinch-Geste. Am bequemsten spielt es sich mit Maus und Tastatur auf einem größeren Bildschirm.',
       proceed: 'Mit Touch spielen',
     },
     webgl: {

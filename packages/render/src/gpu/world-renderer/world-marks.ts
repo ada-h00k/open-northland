@@ -29,6 +29,8 @@ import {
   GroupNumberLayer,
   type ImportMarkerGfx,
   ImportMarkerLayer,
+  type JobLabel,
+  JobLabelLayer,
   type LifeHeart,
   LifeHeartLayer,
   type LostGoalMarker,
@@ -76,6 +78,7 @@ export type MarkSlots = Pick<
   | 'hearts'
   | 'importMarkers'
   | 'groupNumbers'
+  | 'jobLabels'
   | 'rallyBanners'
   | 'mapPings'
   | 'geometryDebug'
@@ -125,6 +128,8 @@ export interface WorldMarksFrame {
   readonly experienceStars: readonly ExperienceStar[];
   /** Entity id → the numbers of its control groups; empty when the player turned the numbers off. */
   readonly groupNumbers: ReadonlyMap<number, readonly string[]>;
+  /** Entity id → the profession name over the working settler's head; empty draws none. */
+  readonly jobLabels: ReadonlyMap<number, JobLabel>;
 }
 
 export class WorldMarks {
@@ -161,6 +166,7 @@ export class WorldMarks {
   /** The icons each person wears over his head this frame, which stack them in one column. */
   private readonly column = new OverheadColumn();
   private readonly groupNumbers = new GroupNumberLayer();
+  private readonly jobLabels = new JobLabelLayer();
   private readonly geometryDebug = new GeometryDebugLayer();
   readonly slots: MarkSlots;
 
@@ -205,6 +211,7 @@ export class WorldMarks {
       hearts: this.hearts.container,
       importMarkers: this.importMarkers.container,
       groupNumbers: this.groupNumbers.container,
+      jobLabels: this.jobLabels.container,
       rallyBanners: this.rallyBanners.container,
       mapPings: this.mapPings.container,
       geometryDebug: this.geometryDebug.container,
@@ -386,6 +393,8 @@ export class WorldMarks {
       frame.groupNumbers,
       viewport,
     );
+    // The names wear every tier, even where the icons drop: the map keeps its professions far out.
+    this.jobLabels.draw({ drawn, zoom: frame.zoom, column: this.column }, frame.jobLabels, viewport);
   }
 
   collapseGroundCover(): readonly Viewport[] {
@@ -416,6 +425,7 @@ export class WorldMarks {
     this.experienceStars.destroy();
     this.importMarkers.destroy();
     this.groupNumbers.destroy();
+    this.jobLabels.destroy();
     this.geometryDebug.destroy();
   }
 }

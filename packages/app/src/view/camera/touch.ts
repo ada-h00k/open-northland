@@ -4,9 +4,11 @@
  *
  * A tap is the left click; a held finger is the right click, the orders' press; a dragged finger
  * pans the camera, the world following the hand; two fingers pinch the zoom about their midpoint
- * and carry the pan along. The tap and the long-press go out as ordinary `MouseEvent`s the mouse
- * handlers already take, the pan and the pinch through the camera controller's touch methods — no
- * mouse handler learns of any of it.
+ * and carry the pan along. A held finger that then drags draws the selection box instead, the
+ * mouse's drag select over several units: the left press goes out at the point the finger rested,
+ * the moves follow it, and the lift releases the box. The tap and the long-press go out as ordinary
+ * `MouseEvent`s the mouse handlers already take, the pan and the pinch through the camera
+ * controller's touch methods — no mouse handler learns of any of it.
  *
  * The browser's own gestures are shut out instead: the canvas styles itself `touch-action: none`,
  * every touch pointer is captured and its events prevented, so a finger never scrolls or zooms the
@@ -14,8 +16,9 @@
  * stay suppressed — this layer's synthetic events are the only mouse a finger makes.
  */
 
-/** A hold past this many ms is the right click. Below the browsers' own long-press answers
- *  (~500 ms), and the prevented `pointerdown` has already silenced those. */
+/** A hold past this many ms is the held finger: lifted still it is the right click, dragged it is
+ *  the selection box. Below the browsers' own long-press answers (~500 ms), and the prevented
+ *  `pointerdown` has already silenced those. */
 const LONG_PRESS_MS = 450;
 /** Client px a press may drift (a thumb's jitter) and stay a tap, a hold, or a still press. */
 const MOVE_SLOP_PX = 10;
@@ -52,10 +55,10 @@ interface TrackedPointer {
 
 /**
  * The gesture the tracked pointers are in. 'press' waits to learn tap, hold or drag; 'held' is the
- * long-press answered (the right click went out) with the finger resting until it lifts; 'pan' is
- * the one-finger drag; 'pinch' the two-finger one.
+ * long-press answered (the finger rests, its right click waiting for a still lift); 'box' is the
+ * held finger dragging the selection box; 'pan' is the one-finger drag; 'pinch' the two-finger one.
  */
-type GestureMode = 'idle' | 'press' | 'held' | 'pan' | 'pinch';
+type GestureMode = 'idle' | 'press' | 'held' | 'box' | 'pan' | 'pinch';
 
 export function installTouchInput(canvas: HTMLCanvasElement, camera: TouchCameraInput): () => void {
   const pointers = new Map<number, TrackedPointer>();
@@ -93,7 +96,7 @@ export function installTouchInput(canvas: HTMLCanvasElement, camera: TouchCamera
   /** The mouse event the world handlers take, at the finger's point. `detail` carries the tap
    *  count, so a double-tap reads as the double click the job-mates selection needs. */
   const mouseEvent = (
-    type: 'mousedown' | 'mouseup',
+    type: 'mousedown' | 'mousemove' | 'mouseup',
     at: { readonly x: number; readonly y: number },
     button: number,
     detail: number,
@@ -116,6 +119,12 @@ export function installTouchInput(canvas: HTMLCanvasElement, camera: TouchCamera
 
   const beginPinch = (): void => {
     clearHold();
+    // A box the pinch takes over releases where its finger stood, so the boxed selection lands and
+    // no marquee dangles; a held finger was never a click, its right press waited for a still lift.
+    if (mode === 'box') {
+      const rest = pair()[0];
+      if (rest !== undefined) canvas.dispatchEvent(mouseEvent('mouseup', rest, 0, 1));
+    }
     mode = 'pinch';
     const [a, b] = pair();
     if (a === undefined || b === undefined) return;
@@ -157,15 +166,13 @@ export function installTouchInput(canvas: HTMLCanvasElement, camera: TouchCamera
       return;
     }
     mode = 'press';
-    // The hold's timer: past it, the finger answers as the right click where it rests.
+    // The hold's timer: past it, the finger rests as the held one — lifted still it answers as the
+    // right click, dragged it draws the selection box. Neither has gone out yet.
     holdTimer = window.setTimeout(() => {
       holdTimer = null;
       if (mode !== 'press') return;
-      const held = pair()[0];
-      if (held === undefined) return;
       mode = 'held';
       vibrate();
-      canvas.dispatchEvent(mouseEvent('mousedown', held, 2, 1));
     }, LONG_PRESS_MS);
   };
 
@@ -188,6 +195,20 @@ export function installTouchInput(canvas: HTMLCanvasElement, camera: TouchCamera
       pinchSpan = span;
       pinchMidX = midX;
       pinchMidY = midY;
+      return;
+    }
+    if (mode === 'held') {
+      // A held finger that then drags draws the selection box instead: the mouse's drag select. The
+      // left press anchors at the point the finger rested on, and the camera holds still, as a drag
+      // select on the mouse holds it.
+      if (Math.hypot(p.x - p.downX, p.y - p.downY) < MOVE_SLOP_PX) return;
+      mode = 'box';
+      canvas.dispatchEvent(mouseEvent('mousedown', { x: p.downX, y: p.downY }, 0, 1));
+      canvas.dispatchEvent(mouseEvent('mousemove', p, 0, 1));
+      return;
+    }
+    if (mode === 'box') {
+      canvas.dispatchEvent(mouseEvent('mousemove', p, 0, 1));
       return;
     }
     if (mode === 'press') {
@@ -223,7 +244,17 @@ export function installTouchInput(canvas: HTMLCanvasElement, camera: TouchCamera
     }
     if (mode === 'held') {
       mode = 'idle';
-      if (!cancelled) canvas.dispatchEvent(mouseEvent('mouseup', p, 2, 1)); // a whole press
+      if (cancelled) return; // a stolen hold was never a click, and none goes out now
+      // The lift answers as the right click at the point the finger rested on, a whole press.
+      canvas.dispatchEvent(mouseEvent('mousedown', { x: p.downX, y: p.downY }, 2, 1));
+      canvas.dispatchEvent(mouseEvent('mouseup', { x: p.downX, y: p.downY }, 2, 1));
+      return;
+    }
+    if (mode === 'box') {
+      mode = 'idle';
+      // The release lands the box wherever the finger ended, on a cancel too: a vanished box would
+      // otherwise linger on the screen until the next press took it down.
+      canvas.dispatchEvent(mouseEvent('mouseup', p, 0, 1));
       return;
     }
     if (mode === 'press') {
@@ -249,10 +280,15 @@ export function installTouchInput(canvas: HTMLCanvasElement, camera: TouchCamera
   const onPointerCancel = (e: PointerEvent): void => onPointerEnd(e, true);
 
   // Losing the page mid-gesture drops the pointer's end, which would leave the mode and the zoom
-  // gesture stuck; a blur is a clean sheet.
+  // gesture stuck; a blur is a clean sheet. A box being drawn releases where its finger stood, so
+  // its selection lands and nothing dangles.
   const onBlur = (): void => {
     clearHold();
     endZoom();
+    if (mode === 'box') {
+      const rest = pair()[0];
+      if (rest !== undefined) canvas.dispatchEvent(mouseEvent('mouseup', rest, 0, 1));
+    }
     pointers.clear();
     mode = 'idle';
   };

@@ -589,7 +589,7 @@ export const plSurfaces = {
     },
     touch: {
       title: 'Gra na ekranie dotykowym',
-      body: 'Świat reaguje na palec: stuknięcie zaznacza, przytrzymanie wydaje rozkazy jak prawy przycisk myszy, przeciągnięcie przesuwa mapę, a dwa palce przybliżają ruchem szczypcowym. Najwygodniej gra się myszą i klawiaturą na większym ekranie.',
+      body: 'Świat reaguje na palec: stuknięcie zaznacza, przytrzymanie wydaje rozkazy jak prawy przycisk myszy, przytrzymanie przeciągnięte rysuje ramkę zaznaczenia nad kilkoma jednostkami, przeciągnięcie przesuwa mapę, a dwa palce przybliżają ruchem szczypcowym. Najwygodniej gra się myszą i klawiaturą na większym ekranie.',
       proceed: 'Graj dotykiem',
     },
     webgl: {

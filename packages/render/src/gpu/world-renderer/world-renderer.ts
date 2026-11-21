@@ -76,6 +76,7 @@ import {
   NO_BUBBLES,
   NO_GROUP_NUMBERS,
   NO_HEARTS,
+  NO_JOB_LABELS,
   NO_LOST_GOALS,
   NO_MAP_PINGS,
   NO_ORDER_MARKERS,
@@ -559,6 +560,7 @@ export class WorldRenderer {
       lifeHearts = NO_HEARTS,
       experienceStars = NO_STARS,
       groupNumbers = NO_GROUP_NUMBERS,
+      jobLabels = NO_JOB_LABELS,
       flagged = NO_REFS,
       focused = NO_REFS,
       rangeRings = NO_RANGE_RINGS,
@@ -717,6 +719,7 @@ export class WorldRenderer {
       lifeHearts,
       experienceStars,
       groupNumbers: this.groupNumbersShown ? groupNumbers : NO_GROUP_NUMBERS,
+      jobLabels,
     });
     this.pool.coverGroundPiles(this.marks.collapseGroundCover());
     this.chrome.resize(this.app.screen.width, this.app.screen.height);

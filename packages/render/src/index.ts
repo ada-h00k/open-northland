@@ -226,6 +226,7 @@ export {
   type HudStyle,
   hitsGarrisonFlag,
   type ImportMarkerGfx,
+  type JobLabel,
   type LifeHeart,
   LOST_GOAL_COLOUR,
   LOST_GOAL_OUTLINE,

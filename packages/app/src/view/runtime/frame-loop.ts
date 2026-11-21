@@ -4,6 +4,7 @@ import {
   cameraViewport,
   type DrawItem,
   type HudModel,
+  type JobLabel,
   type MapPing,
   SPRITE_CULL_MARGIN,
   type Viewport,
@@ -60,6 +61,7 @@ import { lostGoalPulse } from '../unit-controls/lost-goals.js';
 import type { WorldHover } from '../world-hover.js';
 import { presentCombatEffects, type TickEffects } from './combat-effects.js';
 import type { GameViewDeps } from './game-view.js';
+import { jobLabelFeed } from './job-label-feed.js';
 import type { PerfReadout } from './perf-readout.js';
 import { type RafLoop, startRafLoop } from './raf-loop.js';
 import { createVisiblePlots } from './visible-plots.js';
@@ -207,6 +209,9 @@ function drawnCreatureIds(items: readonly DrawItem[]): number[] {
 
 /** The cursor's rally banner, keyed apart from every flag entity's id. */
 const RALLY_PREVIEW_ID = -1;
+
+/** The feed a session registered no names under, shared so no frame allocates an empty map. */
+const NO_JOB_LABELS: ReadonlyMap<number, JobLabel> = new Map();
 
 /**
  * Start the RAF loop over a session driver. The per-frame order is pinned here: sim steps, camera, one
@@ -553,6 +558,7 @@ export function startFrameLoop(loop: FrameLoopDeps): RafLoop {
     const doorBadges = doorBadgesFor(snap, markViewport);
     const lifeHearts = lifeHeartsFor(snap, markViewport);
     const experienceStars = experienceStarsFor(snap, markViewport);
+    const jobLabels = jobLabelFeed()?.(snap, markViewport) ?? NO_JOB_LABELS;
     const world0 = performance.now();
     if (!loop.worldHeld())
       renderer.update({
@@ -577,6 +583,7 @@ export function startFrameLoop(loop: FrameLoopDeps): RafLoop {
         flagged: controls.flaggedFlagIds(),
         focused: controls.focusedIds(),
         groupNumbers: controls.groupNumbers(),
+        jobLabels,
         rangeRings: controls.rangeRings(),
         orderMarkers: controls.orderMarkers(),
         mapPings: loop.mapPings?.(),

@@ -64,8 +64,9 @@ const TOOL_GLYPH: Readonly<Record<ConstructionTool, string>> = {
 export interface ConstructionWindowDeps {
   readonly plane: HTMLElement;
   /** The plane's live HUD scale (`HudPlane.currentScale`); below {@link MIN_UI_SCALE} the viewport
-   *  is a phone's, and the catalogue widens to hold it. */
-  readonly hudScale: () => number;
+   *  is a phone's, and the catalogue widens to hold it. A caller that wires no HUD scale reads as
+   *  the desktop's, so a wiring gap degrades the width instead of taking the window down. */
+  readonly hudScale?: () => number;
   readonly entries: readonly MenuBuildingEntry[];
   readonly thumbs: BuildingThumbs;
   /** The pack the map draws with, or null for the original's art; the cost icons come from the same. */
@@ -705,7 +706,7 @@ export function createConstructionWindow(deps: ConstructionWindowDeps): Construc
   // viewport, on a phone's shrunken chrome the plane's width less a margin. The phone also marks
   // the window, so its parchment fills the height (foundation.css) and the grid lays its columns.
   const placeWindow = centralWindowPlacer(window, deps.plane, (screen) => {
-    const phone = deps.hudScale() < MIN_UI_SCALE;
+    const phone = (deps.hudScale?.() ?? 1) < MIN_UI_SCALE;
     window.element.classList.toggle('on-window--phone', phone);
     if (!phone) return CONSTRUCTION_WINDOW_W;
     return Math.min(

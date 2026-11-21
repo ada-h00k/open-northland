@@ -26,15 +26,21 @@ describe('createSnapshotProjections - memoized by snapshot identity', () => {
   const HOME_TYPE = 2;
   const PLAYER = 0;
   const projectionsFor = () =>
-    createSnapshotProjections(fixedViewerSeat(PLAYER), () => undefined, workerRoleOf, createFogGates(), {
-      isLivestockTribe: () => false,
-    });
+    createSnapshotProjections(
+      fixedViewerSeat(PLAYER),
+      () => undefined,
+      workerRoleOf,
+      createFogGates(),
+      { isLivestockTribe: () => false },
+      () => 'job',
+    );
   const snap = snapshotOf([building(10, HOME_TYPE, 1, 1), settler(1, 0, 10)]);
 
   it('returns the identical reference for the same snapshot, a fresh one for the next', () => {
-    const { hudModelFor, doorBadgesFor } = projectionsFor();
+    const { hudModelFor, doorBadgesFor, jobLabelsFor } = projectionsFor();
     expect(hudModelFor(snap)).toBe(hudModelFor(snap));
     expect(doorBadgesFor(snap)).toBe(doorBadgesFor(snap));
+    expect(jobLabelsFor(snap)).toBe(jobLabelsFor(snap));
 
     const next = snapshotOf([building(10, HOME_TYPE, 1, 1)]); // a new tick's snapshot - a new instance
     expect(doorBadgesFor(next)).not.toBe(doorBadgesFor(snap));
@@ -70,6 +76,7 @@ describe('createSnapshotProjections - memoized by snapshot identity', () => {
       workerRoleOf,
       createFogGates(),
       { isLivestockTribe: () => false },
+      () => 'job',
     );
     const person = (id: number, player: number): Ent => ({
       id,
@@ -96,12 +103,13 @@ describe('createSnapshotProjections - memoized by snapshot identity', () => {
     const viewer = switchableViewerSeat(0);
     const gates = createFogGates();
     const selected = new Set<number>([1]);
-    const { doorBadgesFor, lifeHeartsFor } = createSnapshotProjections(
+    const { doorBadgesFor, lifeHeartsFor, jobLabelsFor } = createSnapshotProjections(
       viewer,
       () => undefined,
       workerRoleOf,
       gates,
       { isLivestockTribe: () => false, selection: { ids: () => selected, version: () => 0 } },
+      () => 'job',
     );
     const home = building(10, HOME_TYPE, 1, 1);
     const worker = settler(1, 0, 10);
@@ -119,6 +127,7 @@ describe('createSnapshotProjections - memoized by snapshot identity', () => {
     ]);
     expect(doorBadgesFor(world)).toHaveLength(1);
     expect(lifeHeartsFor(world)).toHaveLength(1);
+    expect([...jobLabelsFor(world).values()].map((label) => label.name)).toEqual(['job']);
 
     // The new seat sees nothing: same snapshot, a fog that hides every cell.
     viewer.watch(1);
@@ -132,6 +141,7 @@ describe('createSnapshotProjections - memoized by snapshot identity', () => {
     });
     expect(doorBadgesFor(world)).toHaveLength(0);
     expect(lifeHeartsFor(world)).toHaveLength(0);
+    expect(jobLabelsFor(world).size).toBe(0);
   });
 
   it('re-reads the hearts when the selection moves under a held snapshot (a paused pick)', () => {
@@ -146,6 +156,7 @@ describe('createSnapshotProjections - memoized by snapshot identity', () => {
         isLivestockTribe: () => false,
         selection: { ids: () => selected, version: () => version },
       },
+      () => 'job',
     );
     const unhurt = snapshotOf([
       { id: 1, components: { Settler: { tribe: 1 }, Owner: { player: 0 }, Position: { x: 0, y: 0 } } },
@@ -191,16 +202,18 @@ describe('per-tick projections - one walk of the map between them', () => {
     for (let i = 0; i < SCENERY; i++) entities.push(tree(100 + i));
     const { snapshot, visits } = visitCountingSnapshot(snapshotOf(entities));
     const project = (): void => {
-      const { doorBadgesFor, settlerBubblesFor, lifeHeartsFor } = createSnapshotProjections(
+      const { doorBadgesFor, settlerBubblesFor, lifeHeartsFor, jobLabelsFor } = createSnapshotProjections(
         fixedViewerSeat(PLAYER),
         () => undefined,
         workerRoleOf,
         createFogGates(),
         { isLivestockTribe: () => false },
+        () => 'job',
       );
       doorBadgesFor(snapshot, SCREEN);
       settlerBubblesFor(snapshot);
       lifeHeartsFor(snapshot, SCREEN);
+      jobLabelsFor(snapshot, SCREEN);
       forEachMinimapDot(
         snapshot,
         {
@@ -253,6 +266,7 @@ describe('per-tick projections - one walk of the map between them', () => {
       workerRoleOf,
       createFogGates(),
       heartInputs,
+      () => 'job',
     );
     expect(first.lifeHeartsFor(snapshot, SCREEN)).toHaveLength(0); // hidden indoors
     expect(visits()).toBe(entities.length * 2); // the position index, plus the scene index once
@@ -263,6 +277,7 @@ describe('per-tick projections - one walk of the map between them', () => {
       workerRoleOf,
       createFogGates(),
       heartInputs,
+      () => 'job',
     );
     second.lifeHeartsFor(snapshot, SCREEN);
     expect(visits()).toBe(entities.length * 2); // unchanged - both indexes key on the snapshot, not on us

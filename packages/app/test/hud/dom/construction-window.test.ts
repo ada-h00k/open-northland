@@ -90,11 +90,12 @@ function matchMediaOf(answers: Readonly<Record<string, boolean>>): void {
     .mockImplementation((query: string) => ({ matches: answers[query] === true, media: query }));
 }
 
-/** The window's seams against a plane of the given size at the given HUD scale, an empty catalogue. */
-function mounted(plane: HTMLElement, hudScale: number): ConstructionWindow {
+/** The window's seams against a plane of the given size at the given HUD scale, an empty catalogue.
+ *  `undefined` mounts a wiring that carries no HUD scale, as a caller may. */
+function mounted(plane: HTMLElement, hudScale?: number): ConstructionWindow {
   return createConstructionWindow({
     plane,
-    hudScale: () => hudScale,
+    ...(hudScale === undefined ? {} : { hudScale: () => hudScale }),
     entries: [],
     thumbs: { paint: () => false, holds: () => false },
     pack: null,
@@ -182,6 +183,25 @@ it('widens to the plane on a phone scale and marks the window for the parchment 
     if (!(shell instanceof HTMLElement)) throw new Error('construction: window shell');
     expect(shell.classList.contains('on-window--phone')).toBe(true);
     expect(shell.getAttribute('style')).toContain('width: 1252px'); // the plane less the fill's share
+  } finally {
+    window.dispose();
+  }
+});
+
+it('opens on a wiring that carries no HUD scale, reading it as the desktop rather than crashing', () => {
+  // The phone layout is an aid, not a load-bearing line: a caller whose wiring lost the scale opens
+  // the catalogue at the design width, the way the desktop sees it.
+  const plane = document.createElement('div');
+  document.body.append(plane);
+  Object.defineProperty(plane, 'clientWidth', { value: 1920, configurable: true });
+  Object.defineProperty(plane, 'clientHeight', { value: 1080, configurable: true });
+  const window = mounted(plane);
+  try {
+    window.toggle();
+    const shell = plane.querySelector('.on-window--construction');
+    if (!(shell instanceof HTMLElement)) throw new Error('construction: window shell');
+    expect(shell.getAttribute('style')).toContain('width: 640px');
+    expect(shell.classList.contains('on-window--phone')).toBe(false);
   } finally {
     window.dispose();
   }

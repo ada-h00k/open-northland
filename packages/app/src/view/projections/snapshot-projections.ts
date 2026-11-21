@@ -1,14 +1,23 @@
-import { buildHud, emptyHud, fogTileVisible, type HudModel, ONE } from '@open-northland/render';
+import {
+  buildHud,
+  emptyHud,
+  fogTileVisible,
+  type HudModel,
+  type JobLabel,
+  ONE,
+} from '@open-northland/render';
 import { anchorTileBox, type Viewport } from '@open-northland/render/data';
 import type { SignpostReachView } from '@open-northland/sim';
 import { TILE_BUCKET_SIZE, type TileBox, type WorldSnapshot } from '@open-northland/sim';
 import type { WorkerRole } from '../../game/sandbox/index.js';
 import { pickableSeat, type ViewerSeat } from '../../game/viewer-seat.js';
+import { currentLocale } from '../../i18n/index.js';
 import { teamColourVersion } from '../accessibility/team-colour.js';
 import { computeConstructionSigns } from './construction-signs.js';
 import { type BuildingDoorInfoOf, computeDoorBadges, type DoorBadgeCache } from './door-badges.js';
 import { computeExperienceStars, type ExperienceStarInputs } from './experience-stars.js';
 import type { FogGates } from './fog-gates.js';
+import { computeJobLabels, type JobLabelCache } from './job-labels.js';
 import { computeLifeHearts, type LifeHeartInputs } from './life-hearts.js';
 import { computeSettlerBubbles } from './settler-bubbles.js';
 
@@ -103,6 +112,8 @@ export function createSnapshotProjections(
   roleOf: (jobType: number) => WorkerRole,
   fogGates: FogGates,
   hearts: HeartProjectionInputs,
+  /** The localized name a settler's job type shows over his head. */
+  jobNameOf: (jobType: number) => string,
   signpostReach?: (player: number) => SignpostReachView | null,
   inventoryVersion?: () => number,
 ): {
@@ -126,6 +137,9 @@ export function createSnapshotProjections(
     snapshot: WorldSnapshot,
     viewport?: Viewport,
   ) => ReturnType<typeof computeExperienceStars>;
+  /** Entity id → the profession name its working settler wears over his head, the screen's settlers
+   *  only. */
+  readonly jobLabelsFor: (snapshot: WorldSnapshot, viewport?: Viewport) => ReadonlyMap<number, JobLabel>;
 } {
   // Keyed on the viewer too: a spectator switching seats under a paused sim holds one snapshot, and
   // the fog is the viewer's, so every fog-filtered memo keys on it as well.
@@ -187,6 +201,18 @@ export function createSnapshotProjections(
       ? badges
       : badges.filter((badge) => fogTileVisible(fog, badge.x / ONE, badge.y / ONE));
   }, viewerVersion);
+  // The names rebuild when the locale turns, so a held label never says yesterday's language.
+  const jobLabelCache: JobLabelCache = { held: new Map() };
+  const jobLabelsFor = memoByScreen((snapshot, box) => {
+    const labels = computeJobLabels(snapshot, { jobNameOf, stamp: currentLocale() }, box, jobLabelCache);
+    const fog = fogGates.current();
+    if (fog === null) return labels;
+    const visible = new Map<number, JobLabel>();
+    for (const [id, label] of labels) {
+      if (fogTileVisible(fog, label.x / ONE, label.y / ONE)) visible.set(id, label);
+    }
+    return visible;
+  }, viewerVersion);
   return {
     hudModelFor,
     doorBadgesFor,
@@ -202,6 +228,7 @@ export function createSnapshotProjections(
       return fog === null ? bubbles : bubbles.filter((b) => fogTileVisible(fog, b.x / ONE, b.y / ONE));
     }, viewerVersion),
     experienceStarsFor,
+    jobLabelsFor,
     lifeHeartsFor: (snapshot, viewport) => {
       if (viewer.version() !== heartsViewer || teamColourVersion() !== heartsColours) {
         heartsViewer = viewer.version();

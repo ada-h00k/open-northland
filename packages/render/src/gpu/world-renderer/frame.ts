@@ -7,6 +7,7 @@ import type {
   DoorBadge,
   ExperienceStar,
   HudFrame,
+  JobLabel,
   LifeHeart,
   LostGoalMarker,
   MapPing,
@@ -119,6 +120,7 @@ export const NO_BUBBLES: readonly SettlerBubble[] = [];
 export const NO_HEARTS: readonly LifeHeart[] = [];
 export const NO_STARS: readonly ExperienceStar[] = [];
 export const NO_GROUP_NUMBERS: ReadonlyMap<number, readonly string[]> = new Map();
+export const NO_JOB_LABELS: ReadonlyMap<number, JobLabel> = new Map();
 export const NO_RANGE_RINGS: readonly RangeRing[] = [];
 export const NO_ORDER_MARKERS: readonly OrderMarker[] = [];
 export const NO_MAP_PINGS: readonly MapPing[] = [];
@@ -153,6 +155,8 @@ export interface WorldFrame {
   readonly experienceStars?: readonly ExperienceStar[] | undefined;
   /** Entity id → the numbers of its control groups, drawn while the numbers are shown (default none). */
   readonly groupNumbers?: ReadonlyMap<number, readonly string[]> | undefined;
+  /** Entity id → the profession name over the working settler's head (default none). */
+  readonly jobLabels?: ReadonlyMap<number, JobLabel> | undefined;
   /** Work flag entity ids belonging to selected gatherers; highlighted with an amber outline. */
   readonly flagged?: ReadonlySet<number> | undefined;
   /** Ids the HUD points at among the selection (a hovered group well); lateral marks indicate them (default none). */

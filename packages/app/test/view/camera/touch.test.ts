@@ -44,6 +44,16 @@ const harness = () => {
       y: event.clientY,
     });
   });
+  canvas.addEventListener('mousemove', (e) => {
+    const event = e as MouseEvent;
+    mouse.push({
+      type: 'mousemove',
+      button: event.button,
+      detail: event.detail,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  });
   const dispose = installTouchInput(canvas, camera);
   return { canvas, camera, mouse, dispose };
 };
@@ -153,6 +163,67 @@ describe('installTouchInput', () => {
     pointer(canvas, 'pointerup', { x: 80, y: 100 }, 1);
     expect(camera.touchZoom.end).toHaveBeenCalledTimes(1); // not again
     expect(mouse).toEqual([]); // neither the pinch nor its remainder is a click
+  });
+
+  it('turns a held finger that then drags into the selection box, and holds the camera still', () => {
+    const { canvas, camera, mouse } = harness();
+    pointer(canvas, 'pointerdown', { x: 100, y: 100 });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    pointer(canvas, 'pointermove', { x: 112, y: 104 }); // past the slop: the box begins at the rest point
+    pointer(canvas, 'pointermove', { x: 150, y: 130 });
+    pointer(canvas, 'pointerup', { x: 150, y: 130 });
+    expect(mouse).toEqual([
+      { type: 'mousedown', button: 0, detail: 1, x: 100, y: 100 },
+      { type: 'mousemove', button: 0, detail: 1, x: 112, y: 104 },
+      { type: 'mousemove', button: 0, detail: 1, x: 150, y: 130 },
+      { type: 'mouseup', button: 0, detail: 1, x: 150, y: 130 },
+    ]);
+    expect(camera.panBy).not.toHaveBeenCalled();
+    expect(camera.touchZoom.begin).not.toHaveBeenCalled();
+  });
+
+  it('answers a stolen hold with nothing: the right click waited for a still lift', () => {
+    const { canvas, mouse } = harness();
+    pointer(canvas, 'pointerdown', { x: 40, y: 60 });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    pointer(canvas, 'pointercancel', { x: 40, y: 60 });
+    expect(mouse).toEqual([]);
+  });
+
+  it('lets a second finger take over a held finger with no click and the pinch', () => {
+    const { canvas, camera, mouse } = harness();
+    pointer(canvas, 'pointerdown', { x: 100, y: 100 });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    pointer(canvas, 'pointerdown', { x: 200, y: 100 }, 2);
+    expect(camera.touchZoom.begin).toHaveBeenCalledTimes(1);
+    expect(mouse).toEqual([]); // the held finger was never a click, so none goes out
+  });
+
+  it('releases a box a second finger takes over, so the boxed selection lands', () => {
+    const { canvas, camera, mouse } = harness();
+    pointer(canvas, 'pointerdown', { x: 100, y: 100 });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    pointer(canvas, 'pointermove', { x: 140, y: 120 });
+    pointer(canvas, 'pointerdown', { x: 200, y: 100 }, 2);
+    expect(camera.touchZoom.begin).toHaveBeenCalledTimes(1);
+    expect(mouse).toEqual([
+      { type: 'mousedown', button: 0, detail: 1, x: 100, y: 100 },
+      { type: 'mousemove', button: 0, detail: 1, x: 140, y: 120 },
+      { type: 'mouseup', button: 0, detail: 1, x: 140, y: 120 },
+    ]);
+  });
+
+  it('releases a box a blur interrupts where its finger stood', () => {
+    const { canvas, mouse } = harness();
+    pointer(canvas, 'pointerdown', { x: 100, y: 100 });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    pointer(canvas, 'pointermove', { x: 140, y: 120 });
+    window.dispatchEvent(new Event('blur'));
+    expect(mouse).toEqual([
+      { type: 'mousedown', button: 0, detail: 1, x: 100, y: 100 },
+      { type: 'mousemove', button: 0, detail: 1, x: 140, y: 120 },
+      { type: 'mouseup', button: 0, detail: 1, x: 140, y: 120 },
+    ]);
   });
 
   it('reads two near taps inside the window as the double click (detail 2)', () => {

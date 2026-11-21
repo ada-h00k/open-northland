@@ -13,6 +13,7 @@ export * from './experience-stars.js';
 export * from './fog-gates.js';
 export * from './geometry-debug-items.js';
 export * from './hud-labels.js';
+export * from './job-labels.js';
 export * from './life-hearts.js';
 export * from './rally-banners.js';
 export * from './range-rings.js';
