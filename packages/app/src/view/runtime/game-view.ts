@@ -713,6 +713,7 @@ export async function startGameView(deps: GameViewDeps): Promise<GameViewHandle>
       app,
       canvas,
       plane: hudDom.element,
+      hudScale: hudDom.currentScale,
       barLead,
       camera: () => cameraCtl.camera(),
       enqueue: issueCommand,

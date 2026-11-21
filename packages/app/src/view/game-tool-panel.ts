@@ -59,6 +59,9 @@ export interface GameToolPanelDeps {
   readonly canvas: HTMLCanvasElement;
   /** The DOM HUD plane the shell regions mount on. */
   readonly plane: HTMLElement;
+  /** The plane's live HUD scale (`HudDomRoot.currentScale`), for the construction window's phone
+   *  layout. */
+  readonly hudScale: () => number;
   /** The node standing first in the system bar. */
   readonly barLead?: HTMLElement;
   readonly camera: () => Camera;
@@ -291,6 +294,7 @@ export async function mountGameToolPanel(deps: GameToolPanelDeps): Promise<GameT
     settlerName: deps.settlerName,
     canvas: deps.canvas,
     plane: deps.plane,
+    hudScale: deps.hudScale,
     ...(deps.barLead !== undefined ? { barLead: deps.barLead } : {}),
     buildings: deps.buildings,
     knowledge: deps.knowledge,

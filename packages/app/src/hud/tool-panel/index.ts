@@ -125,6 +125,9 @@ export interface ToolPanelOptions {
   readonly canvas: HTMLCanvasElement;
   /** The DOM plane the beam, the system bar, the notification column and the central windows mount on. */
   readonly plane: HTMLElement;
+  /** The plane's live HUD scale (`HudPlane.currentScale`), for the construction window's phone
+   *  layout. */
+  readonly hudScale: () => number;
   /** The caller's node standing first in the system bar (`HudSystemBarDeps.lead`). */
   readonly barLead?: HTMLElement;
   /** The buildings the construction window lists. */
@@ -627,6 +630,7 @@ export async function mountToolPanel(opts: ToolPanelOptions): Promise<ToolPanelC
       constructionWindow: (seam) => {
         const window = createConstructionWindow({
           plane,
+          hudScale: opts.hudScale,
           entries: seam.entries,
           thumbs,
           pack: opts.pack,

@@ -24,18 +24,25 @@ import {
 } from '../tool-panel/construction-catalog.js';
 import { type PaperCard, paperCards, paperCardsKey, plansCount } from '../tool-panel/paper-cards.js';
 import type { ToolWindow } from '../tool-panel/window-shell.js';
+import { MIN_UI_SCALE } from '../ui-scale.js';
 import type { BuildingThumbs } from './building-thumb.js';
 import { goodIconMarkup, goodIconPicture, goodIconStyle } from './good-art.js';
 import { GLYPH, paintedIcon } from './icons.js';
 import { escapeHtml } from './parts/dom.js';
 import { hasWords, searchWords } from './parts/name-search.js';
 import { quietTextField } from './parts/text-field.js';
+import { touchFirstDevice } from './parts/touch-first.js';
 import { PICTURE_SLOT } from './static-picture.js';
 import { centralWindowPlacer, createHudWindow } from './window.js';
 
 /** Design px: the window width, sized so the widest bill in the content (eight goods, the top house) sits in
  *  one row beside the picture; the head's painted icon, a card's picture box and a cost slot's icon box. */
 const CONSTRUCTION_WINDOW_W = 640;
+/** On a phone's shrunken chrome (the scale under {@link MIN_UI_SCALE}) the catalogue spans the plane
+ *  less a margin, instead of the fixed width: the share of the screen it then covers, whose grid
+ *  lays whole extra columns of cards. */
+const PHONE_CATALOGUE_FILL = 0.92;
+const PHONE_CATALOGUE_MARGIN = 16;
 const TITLE_ART_PX = 43;
 /** Wall ms between two reads of the entries' availability while the window is open. Each read at a
  *  newer tick asks the host again for every entry, so a read per tick would keep a request per entry
@@ -56,6 +63,9 @@ const TOOL_GLYPH: Readonly<Record<ConstructionTool, string>> = {
 
 export interface ConstructionWindowDeps {
   readonly plane: HTMLElement;
+  /** The plane's live HUD scale (`HudPlane.currentScale`); below {@link MIN_UI_SCALE} the viewport
+   *  is a phone's, and the catalogue widens to hold it. */
+  readonly hudScale: () => number;
   readonly entries: readonly MenuBuildingEntry[];
   readonly thumbs: BuildingThumbs;
   /** The pack the map draws with, or null for the original's art; the cost icons come from the same. */
@@ -691,7 +701,18 @@ export function createConstructionWindow(deps: ConstructionWindowDeps): Construc
     }
   };
 
-  const placeWindow = centralWindowPlacer(window, deps.plane, CONSTRUCTION_WINDOW_W);
+  // The catalogue's width follows the screen: the fixed design width while the chrome holds the
+  // viewport, on a phone's shrunken chrome the plane's width less a margin. The phone also marks
+  // the window, so its parchment fills the height (foundation.css) and the grid lays its columns.
+  const placeWindow = centralWindowPlacer(window, deps.plane, (screen) => {
+    const phone = deps.hudScale() < MIN_UI_SCALE;
+    window.element.classList.toggle('on-window--phone', phone);
+    if (!phone) return CONSTRUCTION_WINDOW_W;
+    return Math.min(
+      screen.width - PHONE_CATALOGUE_MARGIN,
+      Math.max(CONSTRUCTION_WINDOW_W, Math.round(screen.width * PHONE_CATALOGUE_FILL)),
+    );
+  });
   const open = (resumePlacement = false): void => {
     if (!resumePlacement) {
       showPage('catalog');
@@ -706,7 +727,9 @@ export function createConstructionWindow(deps: ConstructionWindowDeps): Construc
     window.open();
     placeWindow(); // the catalogue needs its height bound before a kept scroll can land
     parchment.scrollTop = state.scrollTop;
-    if (!resumePlacement) search.focus({ preventScroll: true });
+    // A finger-first device answers the focus with the on-screen keyboard over the catalogue; there
+    // the field waits for its tap. A mouse keeps the open-for-typing focus.
+    if (!resumePlacement && !touchFirstDevice()) search.focus({ preventScroll: true });
   };
   // A close from any path also forgets a pending resume: another window opened over a placement
   // takes the window's place, and the placement's cancel then leaves it away (one window at a time).

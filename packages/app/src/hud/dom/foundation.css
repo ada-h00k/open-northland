@@ -531,10 +531,25 @@ body.on-drag-scroll.on-drag-scroll-free * {
 .on-hud .on-bcard[hidden] {
   display: none;
 }
+/* The grid lays as many card columns as the window's width holds (the phone's widened catalogue
+   shows whole extra columns); the list view pins one column below. */
 .on-hud .on-build-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 8px;
+}
+/* A phone's shrunken chrome (the window marks itself `--phone` while its scale sits under
+   MIN_UI_SCALE, and the placer widens it): the window stands its region's full height and the
+   parchment takes what the tool row and the tabs leave, so the wider catalogue shows rows of cards
+   instead of a strip over an empty page. Desktop keeps the content-height window. */
+.on-hud .on-window--phone {
+  height: 100%;
+}
+.on-hud .on-window--phone .on-window__body {
+  flex: 1 1 auto;
+}
+.on-hud .on-window--phone .on-parchment {
+  flex: 1 1 auto;
 }
 /* The catalog is a stacking context of its own: its cards are positioned, so they would otherwise paint
    after the window's inset border, which lies over the composited scroll, and the compositor would give
