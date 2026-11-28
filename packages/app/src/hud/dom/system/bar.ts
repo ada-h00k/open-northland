@@ -7,12 +7,14 @@ import {
   DEV_GAME_SPEED_STATES,
   GAME_SPEED_STATES,
   type GameSpeedControl,
+  gameSpeedSpec,
   type RunningGameSpeed,
   UNLIMITED_GAME_SPEED,
 } from '../../tool-panel/game-speed.js';
 import { GLYPH, menuArt } from '../icons.js';
 import { setAttribute, setClass, setHidden, setTip, setTitle } from '../parts/dom.js';
 import { attachTipLayer } from '../parts/tip-layer.js';
+import { createReplayProgress } from '../replay-bar.js';
 import { createObserverPicker, type ObserverPickerDeps } from './observer-picker.js';
 import { createObserverStandings } from './standings.js';
 import { createHudSummary, type HudSummaryDeps } from './summary.js';
@@ -51,6 +53,9 @@ export interface HudSystemBarDeps {
   readonly onSpeed: (running: RunningGameSpeed) => void;
   /** Adds the ×5..×60 and unlimited segments after ×3. */
   readonly devSpeeds?: boolean;
+  /** The watch's progress cell: the playback's tick against the recording's last, shown where the
+   *  session clock stands - the watch's time is the playback's. */
+  readonly replay?: { readonly untilTick: number };
   readonly onMenu: () => void;
   /** The caller's own node standing first in the bar's row (the frame rate, the debug tools). Hidden
    *  while empty. */
@@ -97,6 +102,7 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
           goodLabel: deps.summary.goodLabel,
         });
   const summary = createHudSummary(deps.summary);
+  const progress = deps.replay === undefined ? null : createReplayProgress(deps.replay.untilTick);
 
   // The peace's own framed cell: a glyph and the time left, its name and meaning in the label and tip.
   const peace = document.createElement('span');
@@ -137,16 +143,24 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
   const pause = segment(copy.pause, deps.onPauseToggle);
   pause.textContent = '❚❚';
   const running = new Map<RunningGameSpeed, HTMLButtonElement>();
+  /** A tempo's label in the bar: the ×-factor, the infinity glyph past what a session can name. */
+  const tempoGlyph = (state: RunningGameSpeed): string => {
+    const spec = gameSpeedSpec(state);
+    return spec.tickMultiplier === UNLIMITED_GAME_SPEED ? GLYPH.infinity : `×${spec.factor}`;
+  };
+  const tempoLabel = (state: RunningGameSpeed): string => {
+    const spec = gameSpeedSpec(state);
+    return spec.tickMultiplier === UNLIMITED_GAME_SPEED
+      ? copy.speedUnlimited
+      : formatMessage(copy.speed, { factor: spec.factor });
+  };
   for (const spec of [...GAME_SPEED_STATES, ...(deps.devSpeeds === true ? DEV_GAME_SPEED_STATES : [])]) {
     if (!isRunning(spec.state)) continue;
     const state = spec.state;
-    const unlimited = spec.tickMultiplier === UNLIMITED_GAME_SPEED;
-    const label = unlimited ? copy.speedUnlimited : formatMessage(copy.speed, { factor: spec.factor });
+    const label = tempoLabel(state);
     const button = segment(label, () => deps.onSpeed(state));
-    if (unlimited) {
-      button.innerHTML = GLYPH.infinity;
-      setTitle(button, label);
-    } else button.textContent = `×${spec.factor}`;
+    button.innerHTML = tempoGlyph(state);
+    setTitle(button, label);
     running.set(state, button);
   }
 
@@ -172,7 +186,16 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
   }
   if (picker !== null) bar.append(picker.element);
   if (standings !== null) bar.append(standings.element);
-  bar.append(summary.element, peace, clock, speed, menu, aside);
+  bar.append(
+    summary.element,
+    peace,
+    // A watch's time and its progress are one cell: the recording's fill takes the session clock's
+    // slot, for the playback's tick is the time the bar tells.
+    ...(progress === null ? [clock] : [progress.root]),
+    speed,
+    menu,
+    aside,
+  );
   plane.append(bar);
   const showSpeed = (): void => {
     if (control === null) return;
@@ -215,15 +238,19 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
         peaceTime.textContent = left;
         peace.setAttribute('aria-label', formatMessage(clockCopy.peace, { time: left }));
       }
-      const text = formatSimClock(model.tick);
-      if (text !== shownClock) {
-        shownClock = text;
-        clock.textContent = text;
-        clock.setAttribute(
-          'aria-label',
-          formatMessage(clockCopy.count, { name: clockCopy.clock, count: text }),
-        );
-      }
+      // One time cell: without a recording the session clock tells the time; a watch's playback
+      // time is its progress cell's, so the clock stays out of the row while the fill stands.
+      if (progress === null) {
+        const text = formatSimClock(model.tick);
+        if (text !== shownClock) {
+          shownClock = text;
+          clock.textContent = text;
+          clock.setAttribute(
+            'aria-label',
+            formatMessage(clockCopy.count, { name: clockCopy.clock, count: text }),
+          );
+        }
+      } else progress.update(model.tick);
     },
     setAside: (node) => {
       if (node === null) aside.replaceChildren();
