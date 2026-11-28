@@ -7,6 +7,7 @@ import {
   DEV_GAME_SPEED_STATES,
   GAME_SPEED_STATES,
   type GameSpeedControl,
+  gameSpeedSpec,
   type RunningGameSpeed,
   UNLIMITED_GAME_SPEED,
 } from '../../tool-panel/game-speed.js';
@@ -145,6 +146,17 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
   const pause = segment(copy.pause, deps.onPauseToggle);
   pause.textContent = '❚❚';
   const running = new Map<RunningGameSpeed, HTMLButtonElement>();
+  /** A tempo's label in the bar: the ×-factor, the infinity glyph past what a session can name. */
+  const tempoGlyph = (state: RunningGameSpeed): string => {
+    const spec = gameSpeedSpec(state);
+    return spec.tickMultiplier === UNLIMITED_GAME_SPEED ? GLYPH.infinity : `×${spec.factor}`;
+  };
+  const tempoLabel = (state: RunningGameSpeed): string => {
+    const spec = gameSpeedSpec(state);
+    return spec.tickMultiplier === UNLIMITED_GAME_SPEED
+      ? copy.speedUnlimited
+      : formatMessage(copy.speed, { factor: spec.factor });
+  };
   // The watch's one tempo button: ×1 → ×2 → ×5 → ×10 → ×1, whatever the sim then sustains.
   const REPLAY_CYCLE: readonly RunningGameSpeed[] = ['normal', 'fast', 'dev5', 'dev10'];
   const cycleButton = segment('', () => {
@@ -155,17 +167,16 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
   for (const spec of [...GAME_SPEED_STATES, ...(deps.devSpeeds === true ? DEV_GAME_SPEED_STATES : [])]) {
     if (!isRunning(spec.state)) continue;
     const state = spec.state;
-    const unlimited = spec.tickMultiplier === UNLIMITED_GAME_SPEED;
-    const label = unlimited ? copy.speedUnlimited : formatMessage(copy.speed, { factor: spec.factor });
+    const label = tempoLabel(state);
     const button = segment(label, () => deps.onSpeed(state));
-    if (unlimited) {
-      button.innerHTML = GLYPH.infinity;
-      setTitle(button, label);
-    } else button.textContent = `×${spec.factor}`;
+    button.innerHTML = tempoGlyph(state);
+    setTitle(button, label);
     running.set(state, button);
   }
   if (deps.replayCycle === true) {
-    for (const [state, button] of running) if (REPLAY_CYCLE.includes(state)) button.hidden = true;
+    // The watch drives one tempo button, so every per-tempo segment yields to it - the dev-only
+    // tempos too: they reach the bar for a bench session, not for a recording's playback.
+    for (const [, button] of running) button.hidden = true;
   } else cycleButton.hidden = true;
 
   const menu = document.createElement('button');
@@ -208,6 +219,12 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
     setAttribute(pause, 'aria-pressed', String(paused));
     for (const [state, button] of running) {
       setAttribute(button, 'aria-pressed', String(!paused && pressed === state));
+    }
+    // The watch's tempo button names the tempo the playback stands at; it has no fixed label.
+    if (!cycleButton.hidden) {
+      cycleButton.innerHTML = tempoGlyph(pressed);
+      setAttribute(cycleButton, 'aria-label', tempoLabel(pressed));
+      setTitle(cycleButton, tempoLabel(pressed));
     }
     setClass(speed, 'on-speed--slowed', look?.kind === 'slowed');
     setClass(speed, 'on-speed--held', held);

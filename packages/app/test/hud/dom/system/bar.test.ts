@@ -68,4 +68,46 @@ describe('the system bar', () => {
     expect(document.querySelector('.on-replay-progress')).toBeNull();
     bar.dispose();
   });
+
+  it('offers a recording watch one tempo button over the per-tempo segments, named for the tempo it stands at', () => {
+    const asked: string[] = [];
+    const bar = createHudSystemBar(document.body, {
+      ...barDeps(),
+      // The dev tempos reach the bar for a bench session; the watch yields them all to its cycle.
+      devSpeeds: true,
+      replayCycle: true,
+      replay: { untilTick: 6000 },
+      onSpeed: (state) => asked.push(state),
+    });
+    const cycle = document.querySelector<HTMLButtonElement>('.on-speed button[aria-label=""]');
+    if (cycle === null) throw new Error('the watch tempo button is missing');
+    // The pause yields to nothing - a watch still pauses - so the segments are the tempo buttons.
+    const segments = [...document.querySelectorAll<HTMLButtonElement>('.on-speed button')].filter(
+      (button) => button !== cycle && button.textContent !== '❚❚',
+    );
+    expect(segments.length).toBeGreaterThan(0);
+    expect(segments.every((button) => button.hidden)).toBe(true);
+    expect(cycle.hidden).toBe(false);
+
+    bar.setSpeed({ running: 'normal', paused: false });
+    expect(cycle.textContent).toBe('×1');
+    expect(cycle.getAttribute('aria-label')).toContain('×1');
+    cycle.click();
+    expect(asked).toEqual(['fast']);
+    bar.setSpeed({ running: 'fast', paused: false });
+    expect(cycle.textContent).toBe('×2');
+    bar.dispose();
+  });
+
+  it('keeps the per-tempo segments and hides the tempo button for a session that plays no recording', () => {
+    const bar = createHudSystemBar(document.body, { ...barDeps(), devSpeeds: true });
+    bar.setSpeed({ running: 'normal', paused: false });
+    const cycle = document.querySelector<HTMLButtonElement>('.on-speed button[aria-label=""]');
+    expect(cycle?.hidden).toBe(true);
+    for (const button of document.querySelectorAll<HTMLButtonElement>('.on-speed button')) {
+      if (button === cycle) continue;
+      expect(button.hidden).toBe(false);
+    }
+    bar.dispose();
+  });
 });
