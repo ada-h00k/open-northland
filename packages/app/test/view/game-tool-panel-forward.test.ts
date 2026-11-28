@@ -14,10 +14,8 @@ vi.mock('../../src/hud/tool-panel/index.js', () => ({
   },
 }));
 
-/** Only the watch fields: the rest of the deps reach the mocked mount unread. */
-const depsWith = (
-  watch: Partial<Pick<GameToolPanelDeps, 'replayCycle' | 'replay'>> = {},
-): GameToolPanelDeps =>
+/** Only the watch field: the rest of the deps reach the mocked mount unread. */
+const depsWith = (watch: Partial<Pick<GameToolPanelDeps, 'replay'>> = {}): GameToolPanelDeps =>
   ({
     canvas: {} as HTMLCanvasElement,
     plane: {} as HTMLElement,
@@ -25,17 +23,13 @@ const depsWith = (
   }) as GameToolPanelDeps;
 
 describe('the game tool panel wrapper', () => {
-  it('hands the watch tempo cycle and progress cell down to the panel mount', async () => {
-    await mountGameToolPanel(depsWith({ replayCycle: true, replay: { untilTick: 600 } }));
-    const opts = mounted.at(-1);
-    expect(opts?.replayCycle).toBe(true);
-    expect(opts?.replay).toEqual({ untilTick: 600 });
+  it('hands the watch progress cell down to the panel mount', async () => {
+    await mountGameToolPanel(depsWith({ replay: { untilTick: 600 } }));
+    expect(mounted.at(-1)?.replay).toEqual({ untilTick: 600 });
   });
 
-  it('leaves the watch bar opts out for a session that plays no recording', async () => {
+  it('leaves the watch bar opt out for a session that plays no recording', async () => {
     await mountGameToolPanel(depsWith());
-    const opts = mounted.at(-1);
-    expect(opts?.replayCycle).toBeUndefined();
-    expect(opts?.replay).toBeUndefined();
+    expect(mounted.at(-1)?.replay).toBeUndefined();
   });
 });

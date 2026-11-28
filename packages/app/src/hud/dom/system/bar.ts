@@ -53,11 +53,8 @@ export interface HudSystemBarDeps {
   readonly onSpeed: (running: RunningGameSpeed) => void;
   /** Adds the ×5..×60 and unlimited segments after ×3. */
   readonly devSpeeds?: boolean;
-  /** The bar serves a recorded session's watch: one button cycles ×1→×2→×5→×10 instead of the
-   *  segments, so skimming needs no debug tools. */
-  readonly replayCycle?: boolean;
-  /** The watch's progress cell: the playback's tick against the recording's last, shown between the
-   *  clock and the speed segments. */
+  /** The watch's progress cell: the playback's tick against the recording's last, shown where the
+   *  session clock stands - the watch's time is the playback's. */
   readonly replay?: { readonly untilTick: number };
   readonly onMenu: () => void;
   /** The caller's own node standing first in the bar's row (the frame rate, the debug tools). Hidden
@@ -157,13 +154,6 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
       ? copy.speedUnlimited
       : formatMessage(copy.speed, { factor: spec.factor });
   };
-  // The watch's one tempo button: ×1 → ×2 → ×5 → ×10 → ×1, whatever the sim then sustains.
-  const REPLAY_CYCLE: readonly RunningGameSpeed[] = ['normal', 'fast', 'dev5', 'dev10'];
-  const cycleButton = segment('', () => {
-    if (control === null) return;
-    const next = REPLAY_CYCLE[(REPLAY_CYCLE.indexOf(control.running) + 1) % REPLAY_CYCLE.length] ?? 'normal';
-    deps.onSpeed(next);
-  });
   for (const spec of [...GAME_SPEED_STATES, ...(deps.devSpeeds === true ? DEV_GAME_SPEED_STATES : [])]) {
     if (!isRunning(spec.state)) continue;
     const state = spec.state;
@@ -173,11 +163,6 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
     setTitle(button, label);
     running.set(state, button);
   }
-  if (deps.replayCycle === true) {
-    // The watch drives one tempo button, so every per-tempo segment yields to it - the dev-only
-    // tempos too: they reach the bar for a bench session, not for a recording's playback.
-    for (const [, button] of running) button.hidden = true;
-  } else cycleButton.hidden = true;
 
   const menu = document.createElement('button');
   menu.type = 'button';
@@ -204,8 +189,9 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
   bar.append(
     summary.element,
     peace,
-    clock,
-    ...(progress === null ? [] : [progress.root]),
+    // A watch's time and its progress are one cell: the recording's fill takes the session clock's
+    // slot, for the playback's tick is the time the bar tells.
+    ...(progress === null ? [clock] : [progress.root]),
     speed,
     menu,
     aside,
@@ -219,12 +205,6 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
     setAttribute(pause, 'aria-pressed', String(paused));
     for (const [state, button] of running) {
       setAttribute(button, 'aria-pressed', String(!paused && pressed === state));
-    }
-    // The watch's tempo button names the tempo the playback stands at; it has no fixed label.
-    if (!cycleButton.hidden) {
-      cycleButton.innerHTML = tempoGlyph(pressed);
-      setAttribute(cycleButton, 'aria-label', tempoLabel(pressed));
-      setTitle(cycleButton, tempoLabel(pressed));
     }
     setClass(speed, 'on-speed--slowed', look?.kind === 'slowed');
     setClass(speed, 'on-speed--held', held);
@@ -258,16 +238,19 @@ export function createHudSystemBar(plane: HTMLElement, deps: HudSystemBarDeps): 
         peaceTime.textContent = left;
         peace.setAttribute('aria-label', formatMessage(clockCopy.peace, { time: left }));
       }
-      const text = formatSimClock(model.tick);
-      if (text !== shownClock) {
-        shownClock = text;
-        clock.textContent = text;
-        clock.setAttribute(
-          'aria-label',
-          formatMessage(clockCopy.count, { name: clockCopy.clock, count: text }),
-        );
-      }
-      progress?.update(model.tick);
+      // One time cell: without a recording the session clock tells the time; a watch's playback
+      // time is its progress cell's, so the clock stays out of the row while the fill stands.
+      if (progress === null) {
+        const text = formatSimClock(model.tick);
+        if (text !== shownClock) {
+          shownClock = text;
+          clock.textContent = text;
+          clock.setAttribute(
+            'aria-label',
+            formatMessage(clockCopy.count, { name: clockCopy.clock, count: text }),
+          );
+        }
+      } else progress.update(model.tick);
     },
     setAside: (node) => {
       if (node === null) aside.replaceChildren();
