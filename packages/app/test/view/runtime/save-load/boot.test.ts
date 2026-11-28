@@ -8,7 +8,6 @@ import {
   storePendingReplay,
 } from '../../../../src/view/runtime/save-load/pending-store.js';
 import {
-  parseReplayDocument,
   REPLAY_FORMAT_VERSION,
   replayDocumentTextOf,
 } from '../../../../src/view/runtime/save-load/replay.js';
